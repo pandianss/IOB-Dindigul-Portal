@@ -64,6 +64,15 @@
   .header-title { font-size: 1.05rem; font-weight: 600; opacity: 0.95; letter-spacing: 0.01em; }
   .header-right { display: flex; align-items: center; gap: 12px; }
   .header-lottie { width: 44px; height: 44px; }
+  
+  .notif-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .notif-btn:hover { background: rgba(255,255,255,0.3); }
+  .notif-btn.active { background: #22c55e; border-color: #16a34a; color: #fff; }
+
   .admin-link {
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
     color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
@@ -222,7 +231,7 @@
 
   /* ── INFO BANNER ── */
   .info-box {
-    background: #fffbeb; border: 1px solid #f5c842; border-radius: 9px;
+    background: #fffbeb; border: 1px solid #f5c842; border-radius: 99px;
     padding: 10px 14px; font-size: 0.8rem; color: #7a5800;
     display: flex; gap: 8px; align-items: center; margin-bottom: 18px;
   }
@@ -349,7 +358,9 @@
     <span class="header-title">Dindigul Regional Office — Merchant Services</span>
   </div>
   <div class="header-right">
-    <button type="button" class="admin-link" style="cursor:pointer" onclick="requestBrowserNotificationPermission()">🔔 Enable Notifications</button>
+    <button type="button" id="notifToggleBtn" class="notif-btn" onclick="toggleNotificationPermission()">
+      <span>🔔</span> <span id="notifLabel">Notifications: Checking...</span>
+    </button>
     <a href="admin.html" class="admin-link">⚙️ Admin Dashboard</a>
     <div id="header-lottie" class="header-lottie"></div>
   </div>
@@ -1259,18 +1270,48 @@ let currentActiveStaff = null;
 let isFirstTimeLogin = false;
 
 // ── BROWSER NOTIFICATIONS MODULE ──
-function requestBrowserNotificationPermission() {
-  if ("Notification" in window) {
+function checkNotificationState() {
+  const btn = document.getElementById('notifToggleBtn');
+  const label = document.getElementById('notifLabel');
+  if (!btn || !label) return;
+
+  if (!("Notification" in window)) {
+    label.textContent = "Notifications Unsupported";
+    btn.style.opacity = "0.6";
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    label.textContent = "Notifications: Active";
+    btn.classList.add('active');
+  } else if (Notification.permission === "denied") {
+    label.textContent = "Notifications: Blocked";
+    btn.classList.remove('active');
+  } else {
+    label.textContent = "Notifications: Off (Click)";
+    btn.classList.remove('active');
+  }
+}
+
+function toggleNotificationPermission() {
+  if (!("Notification" in window)) {
+    showToast("Browser does not support desktop notifications", "error");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    triggerBrowserNotification("IOB Dindigul Regional Office", "Test Notification: Desktop alerts are active and working!");
+    showToast("🔔 Test notification sent to desktop!", "success");
+  } else {
     Notification.requestPermission().then(permission => {
+      checkNotificationState();
       if (permission === "granted") {
-        showToast("🔔 Browser Notifications Enabled!", "success");
-        triggerBrowserNotification("IOB Dindigul Regional Office", "Notifications enabled successfully! You will receive live status alerts.");
+        showToast("🔔 Desktop Notifications Enabled!", "success");
+        triggerBrowserNotification("IOB Dindigul Regional Office", "Notifications enabled successfully! You will receive live alerts.");
       } else {
-        showToast("Notifications disabled or blocked in browser settings", "error");
+        showToast("Notification permission blocked in browser settings", "error");
       }
     });
-  } else {
-    showToast("Browser does not support desktop notifications", "error");
   }
 }
 
@@ -1279,7 +1320,7 @@ function triggerBrowserNotification(title, body) {
     try {
       new Notification(title, {
         body: body,
-        icon: "favicon.svg"
+        icon: "iob_icon.png"
       });
     } catch(e) {
       console.error("Notification error:", e);
@@ -1289,6 +1330,7 @@ function triggerBrowserNotification(title, body) {
 
 // Initialize Splash & Lottie
 window.addEventListener('DOMContentLoaded', () => {
+  checkNotificationState();
   lottie.loadAnimation({
     container: document.getElementById('lottie-splash'),
     renderer: 'svg', loop: true, autoplay: true,
