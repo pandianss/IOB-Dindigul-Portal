@@ -3,8 +3,8 @@
  * Includes automated email notifications for Submissions & Status Updates.
  */
 
-// CONFIGURATION: Set default admin notification email recipient(s)
-var ADMIN_NOTIFICATION_EMAIL = ""; // E.g., "admin@iob.in" or leave blank to send to script owner
+// CONFIGURATION: Recipient email address for all portal notifications
+var ADMIN_NOTIFICATION_EMAIL = "satishpandian@iob.bank.in";
 
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -282,7 +282,7 @@ function sendNewSubmissionNotification(serviceType, data) {
     var htmlBody = "" +
       "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0daf0;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)'>" +
         "<div style='background:linear-gradient(90deg,#0d2354,#1a3a7a);color:#fff;padding:18px 24px'>" +
-          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank</h2>" +
+          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank — Dindigul RO</h2>" +
           "<p style='margin:4px 0 0;font-size:0.85rem;opacity:0.85'>New Merchant Application / Lead Submitted</p>" +
         "</div>" +
         "<div style='padding:24px;color:#1a2440;line-height:1.5'>" +
@@ -300,7 +300,7 @@ function sendNewSubmissionNotification(serviceType, data) {
           "</div>" +
         "</div>" +
         "<div style='background:#f0f4ff;padding:12px 24px;font-size:0.75rem;color:#6b7a99;text-align:center'>" +
-          "IOB Merchant Services Portal • Automated System Notification" +
+          "IOB Dindigul Regional Office • Automated Notification" +
         "</div>" +
       "</div>";
 
@@ -324,7 +324,7 @@ function sendStatusUpdateNotification(data) {
     var htmlBody = "" +
       "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0daf0;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)'>" +
         "<div style='background:linear-gradient(90deg,#0d2354,#1a3a7a);color:#fff;padding:18px 24px'>" +
-          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank</h2>" +
+          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank — Dindigul RO</h2>" +
           "<p style='margin:4px 0 0;font-size:0.85rem;opacity:0.85'>Application / Lead Status Updated</p>" +
         "</div>" +
         "<div style='padding:24px;color:#1a2440;line-height:1.5'>" +
@@ -342,7 +342,7 @@ function sendStatusUpdateNotification(data) {
           "</div>" +
         "</div>" +
         "<div style='background:#f0f4ff;padding:12px 24px;font-size:0.75rem;color:#6b7a99;text-align:center'>" +
-          "IOB Merchant Services Portal • Automated Status Notification" +
+          "IOB Dindigul Regional Office • Automated Status Notification" +
         "</div>" +
       "</div>";
 
