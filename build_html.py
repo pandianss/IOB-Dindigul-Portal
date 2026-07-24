@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Indian Overseas Bank - Merchant Services Portal</title>
+<title>IOB Dindigul Regional Office - Merchant Services Portal</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -337,8 +337,8 @@
 <!-- SPLASH -->
 <div id="splash">
   <div id="lottie-splash"></div>
-  <div id="splash-title">Indian Overseas Bank</div>
-  <div id="splash-sub">Merchant Services Portal</div>
+  <div id="splash-title">IOB Dindigul Regional Office</div>
+  <div id="splash-sub">Merchant Services & Leads Portal</div>
   <div id="splash-progress"><div id="splash-bar"></div></div>
 </div>
 
@@ -346,7 +346,7 @@
 <header>
   <div class="header-left">
     <img src="2026logo_min.svg" alt="IOB Logo" class="header-logo">
-    <span class="header-title">Merchant Services Portal</span>
+    <span class="header-title">Dindigul Regional Office — Merchant Services</span>
   </div>
   <div class="header-right">
     <button type="button" class="admin-link" style="cursor:pointer" onclick="requestBrowserNotificationPermission()">🔔 Enable Notifications</button>
@@ -1264,7 +1264,7 @@ function requestBrowserNotificationPermission() {
     Notification.requestPermission().then(permission => {
       if (permission === "granted") {
         showToast("🔔 Browser Notifications Enabled!", "success");
-        triggerBrowserNotification("IOB Merchant Portal", "Notifications enabled successfully! You will receive live status alerts.");
+        triggerBrowserNotification("IOB Dindigul Regional Office", "Notifications enabled successfully! You will receive live status alerts.");
       } else {
         showToast("Notifications disabled or blocked in browser settings", "error");
       }
