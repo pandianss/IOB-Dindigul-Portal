@@ -1,7 +1,10 @@
 /**
- * Google Apps Script v2.7 for IOB Merchant Services & Leads Portal
- * Includes explicit CREATED_DATE tracking for all QR, Soundbox, and Lead templates.
+ * Google Apps Script v2.8 for IOB Merchant Services & Leads Portal
+ * Includes automated email notifications for Submissions & Status Updates.
  */
+
+// CONFIGURATION: Set default admin notification email recipient(s)
+var ADMIN_NOTIFICATION_EMAIL = ""; // E.g., "admin@iob.in" or leave blank to send to script owner
 
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -42,6 +45,21 @@ function doPost(e) {
       var pdfCol = headers.indexOf("QR_PDF_URL") + 1;
       var remarksCol = headers.indexOf("VENDOR_REMARKS") + 1;
       
+      var merchantCol = headers.indexOf("MERCHANTNAME") + 1;
+      if (merchantCol === 0) merchantCol = headers.indexOf("MERCHANT_NAME") + 1;
+      if (merchantCol === 0) merchantCol = headers.indexOf("ACCOUNT_NAME") + 1;
+      
+      var mobileCol = headers.indexOf("MOBILENO") + 1;
+      if (mobileCol === 0) mobileCol = headers.indexOf("MOBILE_NO") + 1;
+      if (mobileCol === 0) mobileCol = headers.indexOf("MOBILE_NUMBER") + 1;
+      
+      var staffRollCol = headers.indexOf("STAFF_ROLL") + 1;
+      var staffNameCol = headers.indexOf("STAFF_NAME") + 1;
+      
+      var merchantName = merchantCol > 0 ? sheet.getRange(rowIndex, merchantCol).getValue() : "Merchant";
+      var staffRoll = staffRollCol > 0 ? sheet.getRange(rowIndex, staffRollCol).getValue() : "";
+      var staffName = staffNameCol > 0 ? sheet.getRange(rowIndex, staffNameCol).getValue() : "";
+      
       var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
       
       if (statusCol > 0) sheet.getRange(rowIndex, statusCol).setValue(data.status);
@@ -54,9 +72,22 @@ function doPost(e) {
         sheet.getRange(rowIndex, pdfCol).setValue(pdfUrl);
       }
       
+      // AUTOMATIC SOUNDBOX GENERATION
       if (data.sheetName === "QR_Template" && (data.status === "Completed" || data.status === "Merchant Onboarded") && data.soundboxRequired === "Yes") {
         createAutoSoundboxEntry(ss, sheet, rowIndex, data.vpa, data.solId, data.soundboxLang);
       }
+      
+      // EMAIL NOTIFICATION FOR STATUS UPDATE
+      sendStatusUpdateNotification({
+        sheetName: data.sheetName,
+        merchantName: merchantName,
+        status: data.status,
+        remarks: data.remarks || "N/A",
+        vpa: data.vpa || "",
+        staffRoll: staffRoll,
+        staffName: staffName,
+        updatedDate: nowStr
+      });
       
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Status updated successfully" }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -69,15 +100,18 @@ function doPost(e) {
       var qrSheet = getOrCreateSheet(ss, "QR_Template", getQRHeaders());
       if (!data.qr.CREATED_DATE) data.qr.CREATED_DATE = nowStr;
       appendDataRow(qrSheet, data.qr, getQRHeaders());
+      sendNewSubmissionNotification("Payment QR Code Application", data.qr);
     } else if (data.type === "soundbox") {
       var sbSheet = getOrCreateSheet(ss, "Soundbox_Template", getSBHeaders());
       if (!data.sb.CREATED_DATE) data.sb.CREATED_DATE = nowStr;
       appendDataRow(sbSheet, data.sb, getSBHeaders());
+      sendNewSubmissionNotification("Soundbox Application", data.sb);
     } else if (data.type === "lead") {
       var leadSheet = getOrCreateSheet(ss, "Leads_Template", getLeadHeaders());
       if (!data.lead.CREATED_DATE) data.lead.CREATED_DATE = nowStr;
       if (!data.lead.UPDATED_DATE) data.lead.UPDATED_DATE = nowStr;
       appendDataRow(leadSheet, data.lead, getLeadHeaders());
+      sendNewSubmissionNotification("Merchant Product Lead (" + (data.lead.PRODUCT || "POS") + ")", data.lead);
     } else {
       throw new Error("Invalid submission type");
     }
@@ -226,4 +260,98 @@ function createAutoSoundboxEntry(ss, qrSheet, rowIndex, generatedVpa, solId, sou
   };
   
   appendDataRow(sbSheet, sbObj, getSBHeaders());
+}
+
+// ─────────────────────────────────────────────
+// AUTOMATED EMAIL NOTIFICATIONS MODULE
+// ─────────────────────────────────────────────
+function sendNewSubmissionNotification(serviceType, data) {
+  try {
+    var recipient = ADMIN_NOTIFICATION_EMAIL || Session.getActiveUser().getEmail() || EffectiveUser.getEmail();
+    if (!recipient) return;
+    
+    var merchantName = data.MERCHANTNAME || data.MERCHANT_NAME || data.ACCOUNT_NAME || "Merchant";
+    var mobile = data.MOBILENO || data.MOBILE_NO || data.MOBILE_NUMBER || "-";
+    var solId = data.SOL_ID || "-";
+    var staffRoll = data.STAFF_ROLL || "-";
+    var staffName = data.STAFF_NAME || "-";
+    var createdDate = data.CREATED_DATE || Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
+
+    var subject = "🚨 New Request: " + serviceType + " - " + merchantName + " (SOL " + solId + ")";
+    
+    var htmlBody = "" +
+      "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0daf0;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)'>" +
+        "<div style='background:linear-gradient(90deg,#0d2354,#1a3a7a);color:#fff;padding:18px 24px'>" +
+          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank</h2>" +
+          "<p style='margin:4px 0 0;font-size:0.85rem;opacity:0.85'>New Merchant Application / Lead Submitted</p>" +
+        "</div>" +
+        "<div style='padding:24px;color:#1a2440;line-height:1.5'>" +
+          "<p style='font-size:0.95rem;margin-top:0'>A new request has been submitted by branch staff:</p>" +
+          "<table style='width:100%;border-collapse:collapse;margin:16px 0;font-size:0.88rem'>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99;width:35%'><strong>Request Type:</strong></td><td style='padding:8px 0;color:#1a3a7a;font-weight:bold'>" + serviceType + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Merchant Name:</strong></td><td style='padding:8px 0'>" + merchantName + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Mobile Number:</strong></td><td style='padding:8px 0'>" + mobile + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Branch SOL ID:</strong></td><td style='padding:8px 0'>" + solId + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Submitted By Staff:</strong></td><td style='padding:8px 0'>" + staffName + " (" + staffRoll + ")</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Submission Time:</strong></td><td style='padding:8px 0'>" + createdDate + "</td></tr>" +
+          "</table>" +
+          "<div style='margin-top:24px;text-align:center'>" +
+            "<a href='https://pandianss.github.io/IOB-Merchant-Request/admin.html' style='background:#1a3a7a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;display:inline-block;font-size:0.88rem'>Open Admin Dashboard ⚙️</a>" +
+          "</div>" +
+        "</div>" +
+        "<div style='background:#f0f4ff;padding:12px 24px;font-size:0.75rem;color:#6b7a99;text-align:center'>" +
+          "IOB Merchant Services Portal • Automated System Notification" +
+        "</div>" +
+      "</div>";
+
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+  } catch(e) {
+    Logger.log("Email error: " + e.toString());
+  }
+}
+
+function sendStatusUpdateNotification(data) {
+  try {
+    var recipient = ADMIN_NOTIFICATION_EMAIL || Session.getActiveUser().getEmail() || EffectiveUser.getEmail();
+    if (!recipient) return;
+
+    var subject = "🔔 Status Update: " + data.merchantName + " ➔ " + data.status;
+    
+    var htmlBody = "" +
+      "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #d0daf0;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08)'>" +
+        "<div style='background:linear-gradient(90deg,#0d2354,#1a3a7a);color:#fff;padding:18px 24px'>" +
+          "<h2 style='margin:0;font-size:1.15rem'>🏦 Indian Overseas Bank</h2>" +
+          "<p style='margin:4px 0 0;font-size:0.85rem;opacity:0.85'>Application / Lead Status Updated</p>" +
+        "</div>" +
+        "<div style='padding:24px;color:#1a2440;line-height:1.5'>" +
+          "<p style='font-size:0.95rem;margin-top:0'>The status of a merchant request has been updated by Admin:</p>" +
+          "<table style='width:100%;border-collapse:collapse;margin:16px 0;font-size:0.88rem'>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99;width:35%'><strong>Merchant Name:</strong></td><td style='padding:8px 0;font-weight:bold'>" + data.merchantName + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>New Status:</strong></td><td style='padding:8px 0;color:#166534;font-weight:bold'>" + data.status + "</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Admin / Vendor Remarks:</strong></td><td style='padding:8px 0;font-style:italic'>" + data.remarks + "</td></tr>" +
+            (data.vpa ? "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Generated VPA:</strong></td><td style='padding:8px 0;color:#1a3a7a;font-weight:bold'>" + data.vpa + "</td></tr>" : "") +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Staff Roll / Name:</strong></td><td style='padding:8px 0'>" + data.staffName + " (" + data.staffRoll + ")</td></tr>" +
+            "<tr><td style='padding:8px 0;color:#6b7a99'><strong>Updated Time:</strong></td><td style='padding:8px 0'>" + data.updatedDate + "</td></tr>" +
+          "</table>" +
+          "<div style='margin-top:24px;text-align:center'>" +
+            "<a href='https://pandianss.github.io/IOB-Merchant-Request/' style='background:#1a3a7a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;display:inline-block;font-size:0.88rem'>View in Portal 🔍</a>" +
+          "</div>" +
+        "</div>" +
+        "<div style='background:#f0f4ff;padding:12px 24px;font-size:0.75rem;color:#6b7a99;text-align:center'>" +
+          "IOB Merchant Services Portal • Automated Status Notification" +
+        "</div>" +
+      "</div>";
+
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+  } catch(e) {
+    Logger.log("Email update error: " + e.toString());
+  }
 }
