@@ -1,0 +1,59 @@
+﻿code,name_en,name_hi,name_ta,is_active,type,district,populationGroup,pincode,size,openDate,headUserId,secondLineUserId
+0174,Theni Allinagaram,थेनी अल्लिनगरम,தேனி அல்லிநகரம்,1,Branch,Theni,SEMI URBAN,625531,LARGE,1969-01-20,48243.0,53148
+0175,Ayakudi,आयकुडी,ஆயக்குடி,1,BRANCH,Dindigul,SEMI URBAN,624613,MEDIUM,1969-01-20,49344.0,55866
+0176,Cumbum,कम्बम,கம்பம்,1,Branch,Theni,SEMI URBAN,625516,LARGE,1969-01-20,55213.0,35749
+0230,Vedasandur,वेदसंदूर,வேடசந்தூர்,1,Branch,Dindigul,SEMI URBAN,624710,LARGE,1970-06-22,57222.0,55949
+0232,Pannaikadu,पन्नैकाडु,பண்ணைக்காடு,1,Branch,Dindigul,RURAL,624210,MEDIUM,1970-06-22,61900.0,
+0237,Sithayamkottai,सितयमकोट्टै,சித்தையங்கோட்டை,1,Branch,Dindigul,SEMI URBAN,624708,MEDIUM,1970-06-29,39086.0,52128
+0243,Pattiveeranpatti,पट्टीवीरनपट्टी,பட்டிவீரன்பட்டி,1,Branch,Dindigul,RURAL,624211,LARGE,1970-08-03,48253.0,60460
+0332,Dindigul Main,डिंडिगुल मेन,திண்டுக்கல் மெயின்,1,Branch,Dindigul,URBAN,624001,LARGE,1972-12-22,50298.0,49094
+0376,Palani,पलानी,பழனி,1,Branch,Dindigul,SEMI URBAN,624601,LARGE,1973-11-30,64925.0,64985
+0883,Rasingapuram,रासिंगपुरम,ராசிங்காபுரம்,1,Branch,Theni,RURAL,625528,LARGE,1982-08-11,64507.0,53083
+0910,Sembatti,सेम्बट्टी,செம்பட்டி,1,Branch,Dindigul,SEMI URBAN,624707,MEDIUM,1980-10-23,39898.0,60484
+0924,Puduchatram,पुदुछत्रम,புதுச்சத்திரம்,1,Branch,Dindigul,SEMI URBAN,624619,MEDIUM,1980-12-26,43448.0,59904
+1001,Urban Test Branch,,,0,,,URBAN,,,,,
+1013,Reddiapatti,रेड्डियापट्टी,ரெட்டியாபட்டி,1,Branch,Dindigul,RURAL,624401,LARGE,1983-09-06,59207.0,a8a0b71c-7c7f-480d-bbb3-bc31fe345a39
+1044,Lakshmipuram,लक्ष्मीपुरम,லட்சுமிபுரம்,1,Branch,Theni,SEMI URBAN,625523,LARGE,1984-04-03,49090.0,48659
+1112,Nagayakottai,नागयकोट्टै,நாயக்கன்கோட்டை,1,Branch,Dindigul,RURAL,624706,MEDIUM,1985-03-27,56009.0,4f9cc1ec-b57e-44d8-a09b-5d2100764d51
+1152,Narikkalpatti,நரிக்கல்பட்டி,நரிக்கல்பட்டி,1,Branch,Dindigul,RURAL,624618,MEDIUM,1987-11-30,56193.0,62813
+1220,Salaiyur,सालयூர்,சாலையூர்,1,Branch,Dindigul,URBAN,624710,LARGE,1989-07-10,59250.0,57437
+1221,Marambadi,மரம்பாடி,மரம்பாடி,1,Branch,Dindigul,RURAL,624709,MEDIUM,1989-07-10,39426.0,94b123b8-aa3a-442a-ab40-6b6e65ebea16
+1258,Oddanchatram,ओट्टनछत्रम,ஒட்டன்சத்திரம்,1,Branch,Dindigul,SEMI URBAN,624619,MEDIUM,1993-03-04,60121.0,55223
+1314,Dindigul Fort,डिंडिगुल फोर्ट,திண்டுக்கல் கோட்டை,1,Branch,Dindigul,URBAN,624001,LARGE,1955-08-24,38296.0,35719
+1316,Palayam,पालयम,பாளையம்,1,Branch,Dindigul,SEMI URBAN,624620,MEDIUM,1981-07-27,55663.0,65272
+1317,N Paraipatti,एन परैपट्टी,ந. பாறைப்பட்டி,1,Branch,Dindigul,RURAL,624005,MEDIUM,1984-06-09,56920.0,35910
+1401,Silukkuwarpatti,सिलुकुवारपट्टी,சிலுக்குவார்பட்டி,1,Branch,Dindigul,SEMI URBAN,624215,LARGE,1989-05-08,35803.0,63840
+1560,Chinnamanur,चिन्नमनூர்,சின்னமனூர்,1,Branch,Theni,SEMI URBAN,625515,LARGE,2003-11-28,55211.0,58162
+1789,Tamaraikulam,तामरैकुलम,தாமரைகுளம்,1,Branch,Theni,SEMI URBAN,625601,LARGE,2007-03-22,58501.0,50665
+1830,Dindigul Collectorate,डिंडिगुल कलेक्ट्रेट,திண்டுக்கல் மாவட்ட ஆட்சியர் அலுவலகம்,1,Branch,Dindigul,URBAN,624004,LARGE,2007-08-27,52411.0,53722
+1896,Theni Medical College,थेनी मेडिकल कॉलेज,தேனி மருத்துவக் கல்லூரி,1,Branch,Theni,SEMI URBAN,625513,LARGE,2008-03-05,55194.0,40724
+1919,Uthamapalayam,उथ्तमपालयम,உத்தமபாளையம்,1,Branch,Theni,SEMI URBAN,625533,LARGE,2008-06-27,36648.0,38831
+1931,Periyakulam,पेरियकुलम,பெரியகுளம்,1,Branch,Theni,SEMI URBAN,625601,MEDIUM,2008-08-11,39356.0,50550
+2098,RM Colony,आरएम कॉलोनी,ஆர்.எம். காலனி,1,Branch,Dindigul,URBAN,624001,LARGE,1994-03-23,58685.0,53699
+2286,Batlagundu,वतलगुंडु,வத்தலகுண்டு,1,Branch,Dindigul,SEMI URBAN,624202,LARGE,2011-02-10,60198.0,60408
+2287,Andipatti,आंडीपट्टी,ஆண்டிபட்டி,1,Branch,Theni,SEMI URBAN,625512,MEDIUM,2011-02-10,64724.0,53493
+2288,Natham,नथम,நத்தம்,1,Branch,Dindigul,SEMI URBAN,624401,LARGE,2011-02-10,59030.0,53259
+2461,Vadamadurai,वडमदुरै,வடமதுரை,1,Branch,Dindigul,SEMI URBAN,624802,LARGE,2011-07-13,60154.0,81481310-911e-4e5b-b51a-593fa74e1914
+2464,Nilakottai,निलकोट्टै,நிலக்கோட்டை,1,Branch,Dindigul,SEMI URBAN,624208,LARGE,2011-06-29,49301.0,53899
+2574,Bodinayakanur,बोडिनायक्कனூர்,போடிநாயக்கனூர்,1,Branch,Theni,SEMI URBAN,625513,LARGE,2011-11-04,56108.0,56825
+2685,Silapadi,सीलपाडी,சீலப்பாடி,1,Branch,Dindigul,SEMI URBAN,624005,LARGE,2012-01-22,49077.0,42af782e-e8ec-4d78-9939-a0153976c4e7
+2686,Chinnalapatti,चिन्नाळपट्टी,சின்னாளப்பட்டி,1,Branch,Dindigul,SEMI URBAN,624301,MEDIUM,2012-01-22,55755.0,63520
+2702,KK Patti,केके पट्टी,கே.கே. பட்டி,1,Branch,Theni,SEMI URBAN,625521,MEDIUM,2012-01-30,51529.0,52251
+2703,PC Patti,पीसी पट्टी,பி.சி. பட்டி,1,Branch,Theni,SEMI URBAN,625531,LARGE,2012-01-30,50392.0,1148a098-87df-468b-a3fd-38c9e8e2739c
+2704,T Subbulapuram,टी सुब्बुलापुरम,டி. சுப்புலாபுரம்,1,Branch,Theni,SEMI URBAN,625536,MEDIUM,2012-01-30,63831.0,61599
+2705,V Gopalpatti,वी गोपालपट्टी,வி. கோபால்பட்டி,1,Branch,Dindigul,SEMI URBAN,624308,LARGE,2012-02-06,49217.0,61934
+2706,K Reddiarchatram,के रेड्डியார்छत्रम,கே. ரெட்டியார்சத்திரம்,1,Branch,Dindigul,RURAL,624622,MEDIUM,2012-02-06,49124.0,63679
+3164,Sendurai,सेंतुरै,செந்துறை,1,Branch,Dindigul,SEMI URBAN,624403,MEDIUM,2013-04-07,38517.0,63672
+3165,Ponnagaram,पोन्नगरम,பொன்னகரம்,1,Branch,Dindigul,SEMI URBAN,624003,MEDIUM,2013-04-12,62649.0,59820
+3166,Thadikombu,ताडिकोम्बु,தாடிக்கொம்பு,1,Branch,Dindigul,SEMI URBAN,624709,MEDIUM,2013-04-12,54532.0,57546
+3346,Vangamanuthu,वांगमानूथू,வாங்கமானூத்து,1,Branch,Dindigul,RURAL,624306,MEDIUM,2013-08-03,63142.0,132a96e2-95f1-4a18-8d1b-3c47c481706d
+3347,Anaipatti,अणैपट्टी,அணைப்பட்டி,1,Branch,Dindigul,RURAL,624219,MEDIUM,2013-08-03,57320.0,38535
+3436,Kodaikanal,कोडैकानल,கொடைக்கானல்,1,Branch,Dindigul,SEMI URBAN,624101,MEDIUM,2013-12-12,61683.0,51984
+3437,Dharumathupatti,धरुमथुपट्टी,தருமத்துப்பட்டி,1,Branch,Dindigul,SEMI URBAN,624705,MEDIUM,2014-02-08,50059.0,59912
+3548,Boothipuram,बूथीपुरम,பூதிபுரம்,1,Branch,Theni,SEMI URBAN,625531,MEDIUM,2014-02-06,63471.0,61628
+3549,Ambilikai,அम्बिळिकै,அம்பிளிகை,1,Branch,Dindigul,RURAL,624612,MEDIUM,2014-02-08,64574.0,55401
+3920,Balakrishnapuram,बालकृष्णपुरम,பாலகிருஷ்ணாபுரம்,1,Branch,Dindigul,SEMI URBAN,624005,SMALL,1900-01-00,55447.0,
+3933,"Regional Office, Dindigul","क्षेत्रीय कार्यालय, दिण्डुक्कल","மண்டல அலுவலகம், திண்டுக்கல்",1,REGIONAL OFFICE,Dindigul,SEMI URBAN,624001,MEDIUM,nan,36614.0,36937
+4069,"Loan Processing Centre, Dindigul","ऋृण प्रसंस्करण केंद्र, दिण्डुक्कल","கடன் செயலாக்க மையம், திண்டுக்கல்",1,BRANCH,Dindigul,URBAN,624001,nan,nan,,
+4153,Kosavapatti,कोसवपट्टी,கொசவபட்டி,1,BRANCH,Dindigul,RURAL,,SMALL,2026-03-25,39775.0,55777
+911,Kalwarpatti,कलवारपट्टी,கல்வார்பட்டி,1,Branch,Dindigul,RURAL,624711,MEDIUM,1980-10-27,62536.0,45529

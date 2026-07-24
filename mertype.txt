@@ -1,0 +1,4 @@
+<select data-val="true" data-val-number="The field MerchantTypeID must be a number." id="ddlMerchantType" name="MerchantTypeID" class="valid"><option value="0">-- Select --</option>
+<option value="1">Small merchant - turnover upto ₹ 20 lakh during the previous financial year </option>
+<option value="2">Large merchant - with turnover above ₹ 20 lakh during the previous financial year</option>
+</select>

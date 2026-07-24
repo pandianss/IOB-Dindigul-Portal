@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOB Merchant Services - Admin Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+  :root {
+    --iob-blue: #1a3a7a;
+    --iob-blue-light: #2550a8;
+    --iob-blue-dark: #0d2354;
+    --iob-gold: #e8a020;
+    --bg: #f0f4ff;
+    --card: #ffffff;
+    --border: #d0daf0;
+    --text: #1a2440;
+    --muted: #6b7a99;
+    --success: #16a34a;
+    --warning: #d97706;
+    --error: #dc2626;
+    --shadow: 0 4px 24px rgba(26,58,122,0.10);
+    --shadow-lg: 0 8px 40px rgba(26,58,122,0.16);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── ADMIN AUTH OVERLAY ── */
+  #adminAuthOverlay {
+    position: fixed; inset: 0; background: rgba(13,35,84,0.85);
+    backdrop-filter: blur(8px); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .auth-modal-card {
+    background: var(--card); border-radius: 20px; padding: 32px;
+    max-width: 400px; width: 100%; box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border); text-align: center;
+  }
+  .auth-modal-card h2 { color: var(--iob-blue); font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+  .auth-modal-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+  .auth-modal-card input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-size: 0.95rem; font-family: inherit;
+    outline: none; background: #f8faff; margin-bottom: 16px; text-align: center;
+  }
+  .auth-modal-card input:focus { border-color: var(--iob-blue-light); background: #fff; }
+  .auth-modal-card button {
+    width: 100%; background: linear-gradient(135deg, var(--iob-blue) 0%, var(--iob-blue-light) 100%);
+    color: #fff; border: none; border-radius: 10px; padding: 12px;
+    font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .auth-modal-card button:hover { opacity: 0.95; transform: translateY(-1px); }
+  .auth-error { font-size: 0.78rem; color: var(--error); font-weight: 600; margin-top: 10px; display: none; }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(90deg, var(--iob-blue-dark) 0%, var(--iob-blue) 100%);
+    color: #fff; padding: 0 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 70px; box-shadow: 0 2px 16px rgba(13,35,84,0.25);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo { height: 42px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+  .header-title { font-size: 1.05rem; font-weight: 700; opacity: 0.95; letter-spacing: 0.01em; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-lottie { width: 44px; height: 44px; }
+  .nav-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
+    font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.3); }
+
+  /* ── MAIN CONTAINER ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 28px 16px 64px; }
+
+  /* ── STATS CARDS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border-radius: 14px; padding: 20px;
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .stat-card .info h4 { font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .info .num { font-size: 1.8rem; font-weight: 800; color: var(--iob-blue); margin-top: 4px; }
+  .stat-card .icon-box {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+  }
+  .stat-card.total .icon-box { background: #eef2ff; color: var(--iob-blue); }
+  .stat-card.pending .icon-box { background: #fef3c7; color: var(--warning); }
+  .stat-card.vendor .icon-box { background: #e0f2fe; color: #0284c7; }
+  .stat-card.completed .icon-box { background: #dcfce7; color: var(--success); }
+
+  /* ── TAB & CONTROL BAR ── */
+  .control-bar {
+    background: var(--card); border-radius: 16px; padding: 18px 24px;
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+    margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .tabs { display: flex; gap: 8px; background: var(--bg); padding: 4px; border-radius: 10px; }
+  .tab-btn {
+    border: none; background: transparent; padding: 8px 18px;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; color: var(--muted); transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--card); color: var(--iob-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  .search-box { position: relative; flex: 1; max-width: 360px; }
+  .search-box input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 99px;
+    padding: 8px 12px 8px 36px; font-size: 0.85rem; font-family: inherit;
+    outline: none; background: #f8faff;
+  }
+  .search-box input:focus { border-color: var(--iob-blue-light); background: #fff; }
+  .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: var(--card); border-radius: 16px;
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .table-responsive { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+  th {
+    background: #f8faff; color: var(--muted); font-weight: 700;
+    text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 14px 16px; border-bottom: 1px solid #f0f4ff; color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fbff; }
+
+  /* ── BADGES ── */
+  .badge-type {
+    display: inline-block; padding: 3px 8px; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  }
+  .badge-type.qr { background: #e0e7ff; color: #3730a3; }
+  .badge-type.sb { background: #fae8ff; color: #86198f; }
+  .badge-type.lead { background: #fef3c7; color: #92400e; }
+
+  .badge-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;
+  }
+  .badge-status.pending { background: #fef3c7; color: #92400e; }
+  .badge-status.vendor { background: #e0f2fe; color: #0369a1; }
+  .badge-status.completed { background: #dcfce7; color: #166534; }
+  .badge-status.rejected { background: #fee2e2; color: #991b1b; }
+
+  /* ── BUTTONS ── */
+  .btn-action {
+    background: var(--iob-blue); color: #fff; border: none;
+    border-radius: 8px; padding: 7px 14px; font-size: 0.78rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-action:hover { background: var(--iob-blue-light); }
+  .btn-reset-pass {
+    background: #fff5f5; color: var(--error); border: 1px solid #fecaca;
+    border-radius: 8px; padding: 6px 12px; font-size: 0.78rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-reset-pass:hover { background: #fee2e2; }
+
+  .btn-pdf {
+    background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0;
+    border-radius: 8px; padding: 6px 12px; font-size: 0.78rem;
+    font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+    transition: all 0.2s;
+  }
+  .btn-pdf:hover { background: #dcfce7; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(13,35,84,0.4);
+    backdrop-filter: blur(4px); z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal-card {
+    background: var(--card); border-radius: 20px; max-width: 540px; width: 100%;
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border); overflow: hidden;
+    transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .modal-overlay.open .modal-card { transform: translateY(0); }
+  .modal-header {
+    background: linear-gradient(90deg, var(--iob-blue-dark) 0%, var(--iob-blue) 100%);
+    color: #fff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header h3 { font-size: 1.05rem; font-weight: 700; }
+  .modal-close { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; opacity: 0.8; }
+  .modal-close:hover { opacity: 1; }
+  .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+  .app-summary {
+    background: #f8faff; border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; font-size: 0.82rem; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .app-summary div { line-height: 1.4; }
+  .app-summary strong { color: var(--iob-blue); font-weight: 700; }
+
+  .field-modal { display: flex; flex-direction: column; gap: 6px; }
+  .field-modal label { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .field-modal input, .field-modal select {
+    border: 1.5px solid var(--border); border-radius: 9px; padding: 9px 12px;
+    font-size: 0.88rem; font-family: inherit; outline: none; background: #f8faff;
+  }
+
+  .file-dropzone {
+    border: 2px dashed var(--iob-blue-light); border-radius: 12px;
+    padding: 20px; text-align: center; background: #f0f4ff;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .file-dropzone:hover { background: #e5edff; border-color: var(--iob-blue); }
+  .file-dropzone .icon { font-size: 1.8rem; margin-bottom: 4px; }
+  .file-dropzone p { font-size: 0.82rem; color: var(--muted); }
+  .file-dropzone strong { color: var(--iob-blue); }
+
+  .sb-auto-notice {
+    background: #eff6ff; border: 1px solid #93c5fd; border-radius: 9px;
+    padding: 10px 14px; font-size: 0.78rem; color: #1e40af; display: flex; gap: 8px; align-items: center;
+  }
+
+  .modal-footer { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
+  .btn-cancel {
+    background: none; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--muted);
+  }
+  .btn-confirm {
+    background: linear-gradient(135deg, var(--iob-blue) 0%, var(--iob-blue-light) 100%);
+    color: #fff; border: none; border-radius: 10px; padding: 10px 24px;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--iob-blue-dark); color: #fff; padding: 12px 24px; border-radius: 10px;
+    font-size: 0.88rem; font-weight: 600; box-shadow: var(--shadow-lg);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; text-align: center;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { background: var(--success); }
+  #toast.error { background: var(--error); }
+
+  .hidden { display: none !important; }
+  .empty-state { padding: 48px 16px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .control-bar { flex-direction: column; align-items: stretch; }
+    .search-box { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ADMIN AUTH MODAL OVERLAY -->
+<div id="adminAuthOverlay">
+  <div class="auth-modal-card">
+    <div style="font-size:2.5rem;margin-bottom:8px">🔐</div>
+    <h2>Admin Dashboard Access</h2>
+    <p>Please enter the administrator password to proceed.</p>
+    <input type="password" id="adminPassInput" placeholder="Enter Password" onkeyup="if(event.key==='Enter') verifyAdminPass()">
+    <button onclick="verifyAdminPass()">Unlock Dashboard</button>
+    <div class="auth-error" id="adminAuthError">❌ Incorrect password. Access denied.</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="2026logo_min.svg" alt="IOB Logo" class="header-logo">
+    <span class="header-title">Merchant Applications & Leads Admin</span>
+  </div>
+  <div class="header-right">
+    <a href="index.html" class="nav-btn">📝 Merchant Portal</a>
+    <button class="nav-btn" onclick="logoutAdmin()">🔒 Logout</button>
+    <div id="header-lottie" class="header-lottie"></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="info">
+        <h4>Total Submissions</h4>
+        <div class="num" id="stat-total">0</div>
+      </div>
+      <div class="icon-box">📋</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="info">
+        <h4>Pending Requests</h4>
+        <div class="num" id="stat-pending">0</div>
+      </div>
+      <div class="icon-box">⏳</div>
+    </div>
+    <div class="stat-card vendor">
+      <div class="info">
+        <h4>With Vendor</h4>
+        <div class="num" id="stat-vendor">0</div>
+      </div>
+      <div class="icon-box">🚚</div>
+    </div>
+    <div class="stat-card completed">
+      <div class="info">
+        <h4>Onboarded / Done</h4>
+        <div class="num" id="stat-completed">0</div>
+      </div>
+      <div class="icon-box">✅</div>
+    </div>
+  </div>
+
+  <!-- CONTROL BAR -->
+  <div class="control-bar">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-pending" onclick="switchTab('pending')">⏳ Pending Requests</button>
+      <button class="tab-btn" id="tab-vendor" onclick="switchTab('vendor')">🚚 Forwarded to Vendor</button>
+      <button class="tab-btn" id="tab-completed" onclick="switchTab('completed')">✅ Onboarded / Done</button>
+      <button class="tab-btn" id="tab-staff" onclick="switchTab('staff')">🔑 Staff Password Reset</button>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search Merchant, VPA, Roll No, SOL..." oninput="filterTable()">
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table id="appTable">
+        <thead>
+          <tr id="tableHeaders">
+            <!-- Dynamic Headers -->
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="7" class="empty-state">Loading application data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- MARK COMPLETED / UPDATE STATUS MODAL -->
+<div class="modal-overlay" id="completionModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">Update Status & Progress</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="app-summary" id="modalAppSummary">
+        <!-- Filled dynamically -->
+      </div>
+
+      <div class="field-modal">
+        <label>Select Status <span style="color:var(--error)">*</span></label>
+        <select id="modalStatusSelect" onchange="onModalStatusChange(this.value)">
+          <option value="Completed">Completed / Merchant Onboarded</option>
+          <option value="Forwarded to Vendor">Forwarded to Vendor</option>
+          <option value="Pending Review">Pending Review</option>
+          <option value="Rejected / Closed">Rejected / Closed</option>
+        </select>
+      </div>
+
+      <!-- VPA CONTAINER IS STRICTLY FOR QR CODES ONLY -->
+      <div class="field-modal hidden" id="vpaFieldContainer">
+        <label>Generated Merchant VPA <span style="color:var(--error)">*</span></label>
+        <input type="text" id="modalVpaInput" placeholder="e.g. merchantname@iob">
+      </div>
+
+      <div class="field-modal" id="remarksContainer">
+        <label id="remarksLabel">Vendor / Admin Remarks</label>
+        <input type="text" id="modalRemarksInput" placeholder="e.g. Sent to POS Vendor / Ref No #1042">
+      </div>
+
+      <div class="sb-auto-notice hidden" id="modalSbNotice">
+        <span>🔊 <strong>Auto-Soundbox Creation:</strong> Soundbox application will automatically be generated in <strong>Soundbox_Template</strong> using this VPA upon completion.</span>
+      </div>
+
+      <div id="pdfUploadContainer">
+        <label style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px">
+          Upload PDF Document / Confirmation (Optional)
+        </label>
+        <div class="file-dropzone" onclick="document.getElementById('pdfFileInput').click()">
+          <div class="icon">📄</div>
+          <p><strong id="fileNameDisplay">Click to choose PDF file</strong></p>
+          <p style="font-size:0.72rem;margin-top:4px">Upload QR Code PDF or Lead Approval document</p>
+          <input type="file" id="pdfFileInput" accept="application/pdf" style="display:none" onchange="onFileSelected(this)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" id="btnConfirmComplete" onclick="confirmCompletion()">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// CONFIGURATION
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILWqzxB6jb9RopXU_vZhHbusPdbrj70FcQx6vGcyrAQTTy_gW4goL/exec";
+const LOTTIE_DATA = {"v": "5.9.0", "fr": 60, "ip": 0, "op": 210, "w": 512, "h": 512, "nm": "IOB Logo \u2014 Sacred Geometry Bloom", "ddd": 0, "assets": [], "layers": [{"ddd": 0, "ind": 1, "ty": 4, "nm": "Ripple Aura", "sr": 1, "ks": {"o": {"a": 0, "k": 100}, "r": {"a": 0, "k": 0}, "p": {"a": 0, "k": [256, 256, 0]}, "a": {"a": 0, "k": [0, 0, 0]}, "s": {"a": 0, "k": [100, 100, 100]}}, "ip": 0, "op": 210, "shapes": [{"ty": "el", "nm": "Aura Circle", "hd": false, "d": 1, "s": {"a": 1, "k": [{"t": 90, "s": [0, 0], "o": {"x": [0.1], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 210, "s": [680, 680]}]}, "p": {"a": 0, "k": [0, 0]}}, {"ty": "st", "nm": "Aura Stroke", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 1, "k": [{"t": 90, "s": [50], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 162, "s": [15], "o": {"x": [0.4], "y": [0.0]}, "i": {"x": [0.6], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "w": {"a": 0, "k": 1.5}, "lc": 2, "lj": 2}]}, {"ddd": 0, "ind": 2, "ty": 4, "nm": "Top Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 0, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 14, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 0, "s": [10], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [0.8], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 55, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 0, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 32, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 40, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 55, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 7.822], [137.6, 126.578], [152.533, 141.156], [256.0, 37.689], [359.822, 141.511], [374.4, 126.578]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 52.267], [248.533, 59.733], [159.644, 148.622], [174.578, 163.2], [256.0, 81.778], [337.422, 163.2], [352.356, 148.267]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 96.711], [248.533, 104.178], [182.044, 170.667], [196.978, 185.6], [256.0, 126.222], [315.378, 185.6], [330.311, 170.667]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 3, "ty": 4, "nm": "Left Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 8, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 8, "s": [-14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [-1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 63, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 8, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 40, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 63, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 133.689], [122.667, 141.156], [11.733, 252.444], [26.311, 267.022], [130.133, 163.556], [233.956, 267.022], [248.533, 252.444]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 178.133], [122.667, 185.6], [33.778, 274.489], [48.711, 289.422], [130.133, 208.0], [211.556, 289.422], [226.489, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 222.578], [122.667, 230.044], [56.178, 296.533], [70.756, 311.467], [130.133, 252.089], [189.156, 311.467], [204.089, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 259.556], [4.267, 289.067], [130.133, 415.289], [250.667, 294.756], [250.667, 264.889], [241.067, 274.489], [130.133, 385.422], [93.156, 348.444], [19.2, 274.489]], "i": [[0.0, 0.0], [0.0, -9.6], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 9.956], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 304.0], [4.267, 333.511], [130.133, 459.378], [250.667, 338.844], [250.667, 309.333], [130.133, 429.867]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 348.444], [4.267, 377.956], [130.133, 503.822], [250.667, 383.289], [250.667, 353.778], [130.133, 474.311]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 4, "ty": 4, "nm": "Right Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 16, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 16, "s": [14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 71, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 16, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 48, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 64, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 71, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 133.689], [374.4, 141.156], [263.467, 252.444], [278.4, 267.022], [381.867, 163.556], [485.689, 267.022], [500.622, 252.089]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 178.133], [285.511, 274.489], [300.444, 289.422], [381.867, 208.0], [463.289, 289.422], [478.222, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 222.578], [374.4, 230.044], [307.911, 296.533], [322.844, 311.467], [381.867, 252.089], [441.244, 311.467], [455.822, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 259.556], [426.311, 340.978], [381.867, 385.422], [337.422, 340.978], [270.933, 274.489], [261.333, 264.889], [261.333, 294.4], [381.867, 414.933], [507.733, 289.067]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 304.0], [381.867, 429.867], [261.333, 309.333], [261.333, 338.844], [381.867, 459.378], [507.733, 333.511]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 348.444], [381.867, 474.311], [261.333, 353.778], [261.333, 383.289], [381.867, 503.822], [507.733, 377.956]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}], "markers": [{"tm": 90, "cm": "idle_loop_start", "dr": 120}], "meta": {"g": "Antigravity IOB Lottie Generator v1", "a": "Indian Overseas Bank", "d": "Sacred Geometry Bloom \u2014 one-shot intro (0-90f) + idle loop (90-210f)", "loop_from": 90, "loop_to": 210, "fps": 60, "player_note": "Play once (frames 0-210). On complete, playSegments([90,210], true) with loop=true for the infinite idle breathing + ripple."}};
+const STAFF_LIST = {"48243": {"name": "DILEEP G", "sol": "0174", "designation": "CHIEF MANAGER - I line"}, "59529": {"name": "JITH S", "sol": "0174", "designation": "MANAGER - II line"}, "61628": {"name": "LAKSHMI M", "sol": "0174", "designation": "ASST MANAGER"}, "61755": {"name": "RUBINI R", "sol": "0174", "designation": "ASST MANAGER"}, "23277": {"name": "M PUSHPARANI", "sol": "0174", "designation": "PART TIME HOUSE KEEPER / PTHK"}, "47100": {"name": "RENGA RAJA PANDI J", "sol": "0174", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49344": {"name": "DIVYA C B", "sol": "0175", "designation": "MANAGER - I line"}, "55866": {"name": "RESHMA A", "sol": "0175", "designation": "ASST MANAGER - II line"}, "66313": {"name": "GANAPATHISUBRAMANIAM A L", "sol": "0175", "designation": "ASST MANAGER(PROB)"}, "23086": {"name": "PACKIAM M", "sol": "0175", "designation": "OFFICE ASSISTANT"}, "53068": {"name": "MAHALAKSHMI", "sol": "0175", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61981": {"name": "GAUTAM K", "sol": "0175", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "55213": {"name": "BASIL BABY", "sol": "0176", "designation": "SENIOR MANAGER - I line"}, "51529": {"name": "NIRANJAN MISHRA", "sol": "0176", "designation": "MANAGER - II line"}, "39428": {"name": "CHRISTY MARY GEORGE", "sol": "0176", "designation": "ASST MANAGER"}, "64236": {"name": "MYTHILI GUNASEKARAN", "sol": "0176", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "67989": {"name": "SUBIKSHAMUGI S", "sol": "0176", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "57222": {"name": "SUBADEVI M", "sol": "0230", "designation": "SENIOR MANAGER - I line"}, "59189": {"name": "JIBY SIMON", "sol": "0230", "designation": "ASST MANAGER"}, "55949": {"name": "NANDHINI B", "sol": "0230", "designation": "ASST MANAGER - II line"}, "66163": {"name": "ANJU K NAIR", "sol": "0230", "designation": "ASST MANAGER(PROB)"}, "39629": {"name": "SATHISH KUMAR K", "sol": "0230", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "45284": {"name": "MUTHU N", "sol": "0230", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "23035": {"name": "JEYALAKSHMI M", "sol": "0232", "designation": "OFFICE ASSISTANT"}, "61632": {"name": "THIRUMOORTHI K", "sol": "0232", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62729": {"name": "MARUTHU PANDI P", "sol": "0232", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61900": {"name": "DHANASEKAR", "sol": "0232", "designation": "MANAGER - I line"}, "45859": {"name": "SURESH L", "sol": "0232", "designation": "ASST MANAGER"}, "57377": {"name": "A RAMAKRISHNAN", "sol": "0237", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63789": {"name": "BALAGANESH MP", "sol": "0237", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39086": {"name": "VINOD C P", "sol": "0237", "designation": "MANAGER - I line"}, "52128": {"name": "EZHIL SHOBANA M", "sol": "0237", "designation": "ASST MANAGER - II line"}, "22917": {"name": "MARIAPPAN K A", "sol": "0243", "designation": "OFFICE ASSISTANT"}, "29230": {"name": "SHANMUGANANDAN S", "sol": "0243", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "66825": {"name": "KAVI PRIYA C", "sol": "0243", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "48253": {"name": "SUDEM BRAHMA", "sol": "0243", "designation": "SENIOR MANAGER - I line"}, "60460": {"name": "MUTHULATHA G", "sol": "0243", "designation": "MANAGER - II line"}, "67064": {"name": "ARINATH K L", "sol": "0243", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "50298": {"name": "DINESH A", "sol": "0332", "designation": "CHIEF MANAGER - I line"}, "49094": {"name": "PRIYADHARSHINI R", "sol": "0332", "designation": "MANAGER - II line"}, "45563": {"name": "SYED DEEN IBRAHIM", "sol": "0332", "designation": "ASST MANAGER"}, "65380": {"name": "ABINAYA D B", "sol": "0332", "designation": "ASST MANAGER"}, "66897": {"name": "JOHN PAUL P", "sol": "0332", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22919": {"name": "KANAKARAJ M", "sol": "0332", "designation": "OFFICE ASSISTANT"}, "61631": {"name": "SATHISH KUMAR N", "sol": "0332", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61736": {"name": "GAJAPATHI M", "sol": "0332", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64925": {"name": "PRABHAHARAN R", "sol": "0376", "designation": "SENIOR MANAGER - I line"}, "64985": {"name": "NARMADHA K", "sol": "0376", "designation": "ASST MANAGER - II line"}, "60756": {"name": "JUBIN MS", "sol": "0376", "designation": "ASST MANAGER"}, "22017": {"name": "SUBRAMANI K", "sol": "0376", "designation": "OFFICE ASSISTANT"}, "61979": {"name": "MARUTHAMUTHU P", "sol": "0376", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63762": {"name": "RAJAKUMAR R", "sol": "0376", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47159": {"name": "SATHISH KUMAR P", "sol": "0376", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "64507": {"name": "M GOPINATHAN", "sol": "0883", "designation": "MANAGER - I line"}, "53083": {"name": "SARANYA D", "sol": "0883", "designation": "ASST MANAGER - II line"}, "67729": {"name": "JERSHA SOUNDAR S A", "sol": "0883", "designation": "ASST MANAGER(PROB)"}, "63766": {"name": "NANTHINI DEVI K", "sol": "0883", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47243": {"name": "SANTHANA KUMAR N", "sol": "0910", "designation": "OFFICE ASSISTANT"}, "65452": {"name": "SUBHA SHREE R S", "sol": "0910", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66002": {"name": "PALANIAMMAL V", "sol": "0910", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "39898": {"name": "RAHINI R", "sol": "0910", "designation": "MANAGER - I line"}, "60484": {"name": "RAMJANSI R", "sol": "0910", "designation": "MANAGER - II line"}, "66437": {"name": "CHINMAY BISWAS", "sol": "0910", "designation": "ASST MANAGER(PROB)"}, "62536": {"name": "DIPIN P D", "sol": "0911", "designation": "MANAGER - I line"}, "66470": {"name": "KARUNYA VARDANA S", "sol": "0911", "designation": "ASST MANAGER(PROB)"}, "45398": {"name": "MUTHUKUMAR S", "sol": "0911", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "66066": {"name": "PREETHI A", "sol": "0911", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61518": {"name": "AROCKIYADOSS S", "sol": "0924", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62806": {"name": "KANIMOZHI A", "sol": "0924", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "43448": {"name": "PARVATHI MENON", "sol": "0924", "designation": "MANAGER - I line"}, "59904": {"name": "JAYA VAISHNAVI K", "sol": "0924", "designation": "MANAGER - II line"}, "66444": {"name": "PARVATHI B", "sol": "0924", "designation": "ASST MANAGER(PROB)"}, "66977": {"name": "EUKTHA SREE MUHI B", "sol": "0924", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "56082": {"name": "ASHWINI V", "sol": "1013", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61644": {"name": "BEULAH JOY N", "sol": "1013", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59207": {"name": "ROSHAN ZAMEER SHAIK AHAMED", "sol": "1013", "designation": "MANAGER - I line"}, "53259": {"name": "MAHENDRAN M", "sol": "1013", "designation": "ASST MANAGER - II line"}, "67471": {"name": "BHAVESH SAINI", "sol": "1013", "designation": "ASST MANAGER (PROB - RURAL DEV OFFICER)"}, "61733": {"name": "PRABHU A", "sol": "1044", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62823": {"name": "N RAJESKUMAR", "sol": "1044", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49090": {"name": "VAIDHEESVARI P", "sol": "1044", "designation": "SENIOR MANAGER - I line"}, "48659": {"name": "JAMES SEBASTIN", "sol": "1044", "designation": "ASST MANAGER - II line"}, "67716": {"name": "ARADHYA MISHRA", "sol": "1044", "designation": "ASST MANAGER(PROB)"}, "56009": {"name": "KARTHIKKUMAR P", "sol": "1112", "designation": "ASST MANAGER -I line"}, "61987": {"name": "M GUNASEKARAN", "sol": "1112", "designation": "ASST MANAGER - II line"}, "65200": {"name": "POOMANI V", "sol": "1112", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "46933": {"name": "SARAVANAMOORTHY S", "sol": "1112", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38612": {"name": "MANOJKUMAR P", "sol": "1152", "designation": "MANAGER"}, "56193": {"name": "PRABHU R", "sol": "1152", "designation": "MANAGER - I line"}, "62813": {"name": "SUJITHRA", "sol": "1152", "designation": "ASST MANAGER - II line"}, "37054": {"name": "RAJA VETRICHELVAN G", "sol": "1152", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "45554": {"name": "MURUGESAN P", "sol": "1152", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "22923": {"name": "CHANDRA T", "sol": "1220", "designation": "OFFICE ASSISTANT"}, "43916": {"name": "THANDAPANI P", "sol": "1220", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59250": {"name": "ABISHEK NAYAGAM S", "sol": "1220", "designation": "MANAGER - I line"}, "57437": {"name": "SANJEEV KUMAR", "sol": "1220", "designation": "ASST MANAGER - II line"}, "67016": {"name": "KAVINESH R", "sol": "1220", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "67737": {"name": "ABIRAMI ARULPRIYA", "sol": "1220", "designation": "ASST MANAGER(PROB)"}, "45408": {"name": "KALAIVANAN A", "sol": "1221", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39426": {"name": "GIGU GEORGE", "sol": "1221", "designation": "MANAGER - I line"}, "45529": {"name": "RAVI S", "sol": "1221", "designation": "ASST MANAGER - II line"}, "67840": {"name": "KAMALADHARANI B", "sol": "1221", "designation": "ASST MANAGER(PROB)"}, "60121": {"name": "JEENA K P", "sol": "1258", "designation": "MANAGER - I line"}, "55223": {"name": "JAYANT SINGH RATHORE", "sol": "1258", "designation": "MANAGER - II line"}, "59912": {"name": "RAVIKKUMAR S", "sol": "1258", "designation": "ASST MANAGER (RURAL CR & DEV)"}, "61991": {"name": "PERUMALAKKAL L", "sol": "1258", "designation": "ASST MANAGER"}, "45279": {"name": "SIVARAMAN R", "sol": "1258", "designation": "HEAD MESSENGER IN IOB"}, "46353": {"name": "PANDIAN SUDHAKAR", "sol": "1258", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38296": {"name": "RUPESH KUMAR", "sol": "1314", "designation": "CHIEF MANAGER - I line"}, "35719": {"name": "JOSEPH A", "sol": "1314", "designation": "SENIOR MANAGER - II line"}, "52567": {"name": "JISHA M R", "sol": "1314", "designation": "ASST MANAGER"}, "67041": {"name": "YOGAPRIYA S", "sol": "1314", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22931": {"name": "PETCHIAMMAL S", "sol": "1314", "designation": "OFFICE ASSISTANT"}, "53890": {"name": "GOMATHI S", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "21111": {"name": "THENAPPAN M", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "65211": {"name": "P ANANTHI", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55663": {"name": "KAVIPRIYAA", "sol": "1316", "designation": "SENIOR MANAGER - II line"}, "62887": {"name": "RAJBIR SINGH", "sol": "1316", "designation": "MANAGER - I line"}, "67021": {"name": "ISHWARYA R", "sol": "1316", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "65450": {"name": "GOBIKRISHNAN T", "sol": "1316", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66065": {"name": "BAVITHRA A", "sol": "1316", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "56920": {"name": "CHITHRA S S", "sol": "1317", "designation": "MANAGER - I line"}, "53971": {"name": "JAIGANESH", "sol": "1317", "designation": "ASST MANAGER - II line"}, "67806": {"name": "AMUTHA N", "sol": "1317", "designation": "ASST MANAGER(PROB)"}, "56062": {"name": "SAIMON AMBUROSE", "sol": "1317", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "35803": {"name": "RAJKANNAN P", "sol": "1401", "designation": "MANAGER - I line"}, "63840": {"name": "SENTHIL KUMAR M", "sol": "1401", "designation": "ASST MANAGER - II line"}, "45530": {"name": "KUMARESAN K V", "sol": "1401", "designation": "HEAD MESSENGER IN IOB"}, "53043": {"name": "BALAMURUGAN D", "sol": "1401", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61627": {"name": "G MURUGESWARI", "sol": "1401", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55211": {"name": "AJEESH G T", "sol": "1560", "designation": "SENIOR MANAGER - I line"}, "58162": {"name": "MANIKANDAN M", "sol": "1560", "designation": "ASST MANAGER - II line"}, "66956": {"name": "RUBINI M", "sol": "1560", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22837": {"name": "VENNIMUTHU M", "sol": "1560", "designation": "OFFICE ASSISTANT"}, "45169": {"name": "JAYAPRAKASH M", "sol": "1560", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55601": {"name": "PUNITHA", "sol": "1560", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66824": {"name": "SANGEETHA", "sol": "1560", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "58501": {"name": "DILIP SELVAKUMAR R", "sol": "1789", "designation": "MANAGER - I line"}, "50665": {"name": "KANDEEBAN S", "sol": "1789", "designation": "ASST MANAGER - II line"}, "22817": {"name": "KATHIRESAN R", "sol": "1789", "designation": "OFFICE ASSISTANT"}, "54648": {"name": "NATARAJAN P", "sol": "1789", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61722": {"name": "MEENA A", "sol": "1789", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "52411": {"name": "VINEETH N", "sol": "1830", "designation": "MANAGER - I line"}, "53722": {"name": "DAISY OMANA S", "sol": "1830", "designation": "ASST MANAGER - II line"}, "67834": {"name": "FATHIMA NILOOFAR", "sol": "1830", "designation": "ASST MANAGER(PROB)"}, "41853": {"name": "MUTHUCHAMY D", "sol": "1830", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "56073": {"name": "BHARATHI V", "sol": "1830", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "40724": {"name": "SARAVANA KUMAR T", "sol": "1896", "designation": "MANAGER - II line"}, "55194": {"name": "MANOJ KUMAR", "sol": "1896", "designation": "MANAGER - I line"}, "66779": {"name": "MUTHUVIGNESH A", "sol": "1896", "designation": "ASST MANAGER(PROB)"}, "67026": {"name": "PARKAVI E", "sol": "1896", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "58229": {"name": "A SHANMUGAPRIYA", "sol": "1896", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47082": {"name": "PANDIAN K", "sol": "1919", "designation": "OFFICE ASSISTANT"}, "54335": {"name": "MANIKANDAN MS", "sol": "1919", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "47164": {"name": "JEGATHEESH P", "sol": "1919", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "36648": {"name": "PRAKASH B", "sol": "1919", "designation": "SENIOR MANAGER - I line"}, "38831": {"name": "ARYA R CHANDRAN", "sol": "1919", "designation": "ASST MANAGER - II line"}, "66735": {"name": "SUBASHINY K M", "sol": "1919", "designation": "ASST MANAGER(PROB)"}, "39356": {"name": "ASHAMOL C THANKAPPAN", "sol": "1931", "designation": "MANAGER - I line"}, "50550": {"name": "GOKILA G", "sol": "1931", "designation": "ASST MANAGER - II line"}, "66443": {"name": "MAINAK BAIN", "sol": "1931", "designation": "ASST MANAGER(PROB)"}, "66943": {"name": "CHAARU NIKITA CELESTIN A", "sol": "1931", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "62743": {"name": "RAMMYA", "sol": "1931", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "37115": {"name": "TITUS L R", "sol": "2098", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "63544": {"name": "KARUPPU SAMY M", "sol": "2098", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63791": {"name": "SUNITHA M", "sol": "2098", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "58685": {"name": "NEERAJA K PRADEEP", "sol": "2098", "designation": "SENIOR MANAGER - I line"}, "53699": {"name": "JENNY MARX P", "sol": "2098", "designation": "MANAGER - II line"}, "54822": {"name": "YALINI K", "sol": "2098", "designation": "ASST MANAGER"}, "63038": {"name": "LIPIKA PATRA", "sol": "2098", "designation": "UNAUTHORISED ABSENCE"}, "66412": {"name": "RANJANI D", "sol": "2098", "designation": "ASST MANAGER(PROB)"}, "46939": {"name": "AKBAR ALI M", "sol": "2286", "designation": "OFFICE ASSISTANT"}, "61629": {"name": "DHIVYA", "sol": "2286", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "60198": {"name": "G S PRABHU", "sol": "2286", "designation": "MANAGER - I line"}, "60408": {"name": "S BOOMADEVI", "sol": "2286", "designation": "ASST MANAGER - II line"}, "67804": {"name": "SATHIYA MOORTHY K", "sol": "2286", "designation": "ASST MANAGER(PROB)"}, "64724": {"name": "B GANESH RAM", "sol": "2287", "designation": "MANAGER - I line"}, "67039": {"name": "SWETHA V", "sol": "2287", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "53493": {"name": "KAUSHALYA DEVI C", "sol": "2287", "designation": "ASST MANAGER - II line"}, "61633": {"name": "VIJAYKESHAV J", "sol": "2287", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39934": {"name": "ANITA S A", "sol": "2288", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62035": {"name": "VENILA SELVERAJ", "sol": "2288", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59030": {"name": "NALLATHAMBI P", "sol": "2288", "designation": "MANAGER - I line"}, "61934": {"name": "BABU CHOCKALINGAM", "sol": "2288", "designation": "ASST MANAGER - II line"}, "60154": {"name": "B KARTHIK", "sol": "2461", "designation": "MANAGER - I line"}, "65272": {"name": "NAVEEN ARYA", "sol": "2461", "designation": "ASST MANAGER - II line"}, "22924": {"name": "SAKTHIVEL M", "sol": "2461", "designation": "OFFICE ASSISTANT"}, "61548": {"name": "REVATHI", "sol": "2461", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "46494": {"name": "RAJ KUMAR R", "sol": "2461", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49301": {"name": "KUBERAN S", "sol": "2464", "designation": "MANAGER - I line"}, "53899": {"name": "SAVITHA PANDIDURAI", "sol": "2464", "designation": "ASST MANAGER - II line"}, "67805": {"name": "T PRAVEENRAJA", "sol": "2464", "designation": "ASST MANAGER(PROB)"}, "22016": {"name": "MARIAPPAN R", "sol": "2464", "designation": "OFFICE ASSISTANT"}, "39910": {"name": "JENIFER J", "sol": "2464", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "56108": {"name": "DINESH KUMAR M", "sol": "2574", "designation": "SENIOR MANAGER - I line"}, "56825": {"name": "PREMALATHA T", "sol": "2574", "designation": "MANAGER - II line"}, "66427": {"name": "MRINMAY KUMAR SARKAR", "sol": "2574", "designation": "ASST MANAGER(PROB)"}, "67470": {"name": "ALI ABBAS HADI", "sol": "2574", "designation": "ASST MANAGER (PROB - RURAL DEV OFFICER)"}, "22681": {"name": "BAVANI C", "sol": "2574", "designation": "OFFICE ASSISTANT"}, "64119": {"name": "SRIRAM G", "sol": "2574", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "50663": {"name": "ARUN KUMAR R", "sol": "2685", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47483": {"name": "NAVEEN RAJ S", "sol": "2685", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49077": {"name": "FATHIMA S", "sol": "2685", "designation": "MANAGER - I line"}, "66152": {"name": "ASWIN M", "sol": "2685", "designation": "ASST MANAGER(PROB)"}, "66484": {"name": "MEENAKSHI N", "sol": "2685", "designation": "ASST MANAGER(PROB)"}, "55755": {"name": "PRABAHARAN", "sol": "2686", "designation": "MANAGER - I line"}, "63520": {"name": "PRINKA", "sol": "2686", "designation": "ASST MANAGER - II line"}, "67810": {"name": "PRAVEEN SANKAR R", "sol": "2686", "designation": "ASST MANAGER(PROB)"}, "61983": {"name": "R SIVARANJANI", "sol": "2686", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64122": {"name": "KUMARAN P", "sol": "2702", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "65451": {"name": "SURYA PRAKASH R", "sol": "2702", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "35749": {"name": "SHAJI P K", "sol": "2702", "designation": "MANAGER - I line"}, "52251": {"name": "ANILA DAVIES M", "sol": "2702", "designation": "ASST MANAGER - II line"}, "62061": {"name": "SURYA PRABHA", "sol": "2703", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "22764": {"name": "SIVAKUMAR P", "sol": "2703", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "50392": {"name": "PITCHAIATHITHIYAN M", "sol": "2703", "designation": "MANAGER - I line"}, "53148": {"name": "SURESH R", "sol": "2703", "designation": "ASST MANAGER - II line"}, "67860": {"name": "ADITI TOMAR", "sol": "2703", "designation": "ASST MANAGER(PROB)"}, "63831": {"name": "PONMUTHUKUMAR B", "sol": "2704", "designation": "ASST MANAGER -I line"}, "61599": {"name": "M BAKYALAKSHMI", "sol": "2704", "designation": "ASST MANAGER - II line"}, "61672": {"name": "LOGESHWAR R", "sol": "2704", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "49217": {"name": "SATHYA P T", "sol": "2705", "designation": "MANAGER - I line"}, "66733": {"name": "LAKSHMI A", "sol": "2705", "designation": "ASST MANAGER(PROB)"}, "63695": {"name": "GAYATHRI", "sol": "2705", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "64220": {"name": "VIJI S", "sol": "2705", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "49124": {"name": "THARAKESWARI K R", "sol": "2706", "designation": "SENIOR MANAGER - I line"}, "63679": {"name": "BRINDHA A", "sol": "2706", "designation": "ASST MANAGER - II line"}, "46328": {"name": "KULANDAIVEL M", "sol": "2706", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "46455": {"name": "SIVAMURUGAN T", "sol": "2706", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "47042": {"name": "THIRUPPATHI K", "sol": "3164", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "65911": {"name": "SIVAPREETHI M", "sol": "3164", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38517": {"name": "VELMURUGAN C", "sol": "3164", "designation": "SENIOR MANAGER - I line"}, "63672": {"name": "DHANASANKAR BALAKRISHNAN", "sol": "3164", "designation": "ASST MANAGER - II line"}, "62649": {"name": "N HEMALATHA", "sol": "3165", "designation": "SENIOR MANAGER - I line"}, "59820": {"name": "B KARTHIKA", "sol": "3165", "designation": "ASST MANAGER - II line"}, "67717": {"name": "POOJA YADAV", "sol": "3165", "designation": "ASST MANAGER(PROB)"}, "61980": {"name": "SARAL PRIYADHARSINI A", "sol": "3165", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "63926": {"name": "KALAIVANI", "sol": "3166", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "54532": {"name": "SRINIVASAN SUBRAMANIAN", "sol": "3166", "designation": "MANAGER - I line"}, "57546": {"name": "AMBIKA V", "sol": "3166", "designation": "ASST MANAGER - II line"}, "63142": {"name": "PRADEEPSELVA", "sol": "3346", "designation": "MANAGER - I line"}, "66921": {"name": "LOGESH PANDI S", "sol": "3346", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "57320": {"name": "GOPINATH M", "sol": "3347", "designation": "SENIOR MANAGER - I line"}, "38535": {"name": "PREETHA DEVI C", "sol": "3347", "designation": "ASST MANAGER - II line"}, "63527": {"name": "B SATHEESH KUMAR", "sol": "3347", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47481": {"name": "ARUL MURUGAN S", "sol": "3347", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61617": {"name": "PRIYA S V", "sol": "3436", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "51984": {"name": "MAHALINGAM T", "sol": "3436", "designation": "MANAGER - II line"}, "61683": {"name": "P PRAVEEN KOP", "sol": "3436", "designation": "MANAGER - I line"}, "67068": {"name": "THAMILVANAN P", "sol": "3436", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "50059": {"name": "SARANYA R", "sol": "3437", "designation": "MANAGER - I line"}, "66155": {"name": "CHANDAN B ANAND", "sol": "3437", "designation": "ASST MANAGER(PROB)"}, "66454": {"name": "AMGOTH SINDHU", "sol": "3437", "designation": "ASST MANAGER(PROB)"}, "66981": {"name": "SIVA SANKAR S", "sol": "3437", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "43763": {"name": "SHIVA SUBRAMANIAN T", "sol": "3437", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "63471": {"name": "GOTHANDAPERUMAL K", "sol": "3548", "designation": "MANAGER - I line"}, "67069": {"name": "SHAKTHI BHAALAAJI D", "sol": "3548", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "53803": {"name": "THIRUMENI P", "sol": "3548", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64574": {"name": "VELUMAYIL B", "sol": "3549", "designation": "MANAGER - I line"}, "55401": {"name": "SHEETHAL R", "sol": "3549", "designation": "ASST MANAGER - II line"}, "67029": {"name": "VIJAYALAKSHMI B", "sol": "3549", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "46926": {"name": "VIJAY ANAND D", "sol": "3549", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55447": {"name": "AVINASH C", "sol": "3920", "designation": "MANAGER - I line"}, "67052": {"name": "TAMILARASAN S", "sol": "3920", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "54612": {"name": "JEYAPRIYENKA", "sol": "3920", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "36614": {"name": "CHANDRA KUMAR P", "sol": "3933", "designation": "SENIOR REGIONAL MANAGER"}, "36937": {"name": "ANNAMALAI SM", "sol": "3933", "designation": "CHIEF MANAGER - II line"}, "43278": {"name": "VISHNU VARDHAN J M", "sol": "3933", "designation": "CHIEF MANAGER"}, "43261": {"name": "VENKATESWARAN R", "sol": "3933", "designation": "SENIOR MANAGER"}, "49628": {"name": "NISHA J", "sol": "3933", "designation": "SENIOR MANAGER(RISK)"}, "54257": {"name": "DHANASEKARAN N", "sol": "3933", "designation": "SENIOR MANAGER"}, "62467": {"name": "AMIT KUMAR SINGH", "sol": "3933", "designation": "SENIOR MANAGER"}, "63094": {"name": "DINESHKUMAR A", "sol": "3933", "designation": "SENIOR MANAGER"}, "49525": {"name": "SIVAKAMI DEVI C S", "sol": "3933", "designation": "MANAGER"}, "59111": {"name": "KRISHNA KUMAR S", "sol": "3933", "designation": "MANAGER"}, "58844": {"name": "THANGARAJESH PONNUCHAMY", "sol": "3933", "designation": "MANAGER"}, "40412": {"name": "JEYANTHI V RAYEN", "sol": "3933", "designation": "MANAGER"}, "62648": {"name": "S ARUNKUMAR", "sol": "3933", "designation": "MANAGER"}, "56063": {"name": "PRAVEEN S", "sol": "3933", "designation": "MANAGER"}, "60105": {"name": "VIDHYA V", "sol": "3933", "designation": "MANAGER"}, "63039": {"name": "SATISH PANDIAN", "sol": "3933", "designation": "MANAGER-MARKETING"}, "54920": {"name": "ANJU J", "sol": "3933", "designation": "ASST MANAGER"}, "56707": {"name": "ANJANA U S", "sol": "3933", "designation": "ASST MANAGER"}, "59087": {"name": "JOHN CHARLES ABISHEK M", "sol": "3933", "designation": "ASST MANAGER"}, "67910": {"name": "GAJANAND UPADHYAY", "sol": "3933", "designation": "ASST.MANAGER(PROB-OFFICIAL LANGUAGE)"}, "48496": {"name": "SATHISH KUMAR B", "sol": "3933", "designation": "SENIOR MANAGER"}, "36970": {"name": "SIVAMANI S", "sol": "4069", "designation": "CHIEF MANAGER - I line"}, "49670": {"name": "SOUNDARYAA R", "sol": "4069", "designation": "SENIOR MANAGER(FINANCIAL ANALYST)"}, "53840": {"name": "PARVATHY SUDHAKAR", "sol": "4069", "designation": "MANAGER"}, "55580": {"name": "SUMITHRA N", "sol": "4069", "designation": "MANAGER"}, "39775": {"name": "SAMUEL VIJAY A", "sol": "4153", "designation": "MANAGER - I line"}, "55777": {"name": "MINU PREETHI R", "sol": "4153", "designation": "ASST MANAGER - II line"}, "63738": {"name": "SHANTHA KUMAR M", "sol": "4153", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}};
+const ADMIN_PASSWORD = "a3130gsm";
+
+let ALL_DATA = { qr: [], sb: [], lead: [] };
+let currentTab = 'pending';
+let activeSelectedApp = null;
+let selectedFileBase64 = null;
+let selectedFileName = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  checkAdminAuth();
+  lottie.loadAnimation({
+    container: document.getElementById('header-lottie'),
+    renderer: 'svg', loop: true, autoplay: true,
+    animationData: LOTTIE_DATA
+  });
+});
+
+function checkAdminAuth() {
+  if (sessionStorage.getItem('iob_admin_authed') === 'true') {
+    document.getElementById('adminAuthOverlay').style.display = 'none';
+    fetchData();
+  } else {
+    document.getElementById('adminAuthOverlay').style.display = 'flex';
+  }
+}
+
+function verifyAdminPass() {
+  const val = document.getElementById('adminPassInput').value.trim();
+  const err = document.getElementById('adminAuthError');
+  if (val === ADMIN_PASSWORD) {
+    sessionStorage.setItem('iob_admin_authed', 'true');
+    document.getElementById('adminAuthOverlay').style.display = 'none';
+    err.style.display = 'none';
+    fetchData();
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function logoutAdmin() {
+  sessionStorage.removeItem('iob_admin_authed');
+  location.reload();
+}
+
+async function fetchData() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    const data = await res.json();
+    ALL_DATA = data;
+    updateStats();
+    renderTable();
+  } catch(e) {
+    console.error("Fetch error:", e);
+    showToast("Error loading data from Google Sheets", "error");
+  }
+}
+
+function updateStats() {
+  let total = 0, pending = 0, vendor = 0, completed = 0;
+  
+  [...(ALL_DATA.qr || []), ...(ALL_DATA.sb || []), ...(ALL_DATA.lead || [])].forEach(item => {
+    total++;
+    const st = item.STATUS || 'Pending';
+    if (st === 'Completed' || st === 'Merchant Onboarded') completed++;
+    else if (st === 'Forwarded to Vendor') vendor++;
+    else pending++;
+  });
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-vendor').textContent = vendor;
+  document.getElementById('stat-completed').textContent = completed;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  renderTable();
+}
+
+function filterTable() {
+  renderTable();
+}
+
+function adminResetStaffPassword(roll) {
+  if (!confirm('Are you sure you want to reset password for Staff Roll No: ' + roll + ' back to default (Roll Number)?')) return;
+
+  localStorage.removeItem('staff_pass_' + roll);
+  showToast('✅ Password for Roll ' + roll + ' reset to default (Roll No)', 'success');
+  renderTable();
+}
+
+function onModalStatusChange(val) {
+  // Show VPA field STRICTLY ONLY for QR Code applications when setting status to Completed
+  const vpaContainer = document.getElementById('vpaFieldContainer');
+  if (activeSelectedApp && activeSelectedApp._type === 'QR' && (val === 'Completed' || val === 'Merchant Onboarded')) {
+    vpaContainer.classList.remove('hidden');
+  } else {
+    vpaContainer.classList.add('hidden');
+  }
+}
+
+function renderTable() {
+  const query = document.getElementById('searchInput').value.toLowerCase().trim();
+  const tbody = document.getElementById('tableBody');
+  const headers = document.getElementById('tableHeaders');
+
+  if (currentTab === 'staff') {
+    headers.innerHTML = `
+      <th>Roll Number</th>
+      <th>Staff Name</th>
+      <th>Designation</th>
+      <th>SOL ID</th>
+      <th>Password Status</th>
+      <th>Admin Password Action</th>
+    `;
+
+    let staffItems = Object.keys(STAFF_LIST).map(roll => ({ roll, ...STAFF_LIST[roll] }));
+    if (query) {
+      staffItems = staffItems.filter(s => s.roll.includes(query) || s.name.toLowerCase().includes(query) || s.sol.includes(query));
+    }
+
+    if (staffItems.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No staff members found matching query.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = staffItems.map(s => {
+      const hasCustom = localStorage.getItem('staff_pass_' + s.roll) ? true : false;
+      const statusBadge = hasCustom 
+        ? `<span class="badge-status pending">🔐 Custom Password</span>` 
+        : `<span class="badge-status completed">🔑 Default (Roll No)</span>`;
+
+      return `
+        <tr>
+          <td><strong>${s.roll}</strong></td>
+          <td>${s.name}</td>
+          <td>${s.designation || '-'}</td>
+          <td>${s.sol}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="btn-reset-pass" onclick="adminResetStaffPassword('${s.roll}')">🔄 Reset to Default</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    return;
+  }
+
+  headers.innerHTML = `
+    <th>Type / Product</th>
+    <th>Merchant / Entity</th>
+    <th>Details / Account</th>
+    <th>Contact / Staff</th>
+    <th>Location / SOL</th>
+    <th>Status & Date</th>
+    <th>Action</th>
+  `;
+
+  let items = [];
+  
+  (ALL_DATA.qr || []).forEach(item => {
+    items.push({ ...item, _type: 'QR', _name: item.MERCHANTNAME, _vpa: item.MERCHANTVPA, _acc: item.ACCOUNTNO, _mobile: item.MOBILENO, _loc: item.DISTRICT || item.CITY || '-' });
+  });
+  
+  (ALL_DATA.sb || []).forEach(item => {
+    items.push({ ...item, _type: 'Soundbox', _name: item.ACCOUNT_NAME, _vpa: item.VPA, _acc: '-', _mobile: item.MOBILE_NUMBER, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+  });
+
+  (ALL_DATA.lead || []).forEach(item => {
+    items.push({ ...item, _type: 'Lead', _name: item.MERCHANT_NAME, _vpa: item.PRODUCT, _acc: item.ACCOUNT_NO, _mobile: item.MOBILE_NO, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+  });
+
+  // Filter by Tab (Pending vs Forwarded to Vendor vs Completed)
+  items = items.filter(item => {
+    const st = item.STATUS || 'Pending';
+    if (currentTab === 'completed') return st === 'Completed' || st === 'Merchant Onboarded';
+    if (currentTab === 'vendor') return st === 'Forwarded to Vendor';
+    return st !== 'Completed' && st !== 'Merchant Onboarded' && st !== 'Forwarded to Vendor';
+  });
+
+  // Filter by Search Query
+  if (query) {
+    items = items.filter(item => {
+      return (item._name || '').toLowerCase().includes(query) ||
+             (item._vpa || '').toLowerCase().includes(query) ||
+             String(item._mobile || '').includes(query) ||
+             String(item._acc || '').includes(query) ||
+             (item._loc || '').toLowerCase().includes(query) ||
+             String(item.SOL_ID || '').includes(query);
+    });
+  }
+
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No ${currentTab} applications or leads found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map(item => {
+    let typeBadge = '';
+    if (item._type === 'QR') typeBadge = '<span class="badge-type qr">📲 QR Code</span>';
+    else if (item._type === 'Soundbox') typeBadge = '<span class="badge-type sb">🔊 Soundbox</span>';
+    else typeBadge = '<span class="badge-type lead">💳 Product Lead</span>';
+
+    const st = item.STATUS || 'Pending';
+    let statusBadge = '';
+    if (st === 'Completed' || st === 'Merchant Onboarded') {
+      statusBadge = `<span class="badge-status completed">✓ Onboarded</span><div style="font-size:0.72rem;color:var(--muted);margin-top:2px">${item.COMPLETED_DATE || item.UPDATED_DATE || ''}</div>`;
+    } else if (st === 'Forwarded to Vendor') {
+      statusBadge = `<span class="badge-status vendor">🚚 With Vendor</span><div style="font-size:0.72rem;color:var(--muted);margin-top:2px">${item.UPDATED_DATE || ''}</div>`;
+    } else if (st === 'Rejected / Closed') {
+      statusBadge = `<span class="badge-status rejected">❌ Closed</span>`;
+    } else {
+      statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
+    }
+
+    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 Created: ${item.CREATED_DATE}</div>` : '';
+    const jsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+    const actionBtn = `<button class="btn-action" onclick='openModal(${jsonStr})' >⚙️ Update Status</button>`;
+
+    const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes' ? '<div style="font-size:0.7rem;color:var(--warning);font-weight:700;margin-top:2px">🔊 Soundbox Requested</div>' : '';
+    const staffInfo = item.STAFF_NAME ? `<div style="font-size:0.72rem;color:var(--muted)">Staff: ${item.STAFF_NAME} (${item.STAFF_ROLL || ''})</div>` : '';
+    const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${item.VENDOR_REMARKS}</div>` : '';
+
+    let detailsDisplay = '';
+    if (item._type === 'Lead') {
+      detailsDisplay = `<div><strong>Product:</strong> ${item.PRODUCT || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item.ACCOUNT_NO || '-'}</div>`;
+    } else {
+      detailsDisplay = `<div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div>`;
+    }
+
+    return `
+      <tr>
+        <td>${typeBadge}${sbIndicator}</td>
+        <td><strong>${item._name || '-'}</strong></td>
+        <td>${detailsDisplay}</td>
+        <td><div>${item._mobile || '-'}</div>${staffInfo}</td>
+        <td>${item._loc || '-'}</td>
+        <td>${statusBadge}${createdStr}${remarksInfo}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openModal(item) {
+  activeSelectedApp = item;
+  selectedFileBase64 = null;
+  selectedFileName = null;
+  document.getElementById('fileNameDisplay').textContent = "Click to choose PDF file";
+  document.getElementById('pdfFileInput').value = "";
+
+  const titleEl = document.getElementById('modalTitle');
+  const summary = document.getElementById('modalAppSummary');
+  const vpaContainer = document.getElementById('vpaFieldContainer');
+  const vpaInput = document.getElementById('modalVpaInput');
+  const sbNotice = document.getElementById('modalSbNotice');
+  const remarksLabel = document.getElementById('remarksLabel');
+
+  if (item._type === 'Lead') {
+    titleEl.textContent = "⚙️ Update Merchant Product Lead Status";
+    remarksLabel.textContent = "Vendor / Admin Remarks (e.g. Dispatched to POS Vendor)";
+    summary.innerHTML = `
+      <div><strong>Product:</strong> ${item.PRODUCT || '-'}</div>
+      <div><strong>Merchant:</strong> ${item.MERCHANT_NAME || item._name}</div>
+      <div><strong>Current Acc No:</strong> ${item.ACCOUNT_NO || '-'}</div>
+      <div><strong>Devices Required:</strong> ${item.NO_OF_DEVICES || 1}</div>
+      <div><strong>Mobile No:</strong> ${item._mobile || '-'}</div>
+      <div><strong>Branch Contact:</strong> ${item.CONTACT_NAME || '-'} (${item.CONTACT_MOBILE || '-'})</div>
+    `;
+    vpaContainer.classList.add('hidden');
+    sbNotice.classList.add('hidden');
+  } else if (item._type === 'Soundbox') {
+    titleEl.textContent = "⚙️ Update Soundbox Application Status";
+    remarksLabel.textContent = "Vendor / Admin Remarks";
+    summary.innerHTML = `
+      <div><strong>Type:</strong> Soundbox Application</div>
+      <div><strong>Merchant:</strong> ${item.ACCOUNT_NAME || item._name}</div>
+      <div><strong>VPA:</strong> ${item.VPA || '-'}</div>
+      <div><strong>Language:</strong> ${item.LANGUAGE || 'ta'}</div>
+      <div><strong>Mobile:</strong> ${item._mobile}</div>
+      <div><strong>Location / SOL:</strong> ${item._loc}</div>
+    `;
+    vpaContainer.classList.add('hidden');
+    sbNotice.classList.add('hidden');
+  } else {
+    titleEl.textContent = "⚙️ Update Payment QR Application Status";
+    remarksLabel.textContent = "Admin Remarks";
+    summary.innerHTML = `
+      <div><strong>Type:</strong> Payment QR Application</div>
+      <div><strong>Merchant:</strong> ${item.MERCHANTNAME || item._name}</div>
+      <div><strong>Account No:</strong> ${item.ACCOUNTNO || '-'}</div>
+      <div><strong>Mobile:</strong> ${item.MOBILENO || '-'}</div>
+      <div><strong>District:</strong> ${item.DISTRICT || '-'}</div>
+      <div><strong>Soundbox Req:</strong> ${item.SOUNDBOX_REQUIRED || 'No'}</div>
+    `;
+    
+    if (item.SOUNDBOX_REQUIRED === 'Yes') sbNotice.classList.remove('hidden');
+    else sbNotice.classList.add('hidden');
+  }
+
+  const statusSelect = document.getElementById('modalStatusSelect');
+  statusSelect.value = item.STATUS === 'Completed' || item.STATUS === 'Merchant Onboarded' ? 'Completed' : (item.STATUS || 'Forwarded to Vendor');
+
+  document.getElementById('modalRemarksInput').value = item.VENDOR_REMARKS || "";
+
+  // Show VPA input strictly for QR Code applications when Completed
+  if (item._type === 'QR' && (statusSelect.value === 'Completed' || statusSelect.value === 'Merchant Onboarded')) {
+    vpaContainer.classList.remove('hidden');
+    vpaInput.value = item._vpa && item._vpa !== "Pending Generation" ? item._vpa : "";
+  } else {
+    vpaContainer.classList.add('hidden');
+  }
+
+  document.getElementById('completionModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('completionModal').classList.remove('open');
+  activeSelectedApp = null;
+}
+
+function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  if (file.type !== 'application/pdf') {
+    showToast('Please select a valid PDF file', 'error');
+    input.value = '';
+    return;
+  }
+
+  selectedFileName = file.name;
+  document.getElementById('fileNameDisplay').textContent = "✓ " + file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    selectedFileBase64 = e.target.result.split(',')[1];
+  };
+  reader.readAsDataURL(file);
+}
+
+async function confirmCompletion() {
+  if (!activeSelectedApp) return;
+
+  const statusVal = document.getElementById('modalStatusSelect').value;
+  const vpaValue = document.getElementById('modalVpaInput').value.trim();
+  const remarksValue = document.getElementById('modalRemarksInput').value.trim();
+
+  if (activeSelectedApp._type === 'QR' && statusVal === 'Completed' && !vpaValue) {
+    showToast("Please enter/confirm the generated Merchant VPA for QR Code", "error");
+    document.getElementById('modalVpaInput').focus();
+    return;
+  }
+
+  const btn = document.getElementById('btnConfirmComplete');
+  btn.disabled = true;
+  btn.textContent = "Updating...";
+
+  let sheetTarget = 'QR_Template';
+  if (activeSelectedApp._type === 'Soundbox') sheetTarget = 'Soundbox_Template';
+  if (activeSelectedApp._type === 'Lead') sheetTarget = 'Leads_Template';
+
+  // Map Completed status for leads
+  let finalStatus = statusVal;
+  if (activeSelectedApp._type === 'Lead' && statusVal === 'Completed') finalStatus = 'Merchant Onboarded';
+
+  const payload = {
+    action: "updateStatus",
+    sheetName: sheetTarget,
+    rowIndex: activeSelectedApp.rowIndex,
+    status: finalStatus,
+    vpa: activeSelectedApp._type === 'QR' ? vpaValue : "",
+    remarks: remarksValue,
+    pdfBase64: selectedFileBase64,
+    pdfName: selectedFileName || (activeSelectedApp._name + "_Doc.pdf"),
+    soundboxRequired: activeSelectedApp.SOUNDBOX_REQUIRED,
+    solId: activeSelectedApp.SOL_ID,
+    soundboxLang: activeSelectedApp.SOUNDBOX_LANG
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    showToast("✅ Status updated successfully!", "success");
+    closeModal();
+    setTimeout(() => fetchData(), 1200);
+  } catch(e) {
+    showToast("Update error: " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update Status";
+  }
+}
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 4000);
+}
+</script>
+</body>
+</html>

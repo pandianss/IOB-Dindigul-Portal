@@ -1,0 +1,10 @@
+# Temporary build scripts
+clean_encoding.py
+fix_target.py
+fix_build.py
+fix_headers.py
+add_created_date.py
+
+# OS generated files
+.DS_Store
+Thumbs.db
