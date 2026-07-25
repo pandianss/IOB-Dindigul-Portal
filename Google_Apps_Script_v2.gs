@@ -1,6 +1,6 @@
 /**
- * Google Apps Script v2.8 for IOB Merchant Services & Leads Portal
- * Includes automated email notifications for Submissions & Status Updates.
+ * Google Apps Script v2.9 for IOB Merchant Services & Leads Portal
+ * Includes automated email notifications and LockService for High-Concurrency Concurrency Safety.
  */
 
 // CONFIGURATION: Recipient email address for all portal notifications
@@ -24,6 +24,15 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // LOCK SERVICE: Wait up to 10 seconds to process concurrent simultaneous submissions safely
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch(e) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Server busy, please retry in a moment" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   try {
     var contents = e.postData.contents;
     var data = JSON.parse(contents);
@@ -122,6 +131,8 @@ function doPost(e) {
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 
