@@ -47,20 +47,26 @@
   #splash.hide { opacity: 0; pointer-events: none; transform: translateY(-20px); }
   #lottie-splash { width: 140px; height: 140px; }
   #splash-title { color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }
-  /* ── ANIMATED EMBLEM ── */
-  @keyframes iobPulse {
-    0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.4)); }
-    50% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(232,160,32,0.8)); }
-    100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.4)); }
+  /* ── OFFICIAL IOB EMBLEM ANIMATION ── */
+  @keyframes iobGlowPulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.6)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(232,160,32,0.95)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.6)); }
   }
 
-  .iob-animated-emblem {
-    width: 42px; height: 42px; position: relative; display: flex; align-items: center; justify-content: center;
+  .iob-header-emblem-wrap {
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
   }
-  .iob-animated-emblem svg { animation: iobPulse 3s infinite ease-in-out; width: 100%; height: 100%; }
+  .iob-header-emblem {
+    width: 38px; height: 38px; border-radius: 50%; object-fit: contain;
+    animation: iobGlowPulse 2.5s infinite ease-in-out;
+  }
 
-  .splash-emblem { width: 110px; height: 110px; margin-bottom: 8px; }
-  .splash-emblem svg { animation: iobPulse 2s infinite ease-in-out; width: 100%; height: 100%; }
+  .splash-emblem { text-align: center; margin-bottom: 12px; }
+  .splash-emblem-img {
+    width: 100px; height: 100px; border-radius: 50%; object-fit: contain;
+    animation: iobGlowPulse 2s infinite ease-in-out;
+  }
 
   #splash-sub { color: rgba(255,255,255,0.75); font-size: 0.88rem; }
   #splash-progress { width: 180px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 99px; overflow: hidden; }
@@ -355,12 +361,7 @@
 <!-- SPLASH -->
 <div id="splash">
   <div class="splash-emblem">
-    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="45" fill="#1a3a7a" stroke="#e8a020" stroke-width="4"/>
-      <path d="M50 15 L78 32 L78 68 L50 85 L22 68 L22 32 Z" stroke="#ffffff" stroke-width="3" fill="none"/>
-      <circle cx="50" cy="50" r="14" fill="#e8a020"/>
-      <text x="50" y="55" font-family="sans-serif" font-weight="900" font-size="12" fill="#0d2354" text-anchor="middle">IOB</text>
-    </svg>
+    <img src="iob_icon.png" class="splash-emblem-img" alt="IOB Emblem">
   </div>
   <div id="splash-title">IOB Dindigul Regional Office</div>
   <div id="splash-sub">Merchant Services & Leads Portal</div>
@@ -374,13 +375,8 @@
     <span class="header-title">Dindigul Regional Office — Merchant Services</span>
   </div>
   <div class="header-right">
-    <div class="iob-animated-emblem" title="IOB Portal Active">
-      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="45" fill="#1a3a7a" stroke="#e8a020" stroke-width="4"/>
-        <path d="M50 15 L78 32 L78 68 L50 85 L22 68 L22 32 Z" stroke="#ffffff" stroke-width="3" fill="none"/>
-        <circle cx="50" cy="50" r="14" fill="#e8a020"/>
-        <text x="50" y="55" font-family="sans-serif" font-weight="900" font-size="12" fill="#0d2354" text-anchor="middle">IOB</text>
-      </svg>
+    <div class="iob-header-emblem-wrap" title="IOB Portal Active">
+      <img src="iob_icon.png" class="iob-header-emblem" alt="IOB Emblem">
     </div>
     <button type="button" id="notifToggleBtn" class="notif-btn" onclick="toggleNotificationPermission()">
       <span>🔔</span> <span id="notifLabel">Notifications: Checking...</span>
@@ -1292,39 +1288,102 @@ let TRACKING_DATA = { qr: [], sb: [], lead: [] };
 let currentActiveStaff = null;
 let isFirstTimeLogin = false;
 
-// Initialize Splash & Lottie
+// ── BROWSER NOTIFICATIONS MODULE ──
+function checkNotificationState() {
+  const btn = document.getElementById('notifToggleBtn');
+  const label = document.getElementById('notifLabel');
+  if (!label) return;
+
+  try {
+    if (!("Notification" in window)) {
+      label.textContent = "Notifications: Unsupported";
+      if (btn) btn.style.opacity = "0.6";
+      return;
+    }
+
+    const perm = Notification.permission;
+    if (perm === "granted") {
+      label.textContent = "Notifications: Active";
+      if (btn) btn.classList.add('active');
+    } else if (perm === "denied") {
+      label.textContent = "Notifications: Blocked";
+      if (btn) btn.classList.remove('active');
+    } else {
+      label.textContent = "Notifications: Off (Click)";
+      if (btn) btn.classList.remove('active');
+    }
+  } catch(e) {
+    label.textContent = "Notifications: Off (Click)";
+  }
+}
+
+function toggleNotificationPermission() {
+  if (!("Notification" in window)) {
+    showToast("Browser does not support desktop notifications", "error");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    triggerBrowserNotification("IOB Dindigul Regional Office", "Test Notification: Desktop alerts are active and working!");
+    showToast("🔔 Test notification sent to desktop!", "success");
+  } else {
+    Notification.requestPermission().then(permission => {
+      checkNotificationState();
+      if (permission === "granted") {
+        showToast("🔔 Desktop Notifications Enabled!", "success");
+        triggerBrowserNotification("IOB Dindigul Regional Office", "Notifications enabled successfully! You will receive live alerts.");
+      } else {
+        showToast("Notification permission blocked in browser settings", "error");
+      }
+    });
+  }
+}
+
+function triggerBrowserNotification(title, body) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(title, {
+        body: body,
+        icon: "iob_icon.png"
+      });
+    } catch(e) {
+      console.error("Notification error:", e);
+    }
+  }
+}
+
+// Call checkNotificationState immediately on script load
+checkNotificationState();
+
+// Initialize Splash Screen
 window.addEventListener('DOMContentLoaded', () => {
-  lottie.loadAnimation({
-    container: document.getElementById('lottie-splash'),
-    renderer: 'svg', loop: true, autoplay: true,
-    animationData: LOTTIE_DATA
-  });
-  lottie.loadAnimation({
-    container: document.getElementById('header-lottie'),
-    renderer: 'svg', loop: true, autoplay: true,
-    animationData: LOTTIE_DATA
-  });
+  checkNotificationState();
+  
+  // Render cached status table in 0ms
+  renderStatusTable();
 
   let p = 0;
   const bar = document.getElementById('splash-bar');
   const timer = setInterval(() => {
-    p = Math.min(p + 20, 95);
-    bar.style.width = p + '%';
+    p = Math.min(p + 25, 95);
+    if (bar) bar.style.width = p + '%';
   }, 100);
 
   setTimeout(() => {
     clearInterval(timer);
-    bar.style.width = '100%';
+    if (bar) bar.style.width = '100%';
     setTimeout(() => {
-      document.getElementById('splash').classList.add('hide');
-    }, 300);
-  }, 800);
+      const splash = document.getElementById('splash');
+      if (splash) splash.classList.add('hide');
+    }, 400);
+  }, 900);
 
   setupMCC('qr');
   setupMCC('sb');
 
-  // Background fetch status data immediately so tracking tab is pre-warmed
+  // Background fetch latest data & setup 20-second silent auto-polling
   loadStatusData();
+  setInterval(() => loadStatusData(false), 20000);
 
   document.addEventListener('click', e => {
     if (!e.target.closest('.mcc-wrapper')) {
