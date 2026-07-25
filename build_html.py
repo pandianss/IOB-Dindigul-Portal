@@ -1,4 +1,61 @@
-<!DOCTYPE html>
+import csv
+import json
+import os
+
+form_dir = r"C:\Users\sspan\Videos\Form"
+
+# Read branches.csv
+branches = {}
+with open(os.path.join(form_dir, "branches.csv"), "r", encoding="utf-8-sig") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        code = row.get("code", "").strip()
+        name = row.get("name_en", "").strip()
+        if code and name:
+            padded = code.zfill(4)
+            branches[padded] = {
+                "name": name,
+                "district": row.get("district", "").strip() or "Dindigul",
+                "pincode": row.get("pincode", "").strip()
+            }
+
+# Read staff_list.csv
+staff_list = {}
+with open(os.path.join(form_dir, "staff_list.csv"), "r", encoding="utf-8-sig") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        roll = row.get("Roll", "").strip()
+        name = row.get("Name", "").strip()
+        sol = row.get("Branch", "").strip().zfill(4)
+        if roll:
+            staff_list[roll] = {
+                "name": name,
+                "sol": sol,
+                "designation": row.get("Designation", "").strip()
+            }
+
+# Read MCC List.txt
+mcc_list = []
+with open(os.path.join(form_dir, "MCC List.txt"), "r", encoding="utf-8") as f:
+    for line in f:
+        line = line.strip()
+        if 'value="' in line and '</option>' in line:
+            val_start = line.find('value="') + 7
+            val_end = line.find('"', val_start)
+            val = line[val_start:val_end]
+            
+            text_start = line.find('>') + 1
+            text_end = line.find('</option>')
+            text = line[text_start:text_end]
+            
+            if val != "0":
+                parts = text.split('-', 1)
+                desc = parts[1].strip() if len(parts) > 1 else text.strip()
+                mcc_list.append({"code": val, "desc": desc})
+
+admin_url = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILWqzxB6jb9RopXU_vZhHbusPdbrj70FcQx6vGcyrAQTTy_gW4goL/exec"
+
+html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -8,9 +65,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
-  :root {
+  :root {{
     --iob-blue: #1a3a7a;
     --iob-blue-light: #2550a8;
     --iob-blue-dark: #0d2354;
@@ -26,326 +82,349 @@
     --input-bg: #f8faff;
     --shadow: 0 4px 24px rgba(26,58,122,0.10);
     --shadow-lg: 0 8px 40px rgba(26,58,122,0.16);
-  }
+  }}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
-  body {
+  body {{
     font-family: 'Inter', system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-  }
+  }}
+
+  /* ── ANIMATED EMBLEM ── */
+  @keyframes iobPulse {{
+    0% {{ transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.4)); }}
+    50% {{ transform: scale(1.06); filter: drop-shadow(0 0 14px rgba(232,160,32,0.8)); }}
+    100% {{ transform: scale(1); filter: drop-shadow(0 0 4px rgba(232,160,32,0.4)); }}
+  }}
+  @keyframes iobRotate {{
+    from {{ transform: rotate(0deg); }}
+    to {{ transform: rotate(360deg); }}
+  }}
+
+  .iob-animated-emblem {{
+    width: 48px; height: 48px; position: relative; display: flex; align-items: center; justify-content: center;
+  }}
+  .iob-animated-emblem svg {{ animation: iobPulse 3s infinite ease-in-out; }}
 
   /* ── SPLASH SCREEN ── */
-  #splash {
+  #splash {{
     position: fixed; inset: 0; z-index: 999;
     background: linear-gradient(135deg, var(--iob-blue-dark) 0%, var(--iob-blue) 60%, var(--iob-blue-light) 100%);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 20px; transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-  #splash.hide { opacity: 0; pointer-events: none; transform: translateY(-20px); }
-  #lottie-splash { width: 140px; height: 140px; }
-  #splash-title { color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }
-  #splash-sub { color: rgba(255,255,255,0.75); font-size: 0.88rem; }
-  #splash-progress { width: 180px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 99px; overflow: hidden; }
-  #splash-bar { height: 100%; width: 0%; background: var(--iob-gold); border-radius: 99px; transition: width 0.1s linear; }
+  }}
+  #splash.hide {{ opacity: 0; pointer-events: none; transform: translateY(-20px); }}
+  .splash-emblem {{ width: 120px; height: 120px; }}
+  .splash-emblem svg {{ animation: iobPulse 2s infinite ease-in-out; width: 100%; height: 100%; }}
+  #splash-title {{ color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }}
+  #splash-sub {{ color: rgba(255,255,255,0.75); font-size: 0.88rem; }}
+  #splash-progress {{ width: 180px; height: 3px; background: rgba(255,255,255,0.2); border-radius: 99px; overflow: hidden; }}
+  #splash-bar {{ height: 100%; width: 0%; background: var(--iob-gold); border-radius: 99px; transition: width 0.1s linear; }}
 
   /* ── HEADER ── */
-  header {
+  header {{
     background: linear-gradient(90deg, var(--iob-blue-dark) 0%, var(--iob-blue) 100%);
     color: #fff; padding: 0 28px;
     display: flex; align-items: center; justify-content: space-between;
     height: 70px; box-shadow: 0 2px 16px rgba(13,35,84,0.25);
     position: sticky; top: 0; z-index: 100;
-  }
-  .header-left { display: flex; align-items: center; gap: 14px; }
-  .header-logo { height: 42px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
-  .header-title { font-size: 1.05rem; font-weight: 600; opacity: 0.95; letter-spacing: 0.01em; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .header-lottie { width: 44px; height: 44px; }
-  
-  .notif-btn {
+  }}
+  .header-left {{ display: flex; align-items: center; gap: 14px; }}
+  .header-logo {{ height: 42px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }}
+  .header-title {{ font-size: 1.05rem; font-weight: 600; opacity: 0.95; letter-spacing: 0.01em; }}
+  .header-right {{ display: flex; align-items: center; gap: 12px; }}
+
+  .notif-btn {{
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
     color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
     font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
-  }
-  .notif-btn:hover { background: rgba(255,255,255,0.3); }
-  .notif-btn.active { background: #22c55e; border-color: #16a34a; color: #fff; }
+  }}
+  .notif-btn:hover {{ background: rgba(255,255,255,0.3); }}
+  .notif-btn.active {{ background: #22c55e; border-color: #16a34a; color: #fff; }}
 
-  .admin-link {
+  .admin-link {{
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
     color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
     font-weight: 600; text-decoration: none; transition: all 0.2s;
-  }
-  .admin-link:hover { background: rgba(255,255,255,0.3); }
+  }}
+  .admin-link:hover {{ background: rgba(255,255,255,0.3); }}
 
   /* ── MAIN ── */
-  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  main {{ max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }}
 
   /* ── MAIN NAV TABS ── */
-  .nav-tabs {
+  .nav-tabs {{
     display: flex; gap: 10px; margin-bottom: 24px;
     background: #e2e8f0; padding: 5px; border-radius: 14px;
-  }
-  .nav-tab-btn {
+  }}
+  .nav-tab-btn {{
     flex: 1; border: none; background: transparent; padding: 12px 16px;
     border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
     color: var(--muted); transition: all 0.2s; text-align: center;
-  }
-  .nav-tab-btn.active { background: #fff; color: var(--iob-blue); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  }}
+  .nav-tab-btn.active {{ background: #fff; color: var(--iob-blue); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }}
 
   /* ── CARDS ── */
-  .type-card {
+  .type-card {{
     background: var(--card); border-radius: 18px; padding: 28px;
     box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid var(--border);
-  }
-  .type-card h2 { font-size: 1.2rem; font-weight: 700; color: var(--iob-blue); margin-bottom: 6px; }
-  .type-card p { color: var(--muted); font-size: 0.88rem; margin-bottom: 20px; }
-  .type-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .type-btn {
+  }}
+  .type-card h2 {{ font-size: 1.2rem; font-weight: 700; color: var(--iob-blue); margin-bottom: 6px; }}
+  .type-card p {{ color: var(--muted); font-size: 0.88rem; margin-bottom: 20px; }}
+  .type-options {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }}
+  .type-btn {{
     border: 2px solid var(--border); background: var(--input-bg);
     border-radius: 14px; padding: 20px 14px; text-align: center; cursor: pointer;
     transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; gap: 8px;
     font-family: inherit;
-  }
-  .type-btn:hover { border-color: var(--iob-blue-light); background: #eef2ff; transform: translateY(-2px); }
-  .type-btn.active { border-color: var(--iob-blue); background: linear-gradient(135deg, #eef2ff, #e0e8ff); box-shadow: 0 4px 14px rgba(26,58,122,0.15); }
-  .type-btn .icon { font-size: 2rem; }
-  .type-btn .label { font-size: 0.88rem; font-weight: 700; color: var(--iob-blue); line-height: 1.25; }
-  .type-btn .sublabel { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+  }}
+  .type-btn:hover {{ border-color: var(--iob-blue-light); background: #eef2ff; transform: translateY(-2px); }}
+  .type-btn.active {{ border-color: var(--iob-blue); background: linear-gradient(135deg, #eef2ff, #e0e8ff); box-shadow: 0 4px 14px rgba(26,58,122,0.15); }}
+  .type-btn .icon {{ font-size: 2rem; }}
+  .type-btn .label {{ font-size: 0.88rem; font-weight: 700; color: var(--iob-blue); line-height: 1.25; }}
+  .type-btn .sublabel {{ font-size: 0.73rem; color: var(--muted); margin-top: 2px; }}
 
   /* ── SECTION CARDS ── */
-  .section-card {
+  .section-card {{
     background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
     border: 1px solid var(--border); margin-bottom: 24px; overflow: hidden;
-  }
-  .section-header {
+  }}
+  .section-header {{
     background: linear-gradient(90deg, var(--iob-blue) 0%, var(--iob-blue-light) 100%);
     color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px;
-  }
-  .section-header .badge {
+  }}
+  .section-header .badge {{
     background: rgba(255,255,255,0.22); border-radius: 6px; padding: 3px 10px;
     font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;
-  }
-  .section-header h3 { font-size: 1rem; font-weight: 700; }
-  .section-body { padding: 24px; }
+  }}
+  .section-header h3 {{ font-size: 1rem; font-weight: 700; }}
+  .section-body {{ padding: 24px; }}
 
   /* ── FORM LAYOUT ── */
-  .form-grid { display: grid; gap: 18px; }
-  .col-2 { grid-template-columns: 1fr 1fr; }
-  .span-2 { grid-column: 1 / -1; }
+  .form-grid {{ display: grid; gap: 18px; }}
+  .col-2 {{ grid-template-columns: 1fr 1fr; }}
+  .span-2 {{ grid-column: 1 / -1; }}
 
   /* ── FIELDS ── */
-  .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label {
+  .field {{ display: flex; flex-direction: column; gap: 5px; }}
+  .field label {{
     font-size: 0.75rem; font-weight: 700; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.05em;
-  }
-  .field label .req { color: var(--error); margin-left: 2px; }
-  .field input, .field select {
+  }}
+  .field label .req {{ color: var(--error); margin-left: 2px; }}
+  .field input, .field select {{
     border: 1.5px solid var(--border); border-radius: 9px; padding: 10px 12px;
     font-size: 0.88rem; font-family: inherit; background: var(--input-bg);
     color: var(--text); transition: all 0.2s ease; outline: none;
-  }
-  .field input:focus, .field select:focus {
+  }}
+  .field input:focus, .field select:focus {{
     border-color: var(--iob-blue-light); background: #fff;
     box-shadow: 0 0 0 3px rgba(37,80,168,0.12);
-  }
-  .field input.error, .field select.error { border-color: var(--error) !important; background: #fff5f5; }
-  .field input.autofilled { border-color: var(--success) !important; background: #f0fff4 !important; }
-  .field .hint { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-  .sol-error { font-size: 0.75rem; color: var(--error); font-weight: 600; margin-top: 3px; display: none; }
+  }}
+  .field input.error, .field select.error {{ border-color: var(--error) !important; background: #fff5f5; }}
+  .field input.autofilled {{ border-color: var(--success) !important; background: #f0fff4 !important; }}
+  .field .hint {{ font-size: 0.72rem; color: var(--muted); margin-top: 2px; }}
+  .sol-error {{ font-size: 0.75rem; color: var(--error); font-weight: 600; margin-top: 3px; display: none; }}
 
   /* ── MCC DROPDOWN ── */
-  .mcc-wrapper { position: relative; }
-  .mcc-dropdown {
+  .mcc-wrapper {{ position: relative; }}
+  .mcc-dropdown {{
     position: absolute; top: calc(100% + 4px); left: 0; right: 0;
     background: #fff; border: 1.5px solid var(--iob-blue-light);
     border-radius: 10px; max-height: 200px; overflow-y: auto;
     z-index: 200; box-shadow: var(--shadow-lg); display: none;
-  }
-  .mcc-dropdown.open { display: block; }
-  .mcc-item { padding: 9px 12px; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
-  .mcc-item:hover { background: #eef2ff; }
-  .mcc-item .code { font-weight: 700; color: var(--iob-blue); margin-right: 8px; }
-  .mcc-selected {
+  }}
+  .mcc-dropdown.open {{ display: block; }}
+  .mcc-item {{ padding: 9px 12px; font-size: 0.82rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; }}
+  .mcc-item:hover {{ background: #eef2ff; }}
+  .mcc-item .code {{ font-weight: 700; color: var(--iob-blue); margin-right: 8px; }}
+  .mcc-selected {{
     margin-top: 6px; padding: 7px 10px; background: #eef2ff;
     border-radius: 7px; font-size: 0.8rem; color: var(--iob-blue);
     font-weight: 600; display: none;
-  }
-  .mcc-selected.show { display: block; }
+  }}
+  .mcc-selected.show {{ display: block; }}
 
   /* ── GPS INPUT ── */
-  .gps-row { display: flex; gap: 8px; }
-  .gps-row input { flex: 1; }
-  .btn-gps {
+  .gps-row {{ display: flex; gap: 8px; }}
+  .gps-row input {{ flex: 1; }}
+  .btn-gps {{
     padding: 10px 14px; background: var(--iob-blue); color: #fff;
     border: none; border-radius: 99px; cursor: pointer; font-size: 0.8rem;
     font-weight: 600; font-family: inherit; white-space: nowrap; transition: all 0.2s;
-  }
-  .btn-gps:hover { background: var(--iob-blue-light); }
-  .btn-gps:disabled { opacity: 0.6; cursor: not-allowed; }
-  .gps-status { font-size: 0.72rem; color: var(--muted); }
+  }}
+  .btn-gps:hover {{ background: var(--iob-blue-light); }}
+  .btn-gps:disabled {{ opacity: 0.6; cursor: not-allowed; }}
+  .gps-status {{ font-size: 0.72rem; color: var(--muted); }}
 
   /* ── RADIO PILLS & HIGHLIGHT BANNERS ── */
-  .radio-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
-  .radio-pill {
+  .radio-group {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }}
+  .radio-pill {{
     display: flex; align-items: center; gap: 6px;
     border: 1.5px solid var(--border); border-radius: 99px;
     padding: 8px 16px; cursor: pointer; font-size: 0.84rem;
     font-weight: 600; transition: all 0.2s;
-  }
-  .radio-pill input[type=radio], .radio-pill input[type=checkbox] { accent-color: var(--iob-blue); }
-  .radio-pill:has(input:checked) { border-color: var(--iob-blue); background: #eef2ff; color: var(--iob-blue); }
+  }}
+  .radio-pill input[type=radio], .radio-pill input[type=checkbox] {{ accent-color: var(--iob-blue); }}
+  .radio-pill:has(input:checked) {{ border-color: var(--iob-blue); background: #eef2ff; color: var(--iob-blue); }}
 
-  .product-highlight {
+  .product-highlight {{
     background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
     border: 1.5px solid #f59e0b; border-radius: 12px;
     padding: 14px 18px; margin-top: 10px; font-size: 0.84rem; color: #92400e;
     display: flex; align-items: flex-start; gap: 10px; line-height: 1.45;
-  }
-  .product-highlight .icon { font-size: 1.4rem; flex-shrink: 0; }
+  }}
+  .product-highlight .icon {{ font-size: 1.4rem; flex-shrink: 0; }}
 
-  .soundbox-box {
+  .soundbox-box {{
     background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px;
     padding: 16px 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 14px;
-  }
+  }}
 
   /* ── SUBMIT BUTTON ── */
-  .submit-zone { text-align: center; padding: 12px 0 4px; }
-  .btn-submit {
+  .submit-zone {{ text-align: center; padding: 12px 0 4px; }}
+  .btn-submit {{
     background: linear-gradient(135deg, var(--iob-blue) 0%, var(--iob-blue-light) 100%);
     color: #fff; border: none; border-radius: 12px; padding: 14px 44px;
     font-size: 0.98rem; font-weight: 700; font-family: inherit; cursor: pointer;
     transition: all 0.25s ease; box-shadow: 0 4px 16px rgba(26,58,122,0.3);
-  }
-  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,58,122,0.4); }
-  .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-  .btn-reset {
+  }}
+  .btn-submit:hover {{ transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,58,122,0.4); }}
+  .btn-submit:disabled {{ opacity: 0.6; cursor: not-allowed; transform: none; }}
+  .btn-reset {{
     background: none; border: 1.5px solid var(--border); border-radius: 12px;
     padding: 12px 28px; font-size: 0.88rem; font-weight: 600; font-family: inherit;
     cursor: pointer; color: var(--muted); margin-left: 10px;
-  }
-  .btn-reset:hover { border-color: var(--muted); color: var(--text); }
+  }}
+  .btn-reset:hover {{ border-color: var(--muted); color: var(--text); }}
 
   /* ── INFO BANNER ── */
-  .info-box {
+  .info-box {{
     background: #fffbeb; border: 1px solid #f5c842; border-radius: 99px;
     padding: 10px 14px; font-size: 0.8rem; color: #7a5800;
     display: flex; gap: 8px; align-items: center; margin-bottom: 18px;
-  }
+  }}
 
   /* ── MODALS & FLOATING AUTH PANEL ── */
-  .modal-overlay {
+  .modal-overlay {{
     position: fixed; inset: 0; background: rgba(13,35,84,0.55);
     backdrop-filter: blur(6px); z-index: 500;
     display: flex; align-items: center; justify-content: center;
     padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s;
-  }
-  .modal-overlay.open { opacity: 1; pointer-events: auto; }
-  .modal-card {
+  }}
+  .modal-overlay.open {{ opacity: 1; pointer-events: auto; }}
+  .modal-card {{
     background: var(--card); border-radius: 20px; max-width: 460px; width: 100%;
     box-shadow: var(--shadow-lg); border: 1px solid var(--border); overflow: hidden;
     transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .modal-overlay.open .modal-card { transform: translateY(0); }
-  .modal-header {
+  }}
+  .modal-overlay.open .modal-card {{ transform: translateY(0); }}
+  .modal-header {{
     background: linear-gradient(90deg, var(--iob-blue-dark) 0%, var(--iob-blue) 100%);
     color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
-  }
-  .modal-header h3 { font-size: 1rem; font-weight: 700; }
-  .modal-close { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; opacity: 0.8; }
-  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-  .modal-footer { padding: 0 20px 20px; display: flex; justify-content: flex-end; gap: 8px; }
+  }}
+  .modal-header h3 {{ font-size: 1rem; font-weight: 700; }}
+  .modal-close {{ background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; opacity: 0.8; }}
+  .modal-body {{ padding: 20px; display: flex; flex-direction: column; gap: 14px; }}
+  .modal-footer {{ padding: 0 20px 20px; display: flex; justify-content: flex-end; gap: 8px; }}
 
-  .first-time-box {
+  .first-time-box {{
     background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px;
     padding: 12px 14px; font-size: 0.8rem; color: #92400e; line-height: 1.4;
-  }
+  }}
 
-  .staff-badge-float {
+  .staff-badge-float {{
     background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
     padding: 10px 14px; font-size: 0.82rem; color: #166534; font-weight: 600;
     display: none;
-  }
+  }}
 
   /* ── STATUS / TRACKING TABLE ── */
-  .search-bar-wrap { margin-bottom: 16px; display: flex; gap: 12px; }
-  .search-bar-wrap input {
+  .search-bar-wrap {{ margin-bottom: 16px; display: flex; gap: 12px; }}
+  .search-bar-wrap input {{
     flex: 1; border: 1.5px solid var(--border); border-radius: 99px;
     padding: 10px 18px; font-size: 0.88rem; font-family: inherit; outline: none;
     background: var(--input-bg);
-  }
-  .search-bar-wrap input:focus { border-color: var(--iob-blue-light); background: #fff; }
+  }}
+  .search-bar-wrap input:focus {{ border-color: var(--iob-blue-light); background: #fff; }}
 
-  .table-card {
+  .table-card {{
     background: var(--card); border-radius: 16px; border: 1px solid var(--border);
     box-shadow: var(--shadow); overflow: hidden;
-  }
-  .table-responsive { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-  th {
+  }}
+  .table-responsive {{ overflow-x: auto; }}
+  table {{ width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }}
+  th {{
     background: #f8faff; color: var(--muted); font-weight: 700;
     text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;
     padding: 14px 16px; border-bottom: 1px solid var(--border);
-  }
-  td { padding: 14px 16px; border-bottom: 1px solid #f0f4ff; color: var(--text); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #f8fbff; }
+  }}
+  td {{ padding: 14px 16px; border-bottom: 1px solid #f0f4ff; color: var(--text); vertical-align: middle; }}
+  tr:last-child td {{ border-bottom: none; }}
+  tr:hover td {{ background: #f8fbff; }}
 
-  .badge-type {
+  .badge-type {{
     display: inline-block; padding: 3px 8px; border-radius: 6px;
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-  }
-  .badge-type.qr { background: #e0e7ff; color: #3730a3; }
-  .badge-type.sb { background: #fae8ff; color: #86198f; }
-  .badge-type.lead { background: #fef3c7; color: #92400e; }
+  }}
+  .badge-type.qr {{ background: #e0e7ff; color: #3730a3; }}
+  .badge-type.sb {{ background: #fae8ff; color: #86198f; }}
+  .badge-type.lead {{ background: #fef3c7; color: #92400e; }}
 
-  .badge-status {
+  .badge-status {{
     display: inline-flex; align-items: center; gap: 4px;
     padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700;
-  }
-  .badge-status.pending { background: #fef3c7; color: #92400e; }
-  .badge-status.vendor { background: #e0f2fe; color: #0369a1; }
-  .badge-status.completed { background: #dcfce7; color: #166534; }
-  .badge-status.rejected { background: #fee2e2; color: #991b1b; }
+  }}
+  .badge-status.pending {{ background: #fef3c7; color: #92400e; }}
+  .badge-status.vendor {{ background: #e0f2fe; color: #0369a1; }}
+  .badge-status.completed {{ background: #dcfce7; color: #166534; }}
+  .badge-status.rejected {{ background: #fee2e2; color: #991b1b; }}
 
-  .btn-pdf {
+  .btn-pdf {{
     background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0;
     border-radius: 8px; padding: 6px 12px; font-size: 0.78rem;
     font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
     transition: all 0.2s;
-  }
-  .btn-pdf:hover { background: #dcfce7; }
+  }}
+  .btn-pdf:hover {{ background: #dcfce7; }}
 
   /* ── TOAST ── */
-  #toast {
+  #toast {{
     position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
     background: var(--iob-blue-dark); color: #fff; padding: 12px 24px; border-radius: 10px;
     font-size: 0.88rem; font-weight: 600; box-shadow: var(--shadow-lg);
     transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; text-align: center;
-  }
-  #toast.show { transform: translateX(-50%) translateY(0); }
-  #toast.success { background: var(--success); }
-  #toast.error { background: var(--error); }
+  }}
+  #toast.show {{ transform: translateX(-50%) translateY(0); }}
+  #toast.success {{ background: var(--success); }}
+  #toast.error {{ background: var(--error); }}
 
-  .hidden { display: none !important; }
-  .section-divider { border: none; border-top: 1.5px dashed var(--border); margin: 6px 0 16px; }
-  .empty-state { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+  .hidden {{ display: none !important; }}
+  .section-divider {{ border: none; border-top: 1.5px dashed var(--border); margin: 6px 0 16px; }}
+  .empty-state {{ padding: 40px 16px; text-align: center; color: var(--muted); font-size: 0.9rem; }}
 
-  @media (max-width: 768px) {
-    .type-options { grid-template-columns: 1fr; }
-    .col-2 { grid-template-columns: 1fr; }
-    .header-title { display: none; }
-  }
+  @media (max-width: 768px) {{
+    .type-options {{ grid-template-columns: 1fr; }}
+    .col-2 {{ grid-template-columns: 1fr; }}
+    .header-title {{ display: none; }}
+  }}
 </style>
 </head>
 <body>
 
-<!-- SPLASH -->
+<!-- SPLASH SCREEN WITH ANIMATED NATIVE SVG EMBLEM -->
 <div id="splash">
-  <div id="lottie-splash"></div>
+  <div class="splash-emblem">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="45" fill="#1a3a7a" stroke="#e8a020" stroke-width="4"/>
+      <path d="M50 15 L78 32 L78 68 L50 85 L22 68 L22 32 Z" stroke="#ffffff" stroke-width="3" fill="none"/>
+      <circle cx="50" cy="50" r="14" fill="#e8a020"/>
+      <text x="50" y="55" font-family="sans-serif" font-weight="900" font-size="12" fill="#0d2354" text-anchor="middle">IOB</text>
+    </svg>
+  </div>
   <div id="splash-title">IOB Dindigul Regional Office</div>
   <div id="splash-sub">Merchant Services & Leads Portal</div>
   <div id="splash-progress"><div id="splash-bar"></div></div>
@@ -358,11 +437,19 @@
     <span class="header-title">Dindigul Regional Office — Merchant Services</span>
   </div>
   <div class="header-right">
+    <!-- ANIMATED IOB HEADER EMBLEM -->
+    <div class="iob-animated-emblem" title="IOB Portal Active">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="45" fill="#1a3a7a" stroke="#e8a020" stroke-width="4"/>
+        <path d="M50 15 L78 32 L78 68 L50 85 L22 68 L22 32 Z" stroke="#ffffff" stroke-width="3" fill="none"/>
+        <circle cx="50" cy="50" r="14" fill="#e8a020"/>
+        <text x="50" y="55" font-family="sans-serif" font-weight="900" font-size="12" fill="#0d2354" text-anchor="middle">IOB</text>
+      </svg>
+    </div>
     <button type="button" id="notifToggleBtn" class="notif-btn" onclick="toggleNotificationPermission()">
       <span>🔔</span> <span id="notifLabel">Notifications: Checking...</span>
     </button>
     <a href="admin.html" class="admin-link">⚙️ Admin Dashboard</a>
-    <div id="header-lottie" class="header-lottie"></div>
   </div>
 </header>
 
@@ -380,361 +467,20 @@
 
     <!-- DATALISTS -->
     <datalist id="sol-datalist">
-      <option value="0174">0174 — Theni Allinagaram</option>
-      <option value="0175">0175 — Ayakudi</option>
-      <option value="0176">0176 — Cumbum</option>
-      <option value="0230">0230 — Vedasandur</option>
-      <option value="0232">0232 — Pannaikadu</option>
-      <option value="0237">0237 — Sithayamkottai</option>
-      <option value="0243">0243 — Pattiveeranpatti</option>
-      <option value="0332">0332 — Dindigul Main</option>
-      <option value="0376">0376 — Palani</option>
-      <option value="0883">0883 — Rasingapuram</option>
-      <option value="0910">0910 — Sembatti</option>
-      <option value="0924">0924 — Puduchatram</option>
-      <option value="1001">1001 — Urban Test Branch</option>
-      <option value="1013">1013 — Reddiapatti</option>
-      <option value="1044">1044 — Lakshmipuram</option>
-      <option value="1112">1112 — Nagayakottai</option>
-      <option value="1152">1152 — Narikkalpatti</option>
-      <option value="1220">1220 — Salaiyur</option>
-      <option value="1221">1221 — Marambadi</option>
-      <option value="1258">1258 — Oddanchatram</option>
-      <option value="1314">1314 — Dindigul Fort</option>
-      <option value="1316">1316 — Palayam</option>
-      <option value="1317">1317 — N Paraipatti</option>
-      <option value="1401">1401 — Silukkuwarpatti</option>
-      <option value="1560">1560 — Chinnamanur</option>
-      <option value="1789">1789 — Tamaraikulam</option>
-      <option value="1830">1830 — Dindigul Collectorate</option>
-      <option value="1896">1896 — Theni Medical College</option>
-      <option value="1919">1919 — Uthamapalayam</option>
-      <option value="1931">1931 — Periyakulam</option>
-      <option value="2098">2098 — RM Colony</option>
-      <option value="2286">2286 — Batlagundu</option>
-      <option value="2287">2287 — Andipatti</option>
-      <option value="2288">2288 — Natham</option>
-      <option value="2461">2461 — Vadamadurai</option>
-      <option value="2464">2464 — Nilakottai</option>
-      <option value="2574">2574 — Bodinayakanur</option>
-      <option value="2685">2685 — Silapadi</option>
-      <option value="2686">2686 — Chinnalapatti</option>
-      <option value="2702">2702 — KK Patti</option>
-      <option value="2703">2703 — PC Patti</option>
-      <option value="2704">2704 — T Subbulapuram</option>
-      <option value="2705">2705 — V Gopalpatti</option>
-      <option value="2706">2706 — K Reddiarchatram</option>
-      <option value="3164">3164 — Sendurai</option>
-      <option value="3165">3165 — Ponnagaram</option>
-      <option value="3166">3166 — Thadikombu</option>
-      <option value="3346">3346 — Vangamanuthu</option>
-      <option value="3347">3347 — Anaipatti</option>
-      <option value="3436">3436 — Kodaikanal</option>
-      <option value="3437">3437 — Dharumathupatti</option>
-      <option value="3548">3548 — Boothipuram</option>
-      <option value="3549">3549 — Ambilikai</option>
-      <option value="3920">3920 — Balakrishnapuram</option>
-      <option value="3933">3933 — Regional Office, Dindigul</option>
-      <option value="4069">4069 — Loan Processing Centre, Dindigul</option>
-      <option value="4153">4153 — Kosavapatti</option>
-      <option value="0911">0911 — Kalwarpatti</option>
-    </datalist>
+"""
+
+for code, bdata in branches.items():
+    html_content += f'      <option value="{code}">{code} — {bdata["name"]}</option>\n'
+
+html_content += f"""    </datalist>
 
     <datalist id="staff-datalist">
-      <option value="48243">48243 — DILEEP G (CHIEF MANAGER - I line)</option>
-      <option value="59529">59529 — JITH S (MANAGER - II line)</option>
-      <option value="61628">61628 — LAKSHMI M (ASST MANAGER)</option>
-      <option value="61755">61755 — RUBINI R (ASST MANAGER)</option>
-      <option value="23277">23277 — M PUSHPARANI (PART TIME HOUSE KEEPER / PTHK)</option>
-      <option value="47100">47100 — RENGA RAJA PANDI J (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="49344">49344 — DIVYA C B (MANAGER - I line)</option>
-      <option value="55866">55866 — RESHMA A (ASST MANAGER - II line)</option>
-      <option value="66313">66313 — GANAPATHISUBRAMANIAM A L (ASST MANAGER(PROB))</option>
-      <option value="23086">23086 — PACKIAM M (OFFICE ASSISTANT)</option>
-      <option value="53068">53068 — MAHALAKSHMI (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="61981">61981 — GAUTAM K (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="55213">55213 — BASIL BABY (SENIOR MANAGER - I line)</option>
-      <option value="51529">51529 — NIRANJAN MISHRA (MANAGER - II line)</option>
-      <option value="39428">39428 — CHRISTY MARY GEORGE (ASST MANAGER)</option>
-      <option value="64236">64236 — MYTHILI GUNASEKARAN (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="67989">67989 — SUBIKSHAMUGI S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="57222">57222 — SUBADEVI M (SENIOR MANAGER - I line)</option>
-      <option value="59189">59189 — JIBY SIMON (ASST MANAGER)</option>
-      <option value="55949">55949 — NANDHINI B (ASST MANAGER - II line)</option>
-      <option value="66163">66163 — ANJU K NAIR (ASST MANAGER(PROB))</option>
-      <option value="39629">39629 — SATHISH KUMAR K (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="45284">45284 — MUTHU N (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="23035">23035 — JEYALAKSHMI M (OFFICE ASSISTANT)</option>
-      <option value="61632">61632 — THIRUMOORTHI K (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="62729">62729 — MARUTHU PANDI P (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="61900">61900 — DHANASEKAR (MANAGER - I line)</option>
-      <option value="45859">45859 — SURESH L (ASST MANAGER)</option>
-      <option value="57377">57377 — A RAMAKRISHNAN (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="63789">63789 — BALAGANESH MP (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="39086">39086 — VINOD C P (MANAGER - I line)</option>
-      <option value="52128">52128 — EZHIL SHOBANA M (ASST MANAGER - II line)</option>
-      <option value="22917">22917 — MARIAPPAN K A (OFFICE ASSISTANT)</option>
-      <option value="29230">29230 — SHANMUGANANDAN S (SPECIAL CUSTOMER SERVICE ASSOCIATE)</option>
-      <option value="66825">66825 — KAVI PRIYA C (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="48253">48253 — SUDEM BRAHMA (SENIOR MANAGER - I line)</option>
-      <option value="60460">60460 — MUTHULATHA G (MANAGER - II line)</option>
-      <option value="67064">67064 — ARINATH K L (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="50298">50298 — DINESH A (CHIEF MANAGER - I line)</option>
-      <option value="49094">49094 — PRIYADHARSHINI R (MANAGER - II line)</option>
-      <option value="45563">45563 — SYED DEEN IBRAHIM (ASST MANAGER)</option>
-      <option value="65380">65380 — ABINAYA D B (ASST MANAGER)</option>
-      <option value="66897">66897 — JOHN PAUL P (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="22919">22919 — KANAKARAJ M (OFFICE ASSISTANT)</option>
-      <option value="61631">61631 — SATHISH KUMAR N (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="61736">61736 — GAJAPATHI M (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="64925">64925 — PRABHAHARAN R (SENIOR MANAGER - I line)</option>
-      <option value="64985">64985 — NARMADHA K (ASST MANAGER - II line)</option>
-      <option value="60756">60756 — JUBIN MS (ASST MANAGER)</option>
-      <option value="22017">22017 — SUBRAMANI K (OFFICE ASSISTANT)</option>
-      <option value="61979">61979 — MARUTHAMUTHU P (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="63762">63762 — RAJAKUMAR R (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="47159">47159 — SATHISH KUMAR P (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="64507">64507 — M GOPINATHAN (MANAGER - I line)</option>
-      <option value="53083">53083 — SARANYA D (ASST MANAGER - II line)</option>
-      <option value="67729">67729 — JERSHA SOUNDAR S A (ASST MANAGER(PROB))</option>
-      <option value="63766">63766 — NANTHINI DEVI K (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="47243">47243 — SANTHANA KUMAR N (OFFICE ASSISTANT)</option>
-      <option value="65452">65452 — SUBHA SHREE R S (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="66002">66002 — PALANIAMMAL V (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="39898">39898 — RAHINI R (MANAGER - I line)</option>
-      <option value="60484">60484 — RAMJANSI R (MANAGER - II line)</option>
-      <option value="66437">66437 — CHINMAY BISWAS (ASST MANAGER(PROB))</option>
-      <option value="62536">62536 — DIPIN P D (MANAGER - I line)</option>
-      <option value="66470">66470 — KARUNYA VARDANA S (ASST MANAGER(PROB))</option>
-      <option value="45398">45398 — MUTHUKUMAR S (SPECIAL CUSTOMER SERVICE ASSOCIATE)</option>
-      <option value="66066">66066 — PREETHI A (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="61518">61518 — AROCKIYADOSS S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="62806">62806 — KANIMOZHI A (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="43448">43448 — PARVATHI MENON (MANAGER - I line)</option>
-      <option value="59904">59904 — JAYA VAISHNAVI K (MANAGER - II line)</option>
-      <option value="66444">66444 — PARVATHI B (ASST MANAGER(PROB))</option>
-      <option value="66977">66977 — EUKTHA SREE MUHI B (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="56082">56082 — ASHWINI V (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="61644">61644 — BEULAH JOY N (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="59207">59207 — ROSHAN ZAMEER SHAIK AHAMED (MANAGER - I line)</option>
-      <option value="53259">53259 — MAHENDRAN M (ASST MANAGER - II line)</option>
-      <option value="67471">67471 — BHAVESH SAINI (ASST MANAGER (PROB - RURAL DEV OFFICER))</option>
-      <option value="61733">61733 — PRABHU A (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="62823">62823 — N RAJESKUMAR (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="49090">49090 — VAIDHEESVARI P (SENIOR MANAGER - I line)</option>
-      <option value="48659">48659 — JAMES SEBASTIN (ASST MANAGER - II line)</option>
-      <option value="67716">67716 — ARADHYA MISHRA (ASST MANAGER(PROB))</option>
-      <option value="56009">56009 — KARTHIKKUMAR P (ASST MANAGER -I line)</option>
-      <option value="61987">61987 — M GUNASEKARAN (ASST MANAGER - II line)</option>
-      <option value="65200">65200 — POOMANI V (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="46933">46933 — SARAVANAMOORTHY S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="38612">38612 — MANOJKUMAR P (MANAGER)</option>
-      <option value="56193">56193 — PRABHU R (MANAGER - I line)</option>
-      <option value="62813">62813 — SUJITHRA (ASST MANAGER - II line)</option>
-      <option value="37054">37054 — RAJA VETRICHELVAN G (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="45554">45554 — MURUGESAN P (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="22923">22923 — CHANDRA T (OFFICE ASSISTANT)</option>
-      <option value="43916">43916 — THANDAPANI P (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="59250">59250 — ABISHEK NAYAGAM S (MANAGER - I line)</option>
-      <option value="57437">57437 — SANJEEV KUMAR (ASST MANAGER - II line)</option>
-      <option value="67016">67016 — KAVINESH R (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="67737">67737 — ABIRAMI ARULPRIYA (ASST MANAGER(PROB))</option>
-      <option value="45408">45408 — KALAIVANAN A (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="39426">39426 — GIGU GEORGE (MANAGER - I line)</option>
-      <option value="45529">45529 — RAVI S (ASST MANAGER - II line)</option>
-      <option value="67840">67840 — KAMALADHARANI B (ASST MANAGER(PROB))</option>
-      <option value="60121">60121 — JEENA K P (MANAGER - I line)</option>
-      <option value="55223">55223 — JAYANT SINGH RATHORE (MANAGER - II line)</option>
-      <option value="59912">59912 — RAVIKKUMAR S (ASST MANAGER (RURAL CR & DEV))</option>
-      <option value="61991">61991 — PERUMALAKKAL L (ASST MANAGER)</option>
-      <option value="45279">45279 — SIVARAMAN R (HEAD MESSENGER IN IOB)</option>
-      <option value="46353">46353 — PANDIAN SUDHAKAR (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="38296">38296 — RUPESH KUMAR (CHIEF MANAGER - I line)</option>
-      <option value="35719">35719 — JOSEPH A (SENIOR MANAGER - II line)</option>
-      <option value="52567">52567 — JISHA M R (ASST MANAGER)</option>
-      <option value="67041">67041 — YOGAPRIYA S (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="22931">22931 — PETCHIAMMAL S (OFFICE ASSISTANT)</option>
-      <option value="53890">53890 — GOMATHI S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="21111">21111 — THENAPPAN M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="65211">65211 — P ANANTHI (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="55663">55663 — KAVIPRIYAA (SENIOR MANAGER - II line)</option>
-      <option value="62887">62887 — RAJBIR SINGH (MANAGER - I line)</option>
-      <option value="67021">67021 — ISHWARYA R (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="65450">65450 — GOBIKRISHNAN T (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="66065">66065 — BAVITHRA A (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="56920">56920 — CHITHRA S S (MANAGER - I line)</option>
-      <option value="53971">53971 — JAIGANESH (ASST MANAGER - II line)</option>
-      <option value="67806">67806 — AMUTHA N (ASST MANAGER(PROB))</option>
-      <option value="56062">56062 — SAIMON AMBUROSE (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="35803">35803 — RAJKANNAN P (MANAGER - I line)</option>
-      <option value="63840">63840 — SENTHIL KUMAR M (ASST MANAGER - II line)</option>
-      <option value="45530">45530 — KUMARESAN K V (HEAD MESSENGER IN IOB)</option>
-      <option value="53043">53043 — BALAMURUGAN D (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="61627">61627 — G MURUGESWARI (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="55211">55211 — AJEESH G T (SENIOR MANAGER - I line)</option>
-      <option value="58162">58162 — MANIKANDAN M (ASST MANAGER - II line)</option>
-      <option value="66956">66956 — RUBINI M (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="22837">22837 — VENNIMUTHU M (OFFICE ASSISTANT)</option>
-      <option value="45169">45169 — JAYAPRAKASH M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="55601">55601 — PUNITHA (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="66824">66824 — SANGEETHA (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="58501">58501 — DILIP SELVAKUMAR R (MANAGER - I line)</option>
-      <option value="50665">50665 — KANDEEBAN S (ASST MANAGER - II line)</option>
-      <option value="22817">22817 — KATHIRESAN R (OFFICE ASSISTANT)</option>
-      <option value="54648">54648 — NATARAJAN P (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="61722">61722 — MEENA A (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="52411">52411 — VINEETH N (MANAGER - I line)</option>
-      <option value="53722">53722 — DAISY OMANA S (ASST MANAGER - II line)</option>
-      <option value="67834">67834 — FATHIMA NILOOFAR (ASST MANAGER(PROB))</option>
-      <option value="41853">41853 — MUTHUCHAMY D (SPECIAL CUSTOMER SERVICE ASSOCIATE)</option>
-      <option value="56073">56073 — BHARATHI V (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="40724">40724 — SARAVANA KUMAR T (MANAGER - II line)</option>
-      <option value="55194">55194 — MANOJ KUMAR (MANAGER - I line)</option>
-      <option value="66779">66779 — MUTHUVIGNESH A (ASST MANAGER(PROB))</option>
-      <option value="67026">67026 — PARKAVI E (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="58229">58229 — A SHANMUGAPRIYA (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="47082">47082 — PANDIAN K (OFFICE ASSISTANT)</option>
-      <option value="54335">54335 — MANIKANDAN MS (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="47164">47164 — JEGATHEESH P (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="36648">36648 — PRAKASH B (SENIOR MANAGER - I line)</option>
-      <option value="38831">38831 — ARYA R CHANDRAN (ASST MANAGER - II line)</option>
-      <option value="66735">66735 — SUBASHINY K M (ASST MANAGER(PROB))</option>
-      <option value="39356">39356 — ASHAMOL C THANKAPPAN (MANAGER - I line)</option>
-      <option value="50550">50550 — GOKILA G (ASST MANAGER - II line)</option>
-      <option value="66443">66443 — MAINAK BAIN (ASST MANAGER(PROB))</option>
-      <option value="66943">66943 — CHAARU NIKITA CELESTIN A (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="62743">62743 — RAMMYA (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="37115">37115 — TITUS L R (SPECIAL CUSTOMER SERVICE ASSOCIATE)</option>
-      <option value="63544">63544 — KARUPPU SAMY M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="63791">63791 — SUNITHA M (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="58685">58685 — NEERAJA K PRADEEP (SENIOR MANAGER - I line)</option>
-      <option value="53699">53699 — JENNY MARX P (MANAGER - II line)</option>
-      <option value="54822">54822 — YALINI K (ASST MANAGER)</option>
-      <option value="63038">63038 — LIPIKA PATRA (UNAUTHORISED ABSENCE)</option>
-      <option value="66412">66412 — RANJANI D (ASST MANAGER(PROB))</option>
-      <option value="46939">46939 — AKBAR ALI M (OFFICE ASSISTANT)</option>
-      <option value="61629">61629 — DHIVYA (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="60198">60198 — G S PRABHU (MANAGER - I line)</option>
-      <option value="60408">60408 — S BOOMADEVI (ASST MANAGER - II line)</option>
-      <option value="67804">67804 — SATHIYA MOORTHY K (ASST MANAGER(PROB))</option>
-      <option value="64724">64724 — B GANESH RAM (MANAGER - I line)</option>
-      <option value="67039">67039 — SWETHA V (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="53493">53493 — KAUSHALYA DEVI C (ASST MANAGER - II line)</option>
-      <option value="61633">61633 — VIJAYKESHAV J (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="39934">39934 — ANITA S A (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="62035">62035 — VENILA SELVERAJ (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="59030">59030 — NALLATHAMBI P (MANAGER - I line)</option>
-      <option value="61934">61934 — BABU CHOCKALINGAM (ASST MANAGER - II line)</option>
-      <option value="60154">60154 — B KARTHIK (MANAGER - I line)</option>
-      <option value="65272">65272 — NAVEEN ARYA (ASST MANAGER - II line)</option>
-      <option value="22924">22924 — SAKTHIVEL M (OFFICE ASSISTANT)</option>
-      <option value="61548">61548 — REVATHI (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="46494">46494 — RAJ KUMAR R (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="49301">49301 — KUBERAN S (MANAGER - I line)</option>
-      <option value="53899">53899 — SAVITHA PANDIDURAI (ASST MANAGER - II line)</option>
-      <option value="67805">67805 — T PRAVEENRAJA (ASST MANAGER(PROB))</option>
-      <option value="22016">22016 — MARIAPPAN R (OFFICE ASSISTANT)</option>
-      <option value="39910">39910 — JENIFER J (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="56108">56108 — DINESH KUMAR M (SENIOR MANAGER - I line)</option>
-      <option value="56825">56825 — PREMALATHA T (MANAGER - II line)</option>
-      <option value="66427">66427 — MRINMAY KUMAR SARKAR (ASST MANAGER(PROB))</option>
-      <option value="67470">67470 — ALI ABBAS HADI (ASST MANAGER (PROB - RURAL DEV OFFICER))</option>
-      <option value="22681">22681 — BAVANI C (OFFICE ASSISTANT)</option>
-      <option value="64119">64119 — SRIRAM G (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="50663">50663 — ARUN KUMAR R (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="47483">47483 — NAVEEN RAJ S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="49077">49077 — FATHIMA S (MANAGER - I line)</option>
-      <option value="66152">66152 — ASWIN M (ASST MANAGER(PROB))</option>
-      <option value="66484">66484 — MEENAKSHI N (ASST MANAGER(PROB))</option>
-      <option value="55755">55755 — PRABAHARAN (MANAGER - I line)</option>
-      <option value="63520">63520 — PRINKA (ASST MANAGER - II line)</option>
-      <option value="67810">67810 — PRAVEEN SANKAR R (ASST MANAGER(PROB))</option>
-      <option value="61983">61983 — R SIVARANJANI (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="64122">64122 — KUMARAN P (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="65451">65451 — SURYA PRAKASH R (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="35749">35749 — SHAJI P K (MANAGER - I line)</option>
-      <option value="52251">52251 — ANILA DAVIES M (ASST MANAGER - II line)</option>
-      <option value="62061">62061 — SURYA PRABHA (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="22764">22764 — SIVAKUMAR P (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="50392">50392 — PITCHAIATHITHIYAN M (MANAGER - I line)</option>
-      <option value="53148">53148 — SURESH R (ASST MANAGER - II line)</option>
-      <option value="67860">67860 — ADITI TOMAR (ASST MANAGER(PROB))</option>
-      <option value="63831">63831 — PONMUTHUKUMAR B (ASST MANAGER -I line)</option>
-      <option value="61599">61599 — M BAKYALAKSHMI (ASST MANAGER - II line)</option>
-      <option value="61672">61672 — LOGESHWAR R (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="49217">49217 — SATHYA P T (MANAGER - I line)</option>
-      <option value="66733">66733 — LAKSHMI A (ASST MANAGER(PROB))</option>
-      <option value="63695">63695 — GAYATHRI (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="64220">64220 — VIJI S (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="49124">49124 — THARAKESWARI K R (SENIOR MANAGER - I line)</option>
-      <option value="63679">63679 — BRINDHA A (ASST MANAGER - II line)</option>
-      <option value="46328">46328 — KULANDAIVEL M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="46455">46455 — SIVAMURUGAN T (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="47042">47042 — THIRUPPATHI K (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="65911">65911 — SIVAPREETHI M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="38517">38517 — VELMURUGAN C (SENIOR MANAGER - I line)</option>
-      <option value="63672">63672 — DHANASANKAR BALAKRISHNAN (ASST MANAGER - II line)</option>
-      <option value="62649">62649 — N HEMALATHA (SENIOR MANAGER - I line)</option>
-      <option value="59820">59820 — B KARTHIKA (ASST MANAGER - II line)</option>
-      <option value="67717">67717 — POOJA YADAV (ASST MANAGER(PROB))</option>
-      <option value="61980">61980 — SARAL PRIYADHARSINI A (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="63926">63926 — KALAIVANI (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="54532">54532 — SRINIVASAN SUBRAMANIAN (MANAGER - I line)</option>
-      <option value="57546">57546 — AMBIKA V (ASST MANAGER - II line)</option>
-      <option value="63142">63142 — PRADEEPSELVA (MANAGER - I line)</option>
-      <option value="66921">66921 — LOGESH PANDI S (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="57320">57320 — GOPINATH M (SENIOR MANAGER - I line)</option>
-      <option value="38535">38535 — PREETHA DEVI C (ASST MANAGER - II line)</option>
-      <option value="63527">63527 — B SATHEESH KUMAR (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="47481">47481 — ARUL MURUGAN S (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="61617">61617 — PRIYA S V (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="51984">51984 — MAHALINGAM T (MANAGER - II line)</option>
-      <option value="61683">61683 — P PRAVEEN KOP (MANAGER - I line)</option>
-      <option value="67068">67068 — THAMILVANAN P (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="50059">50059 — SARANYA R (MANAGER - I line)</option>
-      <option value="66155">66155 — CHANDAN B ANAND (ASST MANAGER(PROB))</option>
-      <option value="66454">66454 — AMGOTH SINDHU (ASST MANAGER(PROB))</option>
-      <option value="66981">66981 — SIVA SANKAR S (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="43763">43763 — SHIVA SUBRAMANIAN T (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="63471">63471 — GOTHANDAPERUMAL K (MANAGER - I line)</option>
-      <option value="67069">67069 — SHAKTHI BHAALAAJI D (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="53803">53803 — THIRUMENI P (SENIOR CUSTOMER SERVICE ASSOCIATE (CASH))</option>
-      <option value="64574">64574 — VELUMAYIL B (MANAGER - I line)</option>
-      <option value="55401">55401 — SHEETHAL R (ASST MANAGER - II line)</option>
-      <option value="67029">67029 — VIJAYALAKSHMI B (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="46926">46926 — VIJAY ANAND D (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="55447">55447 — AVINASH C (MANAGER - I line)</option>
-      <option value="67052">67052 — TAMILARASAN S (ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION))</option>
-      <option value="54612">54612 — JEYAPRIYENKA (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-      <option value="36614">36614 — CHANDRA KUMAR P (SENIOR REGIONAL MANAGER)</option>
-      <option value="36937">36937 — ANNAMALAI SM (CHIEF MANAGER - II line)</option>
-      <option value="43278">43278 — VISHNU VARDHAN J M (CHIEF MANAGER)</option>
-      <option value="43261">43261 — VENKATESWARAN R (SENIOR MANAGER)</option>
-      <option value="49628">49628 — NISHA J (SENIOR MANAGER(RISK))</option>
-      <option value="54257">54257 — DHANASEKARAN N (SENIOR MANAGER)</option>
-      <option value="62467">62467 — AMIT KUMAR SINGH (SENIOR MANAGER)</option>
-      <option value="63094">63094 — DINESHKUMAR A (SENIOR MANAGER)</option>
-      <option value="49525">49525 — SIVAKAMI DEVI C S (MANAGER)</option>
-      <option value="59111">59111 — KRISHNA KUMAR S (MANAGER)</option>
-      <option value="58844">58844 — THANGARAJESH PONNUCHAMY (MANAGER)</option>
-      <option value="40412">40412 — JEYANTHI V RAYEN (MANAGER)</option>
-      <option value="62648">62648 — S ARUNKUMAR (MANAGER)</option>
-      <option value="56063">56063 — PRAVEEN S (MANAGER)</option>
-      <option value="60105">60105 — VIDHYA V (MANAGER)</option>
-      <option value="63039">63039 — SATISH PANDIAN (MANAGER-MARKETING)</option>
-      <option value="54920">54920 — ANJU J (ASST MANAGER)</option>
-      <option value="56707">56707 — ANJANA U S (ASST MANAGER)</option>
-      <option value="59087">59087 — JOHN CHARLES ABISHEK M (ASST MANAGER)</option>
-      <option value="67910">67910 — GAJANAND UPADHYAY (ASST.MANAGER(PROB-OFFICIAL LANGUAGE))</option>
-      <option value="48496">48496 — SATHISH KUMAR B (SENIOR MANAGER)</option>
-      <option value="36970">36970 — SIVAMANI S (CHIEF MANAGER - I line)</option>
-      <option value="49670">49670 — SOUNDARYAA R (SENIOR MANAGER(FINANCIAL ANALYST))</option>
-      <option value="53840">53840 — PARVATHY SUDHAKAR (MANAGER)</option>
-      <option value="55580">55580 — SUMITHRA N (MANAGER)</option>
-      <option value="39775">39775 — SAMUEL VIJAY A (MANAGER - I line)</option>
-      <option value="55777">55777 — MINU PREETHI R (ASST MANAGER - II line)</option>
-      <option value="63738">63738 — SHANTHA KUMAR M (CUSTOMER SERVICE ASSOCIATE (CSA))</option>
-    </datalist>
+"""
+
+for roll, sdata in staff_list.items():
+    html_content += f'      <option value="{roll}">{roll} — {sdata["name"]} ({sdata["designation"]})</option>\n'
+
+html_content += f"""    </datalist>
 
     <!-- SERVICE SELECTOR -->
     <div class="type-card">
@@ -1251,116 +997,102 @@
 
 <script>
 // CONFIGURATION
-let APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILWqzxB6jb9RopXU_vZhHbusPdbrj70FcQx6vGcyrAQTTy_gW4goL/exec";
+let APPS_SCRIPT_URL = "{admin_url}";
 
 // Embedded MCC List
-const MCC_LIST = [{"code": "0742", "desc": "Veterinary services"}, {"code": "0743", "desc": "Wine producers"}, {"code": "0744", "desc": "Champagne producers"}, {"code": "0763", "desc": "Agricultural co-operatives"}, {"code": "0780", "desc": "Landscaping and horticultural services"}, {"code": "0820", "desc": "Fertilizer Dealers"}, {"code": "0821", "desc": "Pesticides / Insecticides"}, {"code": "0822", "desc": "Seeds"}, {"code": "0823", "desc": "Farm Equipment"}, {"code": "0824", "desc": "Agricultural Machinery"}, {"code": "0825", "desc": "Other Agri Inputs"}, {"code": "1221", "desc": "NETS"}, {"code": "1520", "desc": "General contractors residential and commercial"}, {"code": "1711", "desc": "Heating, plumbing and air-conditioning contractors"}, {"code": "1731", "desc": "Electrical contractors"}, {"code": "1740", "desc": "Masonry, stonework, tile setting, plastering and insulation contractors"}, {"code": "1750", "desc": "Carpentry contractors"}, {"code": "1761", "desc": "Roofing, siding and sheet metal work contractors"}, {"code": "1771", "desc": "Concrete work contractors"}, {"code": "1799", "desc": "Special trade contractors not elsewhere classified"}, {"code": "2741", "desc": "Miscellaneous publishing and printing services"}, {"code": "2791", "desc": "Typesetting, platemaking and related services"}, {"code": "2842", "desc": "Speciality cleaning, polishing and sanitation preparations"}, {"code": "3000", "desc": "UNITED AIRLINES"}, {"code": "3002", "desc": "PAN AMERICAN"}, {"code": "3003", "desc": "Airlines"}, {"code": "3005", "desc": "BRITISH AIRWAYS"}, {"code": "3006", "desc": "JAPAN AIRLINES"}, {"code": "3007", "desc": "AIR FRANCE"}, {"code": "3008", "desc": "LUFTHANSA"}, {"code": "3010", "desc": "KLM (ROYAL DUTCH AIRLINES)"}, {"code": "3012", "desc": "QUANTAS"}, {"code": "3013", "desc": "ALITALIA"}, {"code": "3015", "desc": "SWISSAIR"}, {"code": "3016", "desc": "SAS"}, {"code": "3017", "desc": "SOUTH AFRICAN AIRWAYS"}, {"code": "3018", "desc": "VARIG (BRAZIL)"}, {"code": "3019", "desc": "Airlines"}, {"code": "3020", "desc": "AIR-INDIA"}, {"code": "3021", "desc": "AIR ALGERIE"}, {"code": "3022", "desc": "PHILIPPINE AIRLINES"}, {"code": "3023", "desc": "MEXICANA"}, {"code": "3024", "desc": "PAKISTAN INTERNATIONAL"}, {"code": "3025", "desc": "AIR NEW ZEALAND"}, {"code": "3026", "desc": "Airlines"}, {"code": "3027", "desc": "UTA/INTERAIR"}, {"code": "3028", "desc": "AIR MALTA"}, {"code": "3029", "desc": "SABENA"}, {"code": "3030", "desc": "AEROLINEAS ARGENTINAS"}, {"code": "3031", "desc": "OLYMPIC AIRWAYS"}, {"code": "3032", "desc": "EL AL"}, {"code": "3033", "desc": "ANSETT AIRLINES"}, {"code": "3034", "desc": "AUSTRAINLIAN AIRLINES"}, {"code": "3035", "desc": "TAP (PORTUGAL)"}, {"code": "3036", "desc": "VASP (BRAZIL)"}, {"code": "3037", "desc": "EGYPTAIR"}, {"code": "3038", "desc": "KUWAIT AIRLINES"}, {"code": "3039", "desc": "AVIANCA"}, {"code": "3040", "desc": "GULF AIR (BAHRAIN)"}, {"code": "3042", "desc": "FINNAIR"}, {"code": "3043", "desc": "AER LINGUS"}, {"code": "3044", "desc": "AIR LANKA"}, {"code": "3045", "desc": "NIGERIA AIRWAYS"}, {"code": "3046", "desc": "CRUZEIRO DO SUL (BRAZIJ)"}, {"code": "3047", "desc": "THY (TURKEY)"}, {"code": "3048", "desc": "ROYAL AIR MAROC"}, {"code": "3049", "desc": "TUNIS AIR"}, {"code": "3050", "desc": "ICELANDAIR"}, {"code": "3051", "desc": "AUSTRIAN AIRLINES"}, {"code": "3052", "desc": "LANCHILE"}, {"code": "3053", "desc": "AVIACO (SPAIN)"}, {"code": "3054", "desc": "LADECO (CHILE)"}, {"code": "3055", "desc": "LAB (BOLIVIA)"}, {"code": "3056", "desc": "QUEBECAIRE"}, {"code": "3057", "desc": "EASTWEST AIRLINES (AUSTRALIA)"}, {"code": "3058", "desc": "DELTA"}, {"code": "3059", "desc": "Airlines"}, {"code": "3060", "desc": "NORTHWEST"}, {"code": "3061", "desc": "CONTINENTAL"}, {"code": "3062", "desc": "WESTERN"}, {"code": "3063", "desc": "US AIR"}, {"code": "3064", "desc": "Airlines"}, {"code": "3065", "desc": "AIRINTER"}, {"code": "3066", "desc": "SOUTHWEST"}, {"code": "3067", "desc": "Airlines"}, {"code": "3068", "desc": "Airlines"}, {"code": "3069", "desc": "SUN COUNTRY AIRLINES"}, {"code": "3070", "desc": "Airlines"}, {"code": "3071", "desc": "AIR BRITISH COLUBIA"}, {"code": "3072", "desc": "Airlines"}, {"code": "3073", "desc": "Airlines"}, {"code": "3074", "desc": "Airlines"}, {"code": "3075", "desc": "SINGAPORE AIRLINES"}, {"code": "3077", "desc": "THAI AIRWAYS"}, {"code": "3078", "desc": "CHINA AIRLINES"}, {"code": "3079", "desc": "Airlines"}, {"code": "3080", "desc": "Airlines"}, {"code": "3081", "desc": "NORDAIR"}, {"code": "3082", "desc": "KOREAN AIRLINES"}, {"code": "3083", "desc": "AIR AFRIGUE"}, {"code": "3084", "desc": "EVA AIRLINES"}, {"code": "3085", "desc": "MIDWEST EXPRESS AIRLINES, INC."}, {"code": "3086", "desc": "Airlines"}, {"code": "3087", "desc": "METRO AIRLINES"}, {"code": "3088", "desc": "CROATIA AIRLINES"}, {"code": "3090", "desc": "Airlines"}, {"code": "3091", "desc": "Airlines"}, {"code": "3092", "desc": "Airlines"}, {"code": "3093", "desc": "Airlines"}, {"code": "3095", "desc": "Airlines"}, {"code": "3096", "desc": "AIR ZIMBABWE"}, {"code": "3097", "desc": "Airlines"}, {"code": "3098", "desc": "Airlines"}, {"code": "3099", "desc": "CATHAY PACIFIC"}, {"code": "3100", "desc": "MALAYSIAN AIRLINE SYSTEM"}, {"code": "3101", "desc": "Airlines"}, {"code": "3102", "desc": "IBERIA"}, {"code": "3103", "desc": "GARUDA (INDONESIA)"}, {"code": "3104", "desc": "Airlines"}, {"code": "3105", "desc": "Airlines"}, {"code": "3106", "desc": "BRAATHENS S.A.F.E. (NORWAY)"}, {"code": "3107", "desc": "Airlines"}, {"code": "3108", "desc": "Airlines"}, {"code": "3109", "desc": "Airlines"}, {"code": "3110", "desc": "WINGS AIRWAYS"}, {"code": "3111", "desc": "BRITISH MIDLAND"}, {"code": "3112", "desc": "WINDWARD ISLAND"}, {"code": "3113", "desc": "Airlines"}, {"code": "3114", "desc": "Airlines"}, {"code": "3116", "desc": "Airlines"}, {"code": "3117", "desc": "VIASA"}, {"code": "3118", "desc": "VALLEY AIRLINES"}, {"code": "3119", "desc": "Airlines"}, {"code": "3120", "desc": "Airlines"}, {"code": "3121", "desc": "Airlines"}, {"code": "3122", "desc": "Airlines"}, {"code": "3123", "desc": "Airlines"}, {"code": "3124", "desc": "Airlines"}, {"code": "3125", "desc": "TAN"}, {"code": "3126", "desc": "TALAIR"}, {"code": "3127", "desc": "TACA INTERNATIONAL"}, {"code": "3128", "desc": "Airlines"}, {"code": "3129", "desc": "SURINAM AIRWAYS"}, {"code": "3130", "desc": "SUN WORLD INTERNATIONAL"}, {"code": "3131", "desc": "Airlines"}, {"code": "3132", "desc": "Airlines"}, {"code": "3133", "desc": "SUNBELT AIRLINES"}, {"code": "3134", "desc": "Airlines"}, {"code": "3135", "desc": "SUDAN AIRWAYS"}, {"code": "3136", "desc": "Airlines"}, {"code": "3137", "desc": "SINGLETON"}, {"code": "3138", "desc": "SIMMONS AIRLINES"}, {"code": "3139", "desc": "Airlines"}, {"code": "3140", "desc": "Airlines"}, {"code": "3141", "desc": "Airlines"}, {"code": "3142", "desc": "Airlines"}, {"code": "3143", "desc": "SCENIC AIRLINES"}, {"code": "3144", "desc": "VIRGIN ATLANTIC"}, {"code": "3145", "desc": "SAN JUAN AIRLINES"}, {"code": "3146", "desc": "LUXAIR"}, {"code": "3147", "desc": "Airlines"}, {"code": "3148", "desc": "Airlines"}, {"code": "3149", "desc": "Airlines"}, {"code": "3150", "desc": "Airlines"}, {"code": "3151", "desc": "AIR ZAIRE"}, {"code": "3152", "desc": "Airlines"}, {"code": "3153", "desc": "Airlines"}, {"code": "3154", "desc": "PRINCEVILLE"}, {"code": "3155", "desc": "Airlines"}, {"code": "3156", "desc": "Airlines"}, {"code": "3157", "desc": "Airlines"}, {"code": "3158", "desc": "Airlines"}, {"code": "3159", "desc": "PBA"}, {"code": "3160", "desc": "Airlines"}, {"code": "3161", "desc": "ALL NIPPON AIRWAYS"}, {"code": "3162", "desc": "Airlines"}, {"code": "3163", "desc": "Airlines"}, {"code": "3164", "desc": "NORONTAIR"}, {"code": "3165", "desc": "NEW YORK HELICOPTER"}, {"code": "3166", "desc": "Airlines"}, {"code": "3167", "desc": "Airlines"}, {"code": "3168", "desc": "Airlines"}, {"code": "3169", "desc": "Airlines"}, {"code": "3170", "desc": "NOUNT COOK"}, {"code": "3171", "desc": "CANADIAN AIRLINES INTERNATIONAL"}, {"code": "3172", "desc": "NATIONAIR"}, {"code": "3173", "desc": "Airlines"}, {"code": "3174", "desc": "Airlines"}, {"code": "3175", "desc": "Airlines"}, {"code": "3176", "desc": "METROFLIGHT AIRLINES"}, {"code": "3177", "desc": "Airlines"}, {"code": "3178", "desc": "MESA AIR"}, {"code": "3179", "desc": "Airlines"}, {"code": "3180", "desc": "Airlines"}, {"code": "3181", "desc": "MALEV"}, {"code": "3182", "desc": "LOT (POLAND)"}, {"code": "3183", "desc": "Airlines"}, {"code": "3184", "desc": "LIAT"}, {"code": "3185", "desc": "LAV (VENEZUELA)"}, {"code": "3186", "desc": "LAP (PARAGUAY)"}, {"code": "3187", "desc": "LACSA (COSTA RICA)"}, {"code": "3188", "desc": "Airlines"}, {"code": "3189", "desc": "Airlines"}, {"code": "3190", "desc": "JUGOSLAV AIR"}, {"code": "3191", "desc": "ISLAND AIRLINES"}, {"code": "3192", "desc": "IRAN AIR"}, {"code": "3193", "desc": "INDIAN AIRLINES"}, {"code": "3194", "desc": "Airlines"}, {"code": "3195", "desc": "Airlines"}, {"code": "3196", "desc": "HAWAIIAN AIR"}, {"code": "3197", "desc": "HAVASU AIRLINES"}, {"code": "3198", "desc": "Airlines"}, {"code": "3199", "desc": "Airlines"}, {"code": "3200", "desc": "FUYANA AIRWAYS"}, {"code": "3201", "desc": "Airlines"}, {"code": "3202", "desc": "Airlines"}, {"code": "3203", "desc": "GOLDEN PACIFIC AIR"}, {"code": "3204", "desc": "FREEDOM AIR"}, {"code": "3205", "desc": "Airlines"}, {"code": "3206", "desc": "Airlines"}, {"code": "3207", "desc": "Airlines"}, {"code": "3208", "desc": "Airlines"}, {"code": "3209", "desc": "Airlines"}, {"code": "3210", "desc": "Airlines"}, {"code": "3211", "desc": "Airlines"}, {"code": "3212", "desc": "DOMINICANA"}, {"code": "3213", "desc": "Airlines"}, {"code": "3214", "desc": "Airlines"}, {"code": "3215", "desc": "DAN AIR SERVICES"}, {"code": "3216", "desc": "CUMBERLAND AIRLINES"}, {"code": "3217", "desc": "CSA"}, {"code": "3218", "desc": "CROWN AIR"}, {"code": "3219", "desc": "COPA"}, {"code": "3220", "desc": "COMPANIA FAUCETT"}, {"code": "3221", "desc": "TRANSPORTES AEROS MILITARES ECCUATORANOS"}, {"code": "3222", "desc": "COMMAND AIRWAYS"}, {"code": "3223", "desc": "COMAIR"}, {"code": "3224", "desc": "Airlines"}, {"code": "3225", "desc": "Airlines"}, {"code": "3226", "desc": "Airlines"}, {"code": "3227", "desc": "Airlines"}, {"code": "3228", "desc": "CAYMAN AIRWAYS"}, {"code": "3229", "desc": "SAETA SOCIAEDAD ECUATORIANOS DE TRANSPORTES AEREOS"}, {"code": "3230", "desc": "Airlines"}, {"code": "3231", "desc": "SASHA SERVICIO AERO DE HONDURAS"}, {"code": "3232", "desc": "Airlines"}, {"code": "3233", "desc": "CAPITOL AIR"}, {"code": "3234", "desc": "BWIA"}, {"code": "3235", "desc": "BROKWAY AIR"}, {"code": "3236", "desc": "Airlines"}, {"code": "3237", "desc": "Airlines"}, {"code": "3238", "desc": "BEMIDJI AIRLINES"}, {"code": "3239", "desc": "BAR HARBOR AIRLINES"}, {"code": "3240", "desc": "BAHAMASAIR"}, {"code": "3241", "desc": "AVIATECA (GUATEMALA)"}, {"code": "3242", "desc": "AVENSA"}, {"code": "3243", "desc": "AUSTRIAN AIR SERVICE"}, {"code": "3244", "desc": "Airlines"}, {"code": "3245", "desc": "Airlines"}, {"code": "3246", "desc": "Airlines"}, {"code": "3247", "desc": "Airlines"}, {"code": "3248", "desc": "Airlines"}, {"code": "3249", "desc": "Airlines"}, {"code": "3250", "desc": "Airlines"}, {"code": "3251", "desc": "ALOHA AIRLINES"}, {"code": "3252", "desc": "ALM"}, {"code": "3253", "desc": "AMERICA WEST"}, {"code": "3254", "desc": "TRUMP AIRLINE"}, {"code": "3255", "desc": "Airlines"}, {"code": "3256", "desc": "ALASKA AIRLINES"}, {"code": "3257", "desc": "Airlines"}, {"code": "3258", "desc": "Airlines"}, {"code": "3259", "desc": "AMERICAN TRANS AIR"}, {"code": "3260", "desc": "Airlines"}, {"code": "3261", "desc": "AIR CHINA"}, {"code": "3262", "desc": "RENO AIR, INC."}, {"code": "3263", "desc": "Airlines"}, {"code": "3264", "desc": "Airlines"}, {"code": "3265", "desc": "Airlines"}, {"code": "3266", "desc": "AIR SEYCHELLES"}, {"code": "3267", "desc": "AIR PANAMA"}, {"code": "3268", "desc": "Airlines"}, {"code": "3269", "desc": "Airlines"}, {"code": "3270", "desc": "Airlines"}, {"code": "3271", "desc": "Airlines"}, {"code": "3272", "desc": "Airlines"}, {"code": "3273", "desc": "Airlines"}, {"code": "3274", "desc": "Airlines"}, {"code": "3275", "desc": "Airlines"}, {"code": "3276", "desc": "Airlines"}, {"code": "3277", "desc": "Airlines"}, {"code": "3278", "desc": "Airlines"}, {"code": "3279", "desc": "Airlines"}, {"code": "3280", "desc": "AIR JAMAICA"}, {"code": "3281", "desc": "Airlines"}, {"code": "3282", "desc": "AIR DJIBOUTI"}, {"code": "3283", "desc": "Airlines"}, {"code": "3284", "desc": "AERO VIRGIN ISLANDS"}, {"code": "3285", "desc": "AERO PERU"}, {"code": "3286", "desc": "AEROLINEAS NICARAGUENSIS"}, {"code": "3288", "desc": "Airlines"}, {"code": "3289", "desc": "Airlines"}, {"code": "3290", "desc": "Airlines"}, {"code": "3291", "desc": "ARIANA AFGHAN"}, {"code": "3292", "desc": "CYPRUS AIRWAYS"}, {"code": "3293", "desc": "ECUATORIANA"}, {"code": "3294", "desc": "ETHIOPIAN AIRLINES"}, {"code": "3295", "desc": "KENYA AIRLINES"}, {"code": "3296", "desc": "Airlines"}, {"code": "3297", "desc": "Airlines"}, {"code": "3298", "desc": "AIR MAURITIUS"}, {"code": "3299", "desc": "WIDERO\u00e2\u20ac\u2122S FLYVESELSKAP"}, {"code": "3352", "desc": "AMERICAN INTL RENT-A-CAR"}, {"code": "3353", "desc": "BROOKS RENT-A-CAR"}, {"code": "3354", "desc": "ACTION AUTO RENTAL"}, {"code": "3355", "desc": "Car Rental"}, {"code": "3356", "desc": "Car Rental"}, {"code": "3357", "desc": "HERTZ RENT-A-CAR"}, {"code": "3358", "desc": "Car Rental"}, {"code": "3359", "desc": "PAYLESS CAR RENTAL"}, {"code": "3360", "desc": "SNAPPY CAR RENTAL"}, {"code": "3361", "desc": "AIRWAYS RENT-A-CAR"}, {"code": "3362", "desc": "ALTRA AUTO RENTAL"}, {"code": "3363", "desc": "Car Rental"}, {"code": "3365", "desc": "Car Rental"}, {"code": "3366", "desc": "BUDGET RENT-A-CAR"}, {"code": "3367", "desc": "Car Rental"}, {"code": "3368", "desc": "HOLIDAY RENT-A-WRECK"}, {"code": "3369", "desc": "Car Rental"}, {"code": "3370", "desc": "RENT-A-WRECK"}, {"code": "3371", "desc": "Car Rental"}, {"code": "3372", "desc": "Car Rental"}, {"code": "3373", "desc": "Car Rental"}, {"code": "3374", "desc": "Car Rental"}, {"code": "3375", "desc": "Car Rental"}, {"code": "3376", "desc": "AJAX RENT-A-CAR"}, {"code": "3377", "desc": "Car Rental"}, {"code": "3378", "desc": "Car Rental"}, {"code": "3379", "desc": "Car Rental"}, {"code": "3380", "desc": "Car Rental"}, {"code": "3381", "desc": "EUROP CAR"}, {"code": "3382", "desc": "Car Rental"}, {"code": "3383", "desc": "Car Rental"}, {"code": "3384", "desc": "Car Rental"}, {"code": "3386", "desc": "SHOWCASE RENTAL CARS"}, {"code": "3387", "desc": "ALAMO RENT-A-CAR"}, {"code": "3388", "desc": "Car Rental"}, {"code": "3389", "desc": "AVIS RENT-A-CAR"}, {"code": "3390", "desc": "DOLLAR RENT-A-CAR"}, {"code": "3391", "desc": "EUROPE BY CAR"}, {"code": "3392", "desc": "Car Rental"}, {"code": "3393", "desc": "NATIONAL CAR RENTAL"}, {"code": "3394", "desc": "KEMWELL GROUP RENT-A-CAR"}, {"code": "3395", "desc": "THRIFTY RENT-A-CAR"}, {"code": "3396", "desc": "TILDEN TENT-A-CAR"}, {"code": "3397", "desc": "Car Rental"}, {"code": "3398", "desc": "ECONO-CAR RENT-A-CAR"}, {"code": "3399", "desc": "Car Rental"}, {"code": "3401", "desc": "Car Rental"}, {"code": "3402", "desc": "Car Rental"}, {"code": "3403", "desc": "Car Rental"}, {"code": "3404", "desc": "Car Rental"}, {"code": "3405", "desc": "ENTERPRISE RENT-A-CAR"}, {"code": "3406", "desc": "Car Rental"}, {"code": "3407", "desc": "Car Rental"}, {"code": "3408", "desc": "Car Rental"}, {"code": "3409", "desc": "GENERAL RENT-A-CAR"}, {"code": "3410", "desc": "Car Rental"}, {"code": "3411", "desc": "Car Rental"}, {"code": "3413", "desc": "Car Rental"}, {"code": "3414", "desc": "GODFREY NATL RENT-A-CAR"}, {"code": "3415", "desc": "Car Rental"}, {"code": "3416", "desc": "Car Rental"}, {"code": "3417", "desc": "Car Rental"}, {"code": "3418", "desc": "Car Rental"}, {"code": "3419", "desc": "ALPHA RENT-A-CAR"}, {"code": "3420", "desc": "ANSA INTL RENT-A-CAR"}, {"code": "3421", "desc": "ALLSTAE RENT-A-CAR"}, {"code": "3422", "desc": "Car Rental"}, {"code": "3423", "desc": "AVCAR RENT-A-CAR"}, {"code": "3424", "desc": "Car Rental"}, {"code": "3425", "desc": "AUTOMATE RENT-A-CAR"}, {"code": "3426", "desc": "Car Rental"}, {"code": "3427", "desc": "AVON RENT-A-CAR"}, {"code": "3428", "desc": "CAREY RENT-A-CAR"}, {"code": "3429", "desc": "INSURANCE RENT-A-CAR"}, {"code": "3430", "desc": "MAJOR RENT-A-CAR"}, {"code": "3431", "desc": "REPLACEMENT RENT-A-CAR"}, {"code": "3432", "desc": "RESERVE RENT-A-CAR"}, {"code": "3433", "desc": "UGLY DUCKLING RENT-A-CAR"}, {"code": "3434", "desc": "USA RENT-A-CAR"}, {"code": "3435", "desc": "VALUE RENT-A-CAR"}, {"code": "3436", "desc": "AUTOHANSA RENT-A-CAR"}, {"code": "3437", "desc": "CITE RENT-A-CAR"}, {"code": "3438", "desc": "INTERENT RENT-A-CAR"}, {"code": "3439", "desc": "MILLEVILLE RENT-A-CAR"}, {"code": "3440", "desc": "VIA ROUTE RENT-A-CAR"}, {"code": "3503", "desc": "SHERATON HOTELS"}, {"code": "3505", "desc": "FORTE HOTELS"}, {"code": "3506", "desc": "GOLDEN TULIP HOTELS"}, {"code": "3507", "desc": "FRIENDSHIP INNS"}, {"code": "3509", "desc": "MARRIOTT HOTELS"}, {"code": "3510", "desc": "DAYS INN, DAYSTOP"}, {"code": "3511", "desc": "ARABELLA HOTELS"}, {"code": "3512", "desc": "INTER-CONTINENTAL HOTELS"}, {"code": "3513", "desc": "WESTIN HOTELS"}, {"code": "3514", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3516", "desc": "LA QUINTA MOTOR INNS"}, {"code": "3517", "desc": "AMERICANA HOTELS"}, {"code": "3518", "desc": "SOL HOTELS"}, {"code": "3519", "desc": "PULLMAN INTERNATIONAL HOTELS"}, {"code": "3520", "desc": "MERIDIEN HOTELS"}, {"code": "3521", "desc": "CREST HOTELS (see FORTE HOTELS)"}, {"code": "3522", "desc": "TOKYO HOTEL"}, {"code": "3523", "desc": "PENNSULA HOTEL"}, {"code": "3524", "desc": "WELCOMGROUP HOTELS"}, {"code": "3525", "desc": "DUNFEY HOTELS"}, {"code": "3526", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3527", "desc": "DOWNTOWNER-PASSPORT HOTEL"}, {"code": "3528", "desc": "RED LION HOTELS, RED LION INNS"}, {"code": "3530", "desc": "RENAISSANCE HOTELS, STOUFFER HOTELS"}, {"code": "3531", "desc": "ASTIR HOTELS"}, {"code": "3532", "desc": "SUN ROUTE HOTELS"}, {"code": "3533", "desc": "HOTEL IBIS"}, {"code": "3534", "desc": "SOUTHERN PACIFIC HOTELS"}, {"code": "3536", "desc": "AMFAC HOTELS"}, {"code": "3538", "desc": "CONCORDE HOTELS"}, {"code": "3539", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3540", "desc": "IBEROTEL HOTELS"}, {"code": "3541", "desc": "HOTEL OKURA"}, {"code": "3542", "desc": "ROYAL HOTELS"}, {"code": "3543", "desc": "FOUR SEASONS HOTELS"}, {"code": "3544", "desc": "CIGA HOTELS"}, {"code": "3545", "desc": "SHANGRI-LA INTERNATIONAL"}, {"code": "3546", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3547", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3548", "desc": "HOTELES MELIA"}, {"code": "3549", "desc": "AUBERGE DES GOVERNEURS"}, {"code": "3550", "desc": "REGAL 8 INNS"}, {"code": "3551", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3552", "desc": "COAST HOTELS"}, {"code": "3554", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3556", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3557", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3558", "desc": "JOLLY HOTELS"}, {"code": "3559", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3560", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3561", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3562", "desc": "COMFORT INNS"}, {"code": "3563", "desc": "JOURNEY\u00e2\u20ac\u2122S END MOTLS"}, {"code": "3564", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3565", "desc": "RELAX INNS"}, {"code": "3566", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3567", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3568", "desc": "LADBROKE HOTELS"}, {"code": "3569", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3570", "desc": "FORUM HOTELS"}, {"code": "3571", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3572", "desc": "MIYAKO HOTELS"}, {"code": "3573", "desc": "SANDMAN HOTELS"}, {"code": "3574", "desc": "VENTURE INNS"}, {"code": "3575", "desc": "VAGABOND HOTELS"}, {"code": "3576", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3577", "desc": "MANDARIN ORIENTAL HOTEL"}, {"code": "3578", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3579", "desc": "HOTEL MERCURE"}, {"code": "3580", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3582", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3583", "desc": "SAS HOTELS"}, {"code": "3584", "desc": "PRINCESS HOTELS INTERNATIONAL"}, {"code": "3585", "desc": "HUNGAR HOTELS"}, {"code": "3586", "desc": "SOKOS HOTELS"}, {"code": "3587", "desc": "DORAL HOTELS"}, {"code": "3588", "desc": "HELMSLEY HOTELS"}, {"code": "3589", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3590", "desc": "FAIRMONT HOTELS"}, {"code": "3592", "desc": "OMNI HOTELS"}, {"code": "3593", "desc": "CUNARD HOTELS"}, {"code": "3594", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3596", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3597", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3598", "desc": "REGENT INTERNATIONAL HOTELS"}, {"code": "3599", "desc": "PANNONIA HOTELS"}, {"code": "3600", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3601", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3602", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3603", "desc": "NOAH\u00e2\u20ac\u2122S HOTELS"}, {"code": "3604", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3605", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3606", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3607", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3608", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3609", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3610", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3611", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3612", "desc": "MOVENPICK HOTELS"}, {"code": "3613", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3614", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3616", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3617", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3618", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3619", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3620", "desc": "TELFORD INTERNATIONAL"}, {"code": "3621", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3622", "desc": "MERLIN HOTELS"}, {"code": "3623", "desc": "DORINT HOTELS"}, {"code": "3624", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3625", "desc": "HOTLE UNIVERSALE"}, {"code": "3626", "desc": "PRINCE HOTELS"}, {"code": "3627", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3628", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3629", "desc": "DAN HOTELS"}, {"code": "3630", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3632", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3633", "desc": "RANK HOTELS"}, {"code": "3634", "desc": "SWISSOTEL"}, {"code": "3636", "desc": "SAROVA HOTELS"}, {"code": "3637", "desc": "RAMADA INNS, RAMADA LIMITED"}, {"code": "3638", "desc": "HO JO INN, HOWARD JOHNSON"}, {"code": "3639", "desc": "MOUNT CHARLOTTE THISTLE"}, {"code": "3640", "desc": "HYATT HOTEL"}, {"code": "3641", "desc": "SOFITEL HOTELS"}, {"code": "3642", "desc": "NOVOTEL HOTELS"}, {"code": "3643", "desc": "STEIGENBERGER HOTELS"}, {"code": "3644", "desc": "ECONO LODGES"}, {"code": "3645", "desc": "QUEENS MOAT HOUSES"}, {"code": "3646", "desc": "SWALLOW HOTELS"}, {"code": "3647", "desc": "HUSA HOTELS"}, {"code": "3648", "desc": "DE VERE HOTELS"}, {"code": "3649", "desc": "RADISSON HOTELS"}, {"code": "3650", "desc": "RED ROOK INNS"}, {"code": "3651", "desc": "IMPERIAL LONDON HOTEL"}, {"code": "3652", "desc": "EMBASSY HOTELS"}, {"code": "3653", "desc": "PENTA HOTELS"}, {"code": "3654", "desc": "LOEWS HOTELS"}, {"code": "3655", "desc": "SCANDIC HOTELS"}, {"code": "3656", "desc": "SARA HOTELS"}, {"code": "3657", "desc": "OBEROI HOTELS"}, {"code": "3658", "desc": "OTANI HOTELS"}, {"code": "3659", "desc": "TAJ HOTELS INTERNATIONAL"}, {"code": "3660", "desc": "KNIGHTS INNS"}, {"code": "3661", "desc": "METROPOLE HOTELS"}, {"code": "3662", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3663", "desc": "HOTELES EL PRESIDENTS"}, {"code": "3664", "desc": "FLAG INN"}, {"code": "3665", "desc": "HAMPTON INNS"}, {"code": "3666", "desc": "STAKIS HOTELS"}, {"code": "3667", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3668", "desc": "MARITIM HOTELS"}, {"code": "3669", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3670", "desc": "ARCARD HOTELS"}, {"code": "3671", "desc": "ARCTIA HOTELS"}, {"code": "3673", "desc": "IBUSZ HOTELS"}, {"code": "3674", "desc": "RANTASIPI HOTELS"}, {"code": "3675", "desc": "INTERHOTEL CEDOK"}, {"code": "3676", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3677", "desc": "CLIMAT DE FRANCE HOTELS"}, {"code": "3678", "desc": "CUMULUS HOTELS"}, {"code": "3679", "desc": "DANUBIUS HOTEL"}, {"code": "3680", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3681", "desc": "ADAMS MARK HOTELS"}, {"code": "3682", "desc": "ALLSTAR INNS"}, {"code": "3683", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3684", "desc": "BUDGET HOST INNS"}, {"code": "3685", "desc": "BUDGETEL HOTELS"}, {"code": "3686", "desc": "SUISSE CHALETS"}, {"code": "3687", "desc": "CLARION HOTELS"}, {"code": "3688", "desc": "COMPRI HOTELS"}, {"code": "3689", "desc": "CONSORT HOTELS"}, {"code": "3690", "desc": "COURTYARD BY MARRIOTT"}, {"code": "3691", "desc": "DILLION INNS"}, {"code": "3692", "desc": "DOUBLETREE HOTELS"}, {"code": "3693", "desc": "DRURY INNS"}, {"code": "3694", "desc": "ECONOMY INNS OF AMERICA"}, {"code": "3695", "desc": "EMBASSY SUITES"}, {"code": "3696", "desc": "EXEL INNS"}, {"code": "3697", "desc": "FARFIELD HOTELS"}, {"code": "3698", "desc": "HARLEY HOTELS"}, {"code": "3699", "desc": "MIDWAY MOTOR LODGE"}, {"code": "3701", "desc": "GUEST QUARTERS (Formally PICKETT SUITE HOTELS)"}, {"code": "3702", "desc": "THE REGISTRY HOTELS"}, {"code": "3704", "desc": "ROYCE HOTELS"}, {"code": "3705", "desc": "SANDMAN INNS"}, {"code": "3706", "desc": "SHILO INNS"}, {"code": "3707", "desc": "SHONEYAS INNS"}, {"code": "3708", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3709", "desc": "SUPER8 MOTELS"}, {"code": "3710", "desc": "THE RITZ CARLTON HOTELS"}, {"code": "3711", "desc": "FLAG INNS (AUSRALIA)"}, {"code": "3712", "desc": "GOLDEN CHAIN HOTEL"}, {"code": "3713", "desc": "QUALITY PACIFIC HOTEL"}, {"code": "3714", "desc": "FOUR SEASONS HOTEL (AUSTRALIA)"}, {"code": "3715", "desc": "FARIFIELD INN"}, {"code": "3716", "desc": "CARLTON HOTELS"}, {"code": "3718", "desc": "KAROS HOTELS"}, {"code": "3719", "desc": "PROTEA HOTELS"}, {"code": "3720", "desc": "SOUTHERN SUN HOTELS"}, {"code": "3721", "desc": "HILTON CONRAD"}, {"code": "3722", "desc": "WYNDHAM HOTEL AND RESORTS"}, {"code": "3723", "desc": "RICA HOTELS"}, {"code": "3724", "desc": "INER NOR HOTELS"}, {"code": "3725", "desc": "SEAINES PLANATION"}, {"code": "3726", "desc": "RIO SUITES"}, {"code": "3727", "desc": "BROADMOOR HOTEL"}, {"code": "3728", "desc": "BALLY\u00e2\u20ac\u2122S HOTEL AND CASINO"}, {"code": "3729", "desc": "JOHN ASCUAGA\u00e2\u20ac\u2122S NUGGET"}, {"code": "3730", "desc": "MGM GRAND HOTEL"}, {"code": "3731", "desc": "HARRAH\u00e2\u20ac\u2122S HOTELS AND CASINOS"}, {"code": "3732", "desc": "OPRYLAND HOTEL"}, {"code": "3733", "desc": "BOCA RATON RESORT"}, {"code": "3734", "desc": "HARVEY/BRISTOL HOTELS"}, {"code": "3735", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3736", "desc": "COLORADO BELLE/EDGEWATER RESORT"}, {"code": "3737", "desc": "RIVIERA HOTEL AND CASINO"}, {"code": "3738", "desc": "TROPICANA RESORT AND CASINO"}, {"code": "3739", "desc": "WOODSIDE HOTELS AND RESORTS"}, {"code": "3740", "desc": "TOWNPLACE SUITES"}, {"code": "3741", "desc": "MILLENIUM BROADWAY HOTEL"}, {"code": "3742", "desc": "CLUB MED"}, {"code": "3743", "desc": "BILTMORE HOTEL AND SUITES"}, {"code": "3744", "desc": "CAREFREE RESORTS"}, {"code": "3745", "desc": "ST. REGIS HOTEL"}, {"code": "3746", "desc": "THE ELIOT HOTEL"}, {"code": "3748", "desc": "WELESLEY INNS"}, {"code": "3749", "desc": "THE BEVERLY HILLS HOTEL"}, {"code": "3750", "desc": "CROWNE PLAZA HOTELS"}, {"code": "3751", "desc": "HOMEWOOD SUITES"}, {"code": "3752", "desc": "PEABODY HOTELS"}, {"code": "3753", "desc": "GREENBRIAH RESORTS"}, {"code": "3754", "desc": "AMELIA ISLAND PLANATION"}, {"code": "3755", "desc": "THE HOMESTEAD"}, {"code": "3756", "desc": "SOUTH SEAS RESORTS"}, {"code": "3757", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3758", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3759", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3760", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3761", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3763", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3764", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3765", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3766", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3767", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3768", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3769", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3770", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3771", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3772", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3773", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3774", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3775", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3776", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3777", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3778", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3779", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3780", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3781", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3782", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3784", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3785", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3786", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3787", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3788", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3789", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3790", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3816", "desc": "Home2Suites"}, {"code": "3835", "desc": "* MASTERS ECONOMY INNS"}, {"code": "4011", "desc": "Railroads"}, {"code": "4111", "desc": "Local and suburban commuter passenger transportation, including ferries"}, {"code": "4112", "desc": "Passenger railways"}, {"code": "4119", "desc": "Ambulance services"}, {"code": "4121", "desc": "Taxi-cabs and limousines"}, {"code": "4131", "desc": "Bus lines"}, {"code": "4214", "desc": "Motor freight carriers and trucking local and long distance, moving and storage companies and local delivery"}, {"code": "4215", "desc": "Courier services air and ground and freight forwarders"}, {"code": "4225", "desc": "Public warehousing and storage farm products, refrigerated goods and household goods"}, {"code": "4411", "desc": "Steamships and cruise lines"}, {"code": "4457", "desc": "Boat rentals and leasing"}, {"code": "4468", "desc": "Marinas, marine service and supplies"}, {"code": "4511", "desc": "Airlines and air carriers"}, {"code": "4582", "desc": "Airports, flying fields and airport terminals"}, {"code": "4722", "desc": "Travel agencies and tour operators"}, {"code": "4784", "desc": "Tolls and bridge fees"}, {"code": "4789", "desc": "Transportation services not elsewhere classified"}, {"code": "4812", "desc": "Telecommunication equipment and telephone sales"}, {"code": "4814", "desc": "Telecommunication services, including local and long distance calls, credit card calls, calls through use of magnetic stripe reading telephones and faxes"}, {"code": "4816", "desc": "Computer network/information services"}, {"code": "4829", "desc": "Wire transfers and money orders"}, {"code": "4899", "desc": "Cable and other pay television services"}, {"code": "4900", "desc": "Utilities electric, gas, water and sanitary"}, {"code": "5013", "desc": "Motor vehicle supplies and new parts"}, {"code": "5021", "desc": "Office and commercial furniture"}, {"code": "5039", "desc": "Construction materials not elsewhere classified"}, {"code": "5044", "desc": "Office, photographic, photocopy and microfilm equipment"}, {"code": "5045", "desc": "Computers, computer peripheral equipment not elsewhere classified"}, {"code": "5046", "desc": "Commercial equipment not elsewhere classified"}, {"code": "5047", "desc": "Dental/laboratory/medical/ophthalmic hospital equipment and supplies"}, {"code": "5051", "desc": "Metal service centres and offices"}, {"code": "5065", "desc": "Electrical parts and equipment"}, {"code": "5072", "desc": "Hardware equipment and supplies"}, {"code": "5074", "desc": "Plumbing and heating equipment and supplies"}, {"code": "5085", "desc": "Industrial supplies not elsewhere classified"}, {"code": "5094", "desc": "Precious stones and metals, watches and jewellery"}, {"code": "5099", "desc": "Durable goods not elsewhere classified"}, {"code": "5111", "desc": "Stationery office supplies and printing and writing paper"}, {"code": "5122", "desc": "Drugs, drug proprietors"}, {"code": "5131", "desc": "Piece goods, notions and other dry goods"}, {"code": "5137", "desc": "Mens, womens and childrens uniforms and commercial clothing"}, {"code": "5139", "desc": "Commercial footwear"}, {"code": "5169", "desc": "Chemicals and allied products not elsewhere classified"}, {"code": "5172", "desc": "Petroleum and petroleum products"}, {"code": "5192", "desc": "Books, periodicals and newspapers"}, {"code": "5193", "desc": "Florists supplies, nursery stock and flowers"}, {"code": "5198", "desc": "Paints, varnishes and supplies"}, {"code": "5199", "desc": "Non-durable goods not elsewhere classified"}, {"code": "5200", "desc": "Home supply warehouse outlets"}, {"code": "5211", "desc": "Lumber and building materials outlets"}, {"code": "5231", "desc": "Glass, paint and wallpaper shops"}, {"code": "5251", "desc": "Hardware shops"}, {"code": "5261", "desc": "Lawn and garden supply outlets, including nurseries"}, {"code": "5262", "desc": "Online Marketplaces"}, {"code": "5271", "desc": "Mobile home dealers"}, {"code": "5300", "desc": "Wholesale clubs"}, {"code": "5309", "desc": "Duty-free shops"}, {"code": "5310", "desc": "Discount shops"}, {"code": "5311", "desc": "Department stores"}, {"code": "5331", "desc": "Variety stores"}, {"code": "5399", "desc": "Miscellaneous general merchandise"}, {"code": "5411", "desc": "Groceries and supermarkets"}, {"code": "5412", "desc": "Purchase of digital gold"}, {"code": "5413", "desc": "Credit Card Bill Payments"}, {"code": "5422", "desc": "Freezer and locker meat provisioners"}, {"code": "5441", "desc": "Candy, nut and confectionery shops"}, {"code": "5451", "desc": "Dairies"}, {"code": "5462", "desc": "Bakeries"}, {"code": "5499", "desc": "Miscellaneous food"}, {"code": "5511", "desc": "Car and truck dealers (new and used) sales, services, repairs, parts and leasing"}, {"code": "5521", "desc": "Car and truck dealers (used only) sales, service, repairs, parts and leasing"}, {"code": "5531", "desc": "Auto and home supply outlets"}, {"code": "5532", "desc": "Automotive tyre outlets"}, {"code": "5533", "desc": "Automotive parts and accessories outlets"}, {"code": "5541", "desc": "Service stations (with or without ancillary services)"}, {"code": "5542", "desc": "Automated fuel dispensers"}, {"code": "5551", "desc": "Boat dealers"}, {"code": "5561", "desc": "Camper, recreational and utility trailer dealers"}, {"code": "5571", "desc": "Motorcycle shops and dealers"}, {"code": "5592", "desc": "Motor home dealers"}, {"code": "5598", "desc": "Snowmobile dealers"}, {"code": "5599", "desc": "Miscellaneous automotive, aircraft and farm equipment dealersnot elsewhere classified"}, {"code": "5611", "desc": "Mens and boys clothing and accessory shops"}, {"code": "5621", "desc": "Womens ready-to-wear shops"}, {"code": "5631", "desc": "Womens accessory and speciality shops"}, {"code": "5641", "desc": "Childrens and infants wear shops"}, {"code": "5651", "desc": "Family clothing shops"}, {"code": "5655", "desc": "Sports and riding apparel shops"}, {"code": "5661", "desc": "Shoe shops"}, {"code": "5681", "desc": "Furriers and fur shops"}, {"code": "5691", "desc": "Mens and womens clothing shops"}, {"code": "5697", "desc": "Tailors, seamstresses, mending and alterations"}, {"code": "5698", "desc": "Wig and toupee shops"}, {"code": "5699", "desc": "Miscellaneous apparel and accessory shops"}, {"code": "5712", "desc": "Furniture, home furnishings and equipment shops and manufacturers, except appliances"}, {"code": "5713", "desc": "Floor covering services"}, {"code": "5714", "desc": "Drapery, window covering and upholstery shops"}, {"code": "5715", "desc": "Alcoholic beverage wholesalers"}, {"code": "5718", "desc": "Fireplaces, fireplace screens and accessories shops"}, {"code": "5719", "desc": "Miscellaneous home furnishing speciality shops"}, {"code": "5722", "desc": "Household appliance shops"}, {"code": "5732", "desc": "Electronics shops"}, {"code": "5733", "desc": "Music shops musical instruments, pianos and sheet music"}, {"code": "5734", "desc": "Computer software outlets"}, {"code": "5735", "desc": "Record shops"}, {"code": "5811", "desc": "Caterers"}, {"code": "5812", "desc": "Eating places and restaurants"}, {"code": "5813", "desc": "Drinking places (alcoholic beverages) bars, taverns, night-clubs, cocktail lounges and discothques"}, {"code": "5814", "desc": "Fast food restaurants"}, {"code": "5815", "desc": "Digital Goods: Media, Books, Movies, Music"}, {"code": "5816", "desc": "Digital Goods: Games"}, {"code": "5817", "desc": "Digital Goods: Applications (Excludes Games)"}, {"code": "5818", "desc": "Digital Goods: Large Digital Goods Merchant"}, {"code": "5832", "desc": "Antique Shops \u00e2\u20ac\u201c Sales, Repairs, and Restoration Services"}, {"code": "5912", "desc": "Drug stores and pharmacies"}, {"code": "5921", "desc": "Package shops beer, wine and liquor"}, {"code": "5931", "desc": "Used merchandise and second-hand shops"}, {"code": "5932", "desc": "Antique shops \u00e2\u20ac\u201d sales, repairs and restoration services"}, {"code": "5933", "desc": "Pawn shops"}, {"code": "5935", "desc": "Wrecking and salvage yards"}, {"code": "5937", "desc": "Antique reproduction shops"}, {"code": "5940", "desc": "Bicycle shops sales and service"}, {"code": "5941", "desc": "Sporting goods shops"}, {"code": "5942", "desc": "Bookshops"}, {"code": "5943", "desc": "Stationery, office and school supply shops"}, {"code": "5944", "desc": "Jewellery, watch, clock and silverware shops"}, {"code": "5945", "desc": "Hobby, toy and game shops"}, {"code": "5946", "desc": "Camera and photographic supply shops"}, {"code": "5947", "desc": "Gift, card, novelty and souvenir shops"}, {"code": "5948", "desc": "Luggage and leather goods shops"}, {"code": "5949", "desc": "Sewing, needlework, fabric and piece goods shops"}, {"code": "5950", "desc": "Glassware and crystal shops"}, {"code": "5960", "desc": "Direct marketing insurance services"}, {"code": "5961", "desc": "Mail Order Houses Including Catalog Order Stores, Book/Record Clubs (No longer permitted for U.S. original presentments)"}, {"code": "5962", "desc": "Telemarketing travel-related arrangement services"}, {"code": "5963", "desc": "Door-to-door sales"}, {"code": "5964", "desc": "Direct marketing catalogue merchants"}, {"code": "5965", "desc": "Direct marketing combination catalogue and retail merchants"}, {"code": "5966", "desc": "Direct marketing outbound telemarketing merchants"}, {"code": "5967", "desc": "Direct marketing inbound telemarketing merchants"}, {"code": "5968", "desc": "Direct marketing continuity/subscription merchants"}, {"code": "5969", "desc": "Direct marketing/direct marketers not elsewhere classified"}, {"code": "5970", "desc": "Artist supply and craft shops"}, {"code": "5971", "desc": "Art dealers and galleries"}, {"code": "5972", "desc": "Stamp and coin shops"}, {"code": "5973", "desc": "Religious goods and shops"}, {"code": "5975", "desc": "Hearing aids sales, service and supplies"}, {"code": "5976", "desc": "Orthopaedic goods and prosthetic devices"}, {"code": "5977", "desc": "Cosmetic Stores"}, {"code": "5978", "desc": "Typewriter outlets sales, service and rentals"}, {"code": "5983", "desc": "Fuel dealers fuel oil, wood, coal and liquefied petroleum"}, {"code": "5992", "desc": "Florists"}, {"code": "5993", "desc": "Cigar shops and stands"}, {"code": "5994", "desc": "Newsagents and news-stands"}, {"code": "5995", "desc": "Pet shops, pet food and supplies"}, {"code": "5996", "desc": "Swimming pools sales, supplies and services"}, {"code": "5997", "desc": "Electric razor outlets sales and service"}, {"code": "5998", "desc": "Tent and awning shops"}, {"code": "5999", "desc": "Miscellaneous and speciality retail outlets"}, {"code": "6010", "desc": "Financial institutions manual cash disbursements"}, {"code": "6011", "desc": "Financial institutions automated cash disbursements"}, {"code": "6012", "desc": "Financial institutions merchandise and services"}, {"code": "6051", "desc": "Non-financial institutions foreign currency, money orders (not wire transfer), scrip and travellers checks"}, {"code": "6211", "desc": "Securities brokers and dealers"}, {"code": "6300", "desc": "Insurance sales, underwriting and premiums"}, {"code": "6381", "desc": "Insurance Premiums, (no longer valid for first presentment work)"}, {"code": "6399", "desc": "Insurance, Not Elsewhere Classified ( no longer valid forfirst presentment work)"}, {"code": "6513", "desc": "Real Estate Agents and Managers - Rentals"}, {"code": "6529", "desc": "LIC"}, {"code": "6540", "desc": "Debit card to wallet credit (Wallet top up)"}, {"code": "6666", "desc": "International merchant services"}, {"code": "7011", "desc": "Lodging hotels, motels and resorts"}, {"code": "7012", "desc": "Timeshares"}, {"code": "7013", "desc": "Small PPI wallet loading"}, {"code": "7032", "desc": "Sporting and recreational camps"}, {"code": "7033", "desc": "Trailer parks and camp-sites"}, {"code": "7210", "desc": "Laundry, cleaning and garment services"}, {"code": "7211", "desc": "Laundry services family and commercial"}, {"code": "7216", "desc": "Dry cleaners"}, {"code": "7217", "desc": "Carpet and upholstery cleaning"}, {"code": "7221", "desc": "Photographic studios"}, {"code": "7230", "desc": "Beauty and barber shops"}, {"code": "7251", "desc": "Shoe repair shops, shoe shine parlours and hat cleaning shops"}, {"code": "7261", "desc": "Funeral services and crematoriums"}, {"code": "7273", "desc": "Dating and escort services"}, {"code": "7276", "desc": "Tax preparation services"}, {"code": "7277", "desc": "Counselling services debt, marriage and personal"}, {"code": "7278", "desc": "Buying and shopping services and clubs"}, {"code": "7296", "desc": "Clothing rentals costumes, uniforms and formal wear"}, {"code": "7297", "desc": "Massage parlours"}, {"code": "7298", "desc": "Health and beauty spas"}, {"code": "7299", "desc": "Miscellaneous personal services not elsewhere classified"}, {"code": "7311", "desc": "Advertising services"}, {"code": "7321", "desc": "Consumer credit reporting agencies"}, {"code": "7322", "desc": "Debt collection agencies"}, {"code": "7332", "desc": "Blueprinting and Photocopying Services"}, {"code": "7333", "desc": "Commercial photography, art and graphics"}, {"code": "7338", "desc": "Quick copy, reproduction and blueprinting services"}, {"code": "7339", "desc": "Stenographic and secretarial support services"}, {"code": "7342", "desc": "Exterminating and disinfecting services"}, {"code": "7349", "desc": "Cleaning, maintenance and janitorial services"}, {"code": "7361", "desc": "Employment agencies and temporary help services"}, {"code": "7372", "desc": "Computer programming, data processing and integrated systems design services"}, {"code": "7375", "desc": "Information retrieval services"}, {"code": "7379", "desc": "Computer maintenance and repair services not elsewhere classified"}, {"code": "7392", "desc": "Management, consulting and public relations services"}, {"code": "7393", "desc": "Detective agencies, protective agencies and security services, including armoured cars and guard dogs"}, {"code": "7394", "desc": "Equipment, tool, furniture and appliance rentals and leasing"}, {"code": "7395", "desc": "Photofinishing laboratories and photo developing"}, {"code": "7399", "desc": "Business services not elsewhere classified"}, {"code": "7407", "desc": "P2PM CHANGES"}, {"code": "7408", "desc": "Entity facilitating P2P Lending"}, {"code": "7409", "desc": "Digital Account Opening"}, {"code": "7511", "desc": "Truck Stop"}, {"code": "7512", "desc": "Automobile rentals"}, {"code": "7513", "desc": "Truck and utility trailer rentals"}, {"code": "7519", "desc": "Motor home and recreational vehicle rentals"}, {"code": "7523", "desc": "Parking lots and garages"}, {"code": "7531", "desc": "Automotive body repair shops"}, {"code": "7534", "desc": "Tyre retreading and repair shops"}, {"code": "7535", "desc": "Automotive paint shops"}, {"code": "7538", "desc": "Automotive service shops (non-dealer)"}, {"code": "7542", "desc": "Car washes"}, {"code": "7549", "desc": "Towing services"}, {"code": "7622", "desc": "Electronics repair shops"}, {"code": "7623", "desc": "Air conditioning and refrigeration repair shops"}, {"code": "7629", "desc": "Electrical and small appliance repair shops"}, {"code": "7631", "desc": "Watch, clock and jewellery repair shops"}, {"code": "7641", "desc": "Furniture reupholstery, repair and refinishing"}, {"code": "7692", "desc": "Welding services"}, {"code": "7699", "desc": "Miscellaneous repair shops and related services"}, {"code": "7800", "desc": "Government-Owned Lotteries"}, {"code": "7801", "desc": "Government-Licensed On-Line Casinos (On-Line Gambling)"}, {"code": "7802", "desc": "Government-Licensed Horse/Dog Racing"}, {"code": "7829", "desc": "Motion picture and video tape production and distribution"}, {"code": "7832", "desc": "Motion picture theatres"}, {"code": "7841", "desc": "Video tape rentals"}, {"code": "7911", "desc": "Dance halls, studios and schools"}, {"code": "7922", "desc": "Theatrical producers (except motion pictures) and ticket agencies"}, {"code": "7929", "desc": "Bands, orchestras and miscellaneous entertainers not elsewhere classified"}, {"code": "7932", "desc": "Billiard and pool establishments"}, {"code": "7933", "desc": "Bowling alleys"}, {"code": "7941", "desc": "Commercial sports, professional sports clubs, athletic fields and sports promoters"}, {"code": "7991", "desc": "Tourist attractions and exhibits"}, {"code": "7992", "desc": "Public golf courses"}, {"code": "7993", "desc": "Video amusement game supplies"}, {"code": "7994", "desc": "Video game arcades and establishments"}, {"code": "7995", "desc": "Betting, including lottery tickets, casino gaming chips, off-track betting and wagers at race tracks"}, {"code": "7996", "desc": "Amusement parks, circuses, carnivals and fortune tellers"}, {"code": "7997", "desc": "Membership clubs (sports, recreation, athletic), country clubs and private golf courses"}, {"code": "7998", "desc": "Aquariums, seaquariums and dolphinariums"}, {"code": "7999", "desc": "Recreation services not elsewhere classified"}, {"code": "8011", "desc": "Doctors and physicians not elsewhere classified"}, {"code": "8021", "desc": "Dentists and orthodontists"}, {"code": "8031", "desc": "Osteopaths"}, {"code": "8041", "desc": "Chiropractors"}, {"code": "8042", "desc": "Optometrists and ophthalmologists"}, {"code": "8043", "desc": "Opticians, optical goods and eyeglasses"}, {"code": "8044", "desc": "Opticians, Optical Goods, and Eyeglasses (no longer validfor first presentments)"}, {"code": "8049", "desc": "Podiatrists and chiropodists"}, {"code": "8050", "desc": "Nursing and personal care facilities"}, {"code": "8062", "desc": "Hospitals"}, {"code": "8071", "desc": "Medical and dental laboratories"}, {"code": "8099", "desc": "Medical services and health practitioners not elsewhere classified"}, {"code": "8111", "desc": "Legal services and attorneys"}, {"code": "8211", "desc": "Elementary and secondary schools"}, {"code": "8220", "desc": "Colleges, universities, professional schools and junior colleges"}, {"code": "8241", "desc": "Correspondence schools"}, {"code": "8244", "desc": "Business and secretarial schools"}, {"code": "8249", "desc": "Trade and vocational schools"}, {"code": "8299", "desc": "Schools and educational services not elsewhere classified"}, {"code": "8351", "desc": "Child care services"}, {"code": "8398", "desc": "Charitable and social service organizations"}, {"code": "8493", "desc": "Vaccine voucher"}, {"code": "8641", "desc": "Civic, social and fraternal associations"}, {"code": "8651", "desc": "Political organizations"}, {"code": "8661", "desc": "Religious organizations"}, {"code": "8675", "desc": "Automobile associations"}, {"code": "8699", "desc": "Membership organization not elsewhere classified"}, {"code": "8734", "desc": "Testing laboratories (non-medical)"}, {"code": "8911", "desc": "Architectural, engineering and surveying services"}, {"code": "8931", "desc": "Accounting, auditing and bookkeeping services"}, {"code": "8999", "desc": "Professional services not elsewhere classified"}, {"code": "9211", "desc": "Court costs, including alimony and child support"}, {"code": "9222", "desc": "Fines"}, {"code": "9223", "desc": "Bail and bond payments"}, {"code": "9311", "desc": "Tax payments"}, {"code": "9399", "desc": "Government services not elsewhere classified"}, {"code": "9400", "desc": "PMNRF"}, {"code": "9402", "desc": "Postal services government only"}, {"code": "9405", "desc": "Intra \u00e2\u20ac\u201c Government Transactions"}, {"code": "6013", "desc": "ATM"}];
-
-// Embedded Lottie Animation
-const LOTTIE_DATA = {"v": "5.9.0", "fr": 60, "ip": 0, "op": 210, "w": 512, "h": 512, "nm": "IOB Logo \u2014 Sacred Geometry Bloom", "ddd": 0, "assets": [], "layers": [{"ddd": 0, "ind": 1, "ty": 4, "nm": "Ripple Aura", "sr": 1, "ks": {"o": {"a": 0, "k": 100}, "r": {"a": 0, "k": 0}, "p": {"a": 0, "k": [256, 256, 0]}, "a": {"a": 0, "k": [0, 0, 0]}, "s": {"a": 0, "k": [100, 100, 100]}}, "ip": 0, "op": 210, "shapes": [{"ty": "el", "nm": "Aura Circle", "hd": false, "d": 1, "s": {"a": 1, "k": [{"t": 90, "s": [0, 0], "o": {"x": [0.1], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 210, "s": [680, 680]}]}, "p": {"a": 0, "k": [0, 0]}}, {"ty": "st", "nm": "Aura Stroke", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 1, "k": [{"t": 90, "s": [50], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 162, "s": [15], "o": {"x": [0.4], "y": [0.0]}, "i": {"x": [0.6], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "w": {"a": 0, "k": 1.5}, "lc": 2, "lj": 2}]}, {"ddd": 0, "ind": 2, "ty": 4, "nm": "Top Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 0, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 14, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 0, "s": [10], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [0.8], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 55, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 0, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 32, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 40, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 55, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 7.822], [137.6, 126.578], [152.533, 141.156], [256.0, 37.689], [359.822, 141.511], [374.4, 126.578]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 52.267], [248.533, 59.733], [159.644, 148.622], [174.578, 163.2], [256.0, 81.778], [337.422, 163.2], [352.356, 148.267]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 96.711], [248.533, 104.178], [182.044, 170.667], [196.978, 185.6], [256.0, 126.222], [315.378, 185.6], [330.311, 170.667]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 3, "ty": 4, "nm": "Left Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 8, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 8, "s": [-14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [-1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 63, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 8, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 40, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 63, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 133.689], [122.667, 141.156], [11.733, 252.444], [26.311, 267.022], [130.133, 163.556], [233.956, 267.022], [248.533, 252.444]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 178.133], [122.667, 185.6], [33.778, 274.489], [48.711, 289.422], [130.133, 208.0], [211.556, 289.422], [226.489, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 222.578], [122.667, 230.044], [56.178, 296.533], [70.756, 311.467], [130.133, 252.089], [189.156, 311.467], [204.089, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 259.556], [4.267, 289.067], [130.133, 415.289], [250.667, 294.756], [250.667, 264.889], [241.067, 274.489], [130.133, 385.422], [93.156, 348.444], [19.2, 274.489]], "i": [[0.0, 0.0], [0.0, -9.6], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 9.956], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 304.0], [4.267, 333.511], [130.133, 459.378], [250.667, 338.844], [250.667, 309.333], [130.133, 429.867]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 348.444], [4.267, 377.956], [130.133, 503.822], [250.667, 383.289], [250.667, 353.778], [130.133, 474.311]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 4, "ty": 4, "nm": "Right Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 16, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 16, "s": [14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 71, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 16, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 48, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 64, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 71, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 133.689], [374.4, 141.156], [263.467, 252.444], [278.4, 267.022], [381.867, 163.556], [485.689, 267.022], [500.622, 252.089]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 178.133], [285.511, 274.489], [300.444, 289.422], [381.867, 208.0], [463.289, 289.422], [478.222, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 222.578], [374.4, 230.044], [307.911, 296.533], [322.844, 311.467], [381.867, 252.089], [441.244, 311.467], [455.822, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 259.556], [426.311, 340.978], [381.867, 385.422], [337.422, 340.978], [270.933, 274.489], [261.333, 264.889], [261.333, 294.4], [381.867, 414.933], [507.733, 289.067]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 304.0], [381.867, 429.867], [261.333, 309.333], [261.333, 338.844], [381.867, 459.378], [507.733, 333.511]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 348.444], [381.867, 474.311], [261.333, 353.778], [261.333, 383.289], [381.867, 503.822], [507.733, 377.956]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}], "markers": [{"tm": 90, "cm": "idle_loop_start", "dr": 120}], "meta": {"g": "Antigravity IOB Lottie Generator v1", "a": "Indian Overseas Bank", "d": "Sacred Geometry Bloom \u2014 one-shot intro (0-90f) + idle loop (90-210f)", "loop_from": 90, "loop_to": 210, "fps": 60, "player_note": "Play once (frames 0-210). On complete, playSegments([90,210], true) with loop=true for the infinite idle breathing + ripple."}};
+const MCC_LIST = {json.dumps(mcc_list)};
 
 // Embedded Branches Data (58 valid branches from branches.csv)
-const BRANCHES = {"0174": {"name": "Theni Allinagaram", "district": "Theni", "pincode": "625531"}, "0175": {"name": "Ayakudi", "district": "Dindigul", "pincode": "624613"}, "0176": {"name": "Cumbum", "district": "Theni", "pincode": "625516"}, "0230": {"name": "Vedasandur", "district": "Dindigul", "pincode": "624710"}, "0232": {"name": "Pannaikadu", "district": "Dindigul", "pincode": "624210"}, "0237": {"name": "Sithayamkottai", "district": "Dindigul", "pincode": "624708"}, "0243": {"name": "Pattiveeranpatti", "district": "Dindigul", "pincode": "624211"}, "0332": {"name": "Dindigul Main", "district": "Dindigul", "pincode": "624001"}, "0376": {"name": "Palani", "district": "Dindigul", "pincode": "624601"}, "0883": {"name": "Rasingapuram", "district": "Theni", "pincode": "625528"}, "0910": {"name": "Sembatti", "district": "Dindigul", "pincode": "624707"}, "0924": {"name": "Puduchatram", "district": "Dindigul", "pincode": "624619"}, "1001": {"name": "Urban Test Branch", "district": "Dindigul", "pincode": ""}, "1013": {"name": "Reddiapatti", "district": "Dindigul", "pincode": "624401"}, "1044": {"name": "Lakshmipuram", "district": "Theni", "pincode": "625523"}, "1112": {"name": "Nagayakottai", "district": "Dindigul", "pincode": "624706"}, "1152": {"name": "Narikkalpatti", "district": "Dindigul", "pincode": "624618"}, "1220": {"name": "Salaiyur", "district": "Dindigul", "pincode": "624710"}, "1221": {"name": "Marambadi", "district": "Dindigul", "pincode": "624709"}, "1258": {"name": "Oddanchatram", "district": "Dindigul", "pincode": "624619"}, "1314": {"name": "Dindigul Fort", "district": "Dindigul", "pincode": "624001"}, "1316": {"name": "Palayam", "district": "Dindigul", "pincode": "624620"}, "1317": {"name": "N Paraipatti", "district": "Dindigul", "pincode": "624005"}, "1401": {"name": "Silukkuwarpatti", "district": "Dindigul", "pincode": "624215"}, "1560": {"name": "Chinnamanur", "district": "Theni", "pincode": "625515"}, "1789": {"name": "Tamaraikulam", "district": "Theni", "pincode": "625601"}, "1830": {"name": "Dindigul Collectorate", "district": "Dindigul", "pincode": "624004"}, "1896": {"name": "Theni Medical College", "district": "Theni", "pincode": "625513"}, "1919": {"name": "Uthamapalayam", "district": "Theni", "pincode": "625533"}, "1931": {"name": "Periyakulam", "district": "Theni", "pincode": "625601"}, "2098": {"name": "RM Colony", "district": "Dindigul", "pincode": "624001"}, "2286": {"name": "Batlagundu", "district": "Dindigul", "pincode": "624202"}, "2287": {"name": "Andipatti", "district": "Theni", "pincode": "625512"}, "2288": {"name": "Natham", "district": "Dindigul", "pincode": "624401"}, "2461": {"name": "Vadamadurai", "district": "Dindigul", "pincode": "624802"}, "2464": {"name": "Nilakottai", "district": "Dindigul", "pincode": "624208"}, "2574": {"name": "Bodinayakanur", "district": "Theni", "pincode": "625513"}, "2685": {"name": "Silapadi", "district": "Dindigul", "pincode": "624005"}, "2686": {"name": "Chinnalapatti", "district": "Dindigul", "pincode": "624301"}, "2702": {"name": "KK Patti", "district": "Theni", "pincode": "625521"}, "2703": {"name": "PC Patti", "district": "Theni", "pincode": "625531"}, "2704": {"name": "T Subbulapuram", "district": "Theni", "pincode": "625536"}, "2705": {"name": "V Gopalpatti", "district": "Dindigul", "pincode": "624308"}, "2706": {"name": "K Reddiarchatram", "district": "Dindigul", "pincode": "624622"}, "3164": {"name": "Sendurai", "district": "Dindigul", "pincode": "624403"}, "3165": {"name": "Ponnagaram", "district": "Dindigul", "pincode": "624003"}, "3166": {"name": "Thadikombu", "district": "Dindigul", "pincode": "624709"}, "3346": {"name": "Vangamanuthu", "district": "Dindigul", "pincode": "624306"}, "3347": {"name": "Anaipatti", "district": "Dindigul", "pincode": "624219"}, "3436": {"name": "Kodaikanal", "district": "Dindigul", "pincode": "624101"}, "3437": {"name": "Dharumathupatti", "district": "Dindigul", "pincode": "624705"}, "3548": {"name": "Boothipuram", "district": "Theni", "pincode": "625531"}, "3549": {"name": "Ambilikai", "district": "Dindigul", "pincode": "624612"}, "3920": {"name": "Balakrishnapuram", "district": "Dindigul", "pincode": "624005"}, "3933": {"name": "Regional Office, Dindigul", "district": "Dindigul", "pincode": "624001"}, "4069": {"name": "Loan Processing Centre, Dindigul", "district": "Dindigul", "pincode": "624001"}, "4153": {"name": "Kosavapatti", "district": "Dindigul", "pincode": ""}, "0911": {"name": "Kalwarpatti", "district": "Dindigul", "pincode": "624711"}};
+const BRANCHES = {json.dumps(branches)};
 
 // Embedded Staff List (293 staff from staff_list.csv)
-const STAFF_LIST = {"48243": {"name": "DILEEP G", "sol": "0174", "designation": "CHIEF MANAGER - I line"}, "59529": {"name": "JITH S", "sol": "0174", "designation": "MANAGER - II line"}, "61628": {"name": "LAKSHMI M", "sol": "0174", "designation": "ASST MANAGER"}, "61755": {"name": "RUBINI R", "sol": "0174", "designation": "ASST MANAGER"}, "23277": {"name": "M PUSHPARANI", "sol": "0174", "designation": "PART TIME HOUSE KEEPER / PTHK"}, "47100": {"name": "RENGA RAJA PANDI J", "sol": "0174", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49344": {"name": "DIVYA C B", "sol": "0175", "designation": "MANAGER - I line"}, "55866": {"name": "RESHMA A", "sol": "0175", "designation": "ASST MANAGER - II line"}, "66313": {"name": "GANAPATHISUBRAMANIAM A L", "sol": "0175", "designation": "ASST MANAGER(PROB)"}, "23086": {"name": "PACKIAM M", "sol": "0175", "designation": "OFFICE ASSISTANT"}, "53068": {"name": "MAHALAKSHMI", "sol": "0175", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61981": {"name": "GAUTAM K", "sol": "0175", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "55213": {"name": "BASIL BABY", "sol": "0176", "designation": "SENIOR MANAGER - I line"}, "51529": {"name": "NIRANJAN MISHRA", "sol": "0176", "designation": "MANAGER - II line"}, "39428": {"name": "CHRISTY MARY GEORGE", "sol": "0176", "designation": "ASST MANAGER"}, "64236": {"name": "MYTHILI GUNASEKARAN", "sol": "0176", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "67989": {"name": "SUBIKSHAMUGI S", "sol": "0176", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "57222": {"name": "SUBADEVI M", "sol": "0230", "designation": "SENIOR MANAGER - I line"}, "59189": {"name": "JIBY SIMON", "sol": "0230", "designation": "ASST MANAGER"}, "55949": {"name": "NANDHINI B", "sol": "0230", "designation": "ASST MANAGER - II line"}, "66163": {"name": "ANJU K NAIR", "sol": "0230", "designation": "ASST MANAGER(PROB)"}, "39629": {"name": "SATHISH KUMAR K", "sol": "0230", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "45284": {"name": "MUTHU N", "sol": "0230", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "23035": {"name": "JEYALAKSHMI M", "sol": "0232", "designation": "OFFICE ASSISTANT"}, "61632": {"name": "THIRUMOORTHI K", "sol": "0232", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62729": {"name": "MARUTHU PANDI P", "sol": "0232", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61900": {"name": "DHANASEKAR", "sol": "0232", "designation": "MANAGER - I line"}, "45859": {"name": "SURESH L", "sol": "0232", "designation": "ASST MANAGER"}, "57377": {"name": "A RAMAKRISHNAN", "sol": "0237", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63789": {"name": "BALAGANESH MP", "sol": "0237", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39086": {"name": "VINOD C P", "sol": "0237", "designation": "MANAGER - I line"}, "52128": {"name": "EZHIL SHOBANA M", "sol": "0237", "designation": "ASST MANAGER - II line"}, "22917": {"name": "MARIAPPAN K A", "sol": "0243", "designation": "OFFICE ASSISTANT"}, "29230": {"name": "SHANMUGANANDAN S", "sol": "0243", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "66825": {"name": "KAVI PRIYA C", "sol": "0243", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "48253": {"name": "SUDEM BRAHMA", "sol": "0243", "designation": "SENIOR MANAGER - I line"}, "60460": {"name": "MUTHULATHA G", "sol": "0243", "designation": "MANAGER - II line"}, "67064": {"name": "ARINATH K L", "sol": "0243", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "50298": {"name": "DINESH A", "sol": "0332", "designation": "CHIEF MANAGER - I line"}, "49094": {"name": "PRIYADHARSHINI R", "sol": "0332", "designation": "MANAGER - II line"}, "45563": {"name": "SYED DEEN IBRAHIM", "sol": "0332", "designation": "ASST MANAGER"}, "65380": {"name": "ABINAYA D B", "sol": "0332", "designation": "ASST MANAGER"}, "66897": {"name": "JOHN PAUL P", "sol": "0332", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22919": {"name": "KANAKARAJ M", "sol": "0332", "designation": "OFFICE ASSISTANT"}, "61631": {"name": "SATHISH KUMAR N", "sol": "0332", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61736": {"name": "GAJAPATHI M", "sol": "0332", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64925": {"name": "PRABHAHARAN R", "sol": "0376", "designation": "SENIOR MANAGER - I line"}, "64985": {"name": "NARMADHA K", "sol": "0376", "designation": "ASST MANAGER - II line"}, "60756": {"name": "JUBIN MS", "sol": "0376", "designation": "ASST MANAGER"}, "22017": {"name": "SUBRAMANI K", "sol": "0376", "designation": "OFFICE ASSISTANT"}, "61979": {"name": "MARUTHAMUTHU P", "sol": "0376", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63762": {"name": "RAJAKUMAR R", "sol": "0376", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47159": {"name": "SATHISH KUMAR P", "sol": "0376", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "64507": {"name": "M GOPINATHAN", "sol": "0883", "designation": "MANAGER - I line"}, "53083": {"name": "SARANYA D", "sol": "0883", "designation": "ASST MANAGER - II line"}, "67729": {"name": "JERSHA SOUNDAR S A", "sol": "0883", "designation": "ASST MANAGER(PROB)"}, "63766": {"name": "NANTHINI DEVI K", "sol": "0883", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47243": {"name": "SANTHANA KUMAR N", "sol": "0910", "designation": "OFFICE ASSISTANT"}, "65452": {"name": "SUBHA SHREE R S", "sol": "0910", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66002": {"name": "PALANIAMMAL V", "sol": "0910", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "39898": {"name": "RAHINI R", "sol": "0910", "designation": "MANAGER - I line"}, "60484": {"name": "RAMJANSI R", "sol": "0910", "designation": "MANAGER - II line"}, "66437": {"name": "CHINMAY BISWAS", "sol": "0910", "designation": "ASST MANAGER(PROB)"}, "62536": {"name": "DIPIN P D", "sol": "0911", "designation": "MANAGER - I line"}, "66470": {"name": "KARUNYA VARDANA S", "sol": "0911", "designation": "ASST MANAGER(PROB)"}, "45398": {"name": "MUTHUKUMAR S", "sol": "0911", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "66066": {"name": "PREETHI A", "sol": "0911", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61518": {"name": "AROCKIYADOSS S", "sol": "0924", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62806": {"name": "KANIMOZHI A", "sol": "0924", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "43448": {"name": "PARVATHI MENON", "sol": "0924", "designation": "MANAGER - I line"}, "59904": {"name": "JAYA VAISHNAVI K", "sol": "0924", "designation": "MANAGER - II line"}, "66444": {"name": "PARVATHI B", "sol": "0924", "designation": "ASST MANAGER(PROB)"}, "66977": {"name": "EUKTHA SREE MUHI B", "sol": "0924", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "56082": {"name": "ASHWINI V", "sol": "1013", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61644": {"name": "BEULAH JOY N", "sol": "1013", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59207": {"name": "ROSHAN ZAMEER SHAIK AHAMED", "sol": "1013", "designation": "MANAGER - I line"}, "53259": {"name": "MAHENDRAN M", "sol": "1013", "designation": "ASST MANAGER - II line"}, "67471": {"name": "BHAVESH SAINI", "sol": "1013", "designation": "ASST MANAGER (PROB - RURAL DEV OFFICER)"}, "61733": {"name": "PRABHU A", "sol": "1044", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62823": {"name": "N RAJESKUMAR", "sol": "1044", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49090": {"name": "VAIDHEESVARI P", "sol": "1044", "designation": "SENIOR MANAGER - I line"}, "48659": {"name": "JAMES SEBASTIN", "sol": "1044", "designation": "ASST MANAGER - II line"}, "67716": {"name": "ARADHYA MISHRA", "sol": "1044", "designation": "ASST MANAGER(PROB)"}, "56009": {"name": "KARTHIKKUMAR P", "sol": "1112", "designation": "ASST MANAGER -I line"}, "61987": {"name": "M GUNASEKARAN", "sol": "1112", "designation": "ASST MANAGER - II line"}, "65200": {"name": "POOMANI V", "sol": "1112", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "46933": {"name": "SARAVANAMOORTHY S", "sol": "1112", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38612": {"name": "MANOJKUMAR P", "sol": "1152", "designation": "MANAGER"}, "56193": {"name": "PRABHU R", "sol": "1152", "designation": "MANAGER - I line"}, "62813": {"name": "SUJITHRA", "sol": "1152", "designation": "ASST MANAGER - II line"}, "37054": {"name": "RAJA VETRICHELVAN G", "sol": "1152", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "45554": {"name": "MURUGESAN P", "sol": "1152", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "22923": {"name": "CHANDRA T", "sol": "1220", "designation": "OFFICE ASSISTANT"}, "43916": {"name": "THANDAPANI P", "sol": "1220", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59250": {"name": "ABISHEK NAYAGAM S", "sol": "1220", "designation": "MANAGER - I line"}, "57437": {"name": "SANJEEV KUMAR", "sol": "1220", "designation": "ASST MANAGER - II line"}, "67016": {"name": "KAVINESH R", "sol": "1220", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "67737": {"name": "ABIRAMI ARULPRIYA", "sol": "1220", "designation": "ASST MANAGER(PROB)"}, "45408": {"name": "KALAIVANAN A", "sol": "1221", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39426": {"name": "GIGU GEORGE", "sol": "1221", "designation": "MANAGER - I line"}, "45529": {"name": "RAVI S", "sol": "1221", "designation": "ASST MANAGER - II line"}, "67840": {"name": "KAMALADHARANI B", "sol": "1221", "designation": "ASST MANAGER(PROB)"}, "60121": {"name": "JEENA K P", "sol": "1258", "designation": "MANAGER - I line"}, "55223": {"name": "JAYANT SINGH RATHORE", "sol": "1258", "designation": "MANAGER - II line"}, "59912": {"name": "RAVIKKUMAR S", "sol": "1258", "designation": "ASST MANAGER (RURAL CR & DEV)"}, "61991": {"name": "PERUMALAKKAL L", "sol": "1258", "designation": "ASST MANAGER"}, "45279": {"name": "SIVARAMAN R", "sol": "1258", "designation": "HEAD MESSENGER IN IOB"}, "46353": {"name": "PANDIAN SUDHAKAR", "sol": "1258", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38296": {"name": "RUPESH KUMAR", "sol": "1314", "designation": "CHIEF MANAGER - I line"}, "35719": {"name": "JOSEPH A", "sol": "1314", "designation": "SENIOR MANAGER - II line"}, "52567": {"name": "JISHA M R", "sol": "1314", "designation": "ASST MANAGER"}, "67041": {"name": "YOGAPRIYA S", "sol": "1314", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22931": {"name": "PETCHIAMMAL S", "sol": "1314", "designation": "OFFICE ASSISTANT"}, "53890": {"name": "GOMATHI S", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "21111": {"name": "THENAPPAN M", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "65211": {"name": "P ANANTHI", "sol": "1314", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55663": {"name": "KAVIPRIYAA", "sol": "1316", "designation": "SENIOR MANAGER - II line"}, "62887": {"name": "RAJBIR SINGH", "sol": "1316", "designation": "MANAGER - I line"}, "67021": {"name": "ISHWARYA R", "sol": "1316", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "65450": {"name": "GOBIKRISHNAN T", "sol": "1316", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66065": {"name": "BAVITHRA A", "sol": "1316", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "56920": {"name": "CHITHRA S S", "sol": "1317", "designation": "MANAGER - I line"}, "53971": {"name": "JAIGANESH", "sol": "1317", "designation": "ASST MANAGER - II line"}, "67806": {"name": "AMUTHA N", "sol": "1317", "designation": "ASST MANAGER(PROB)"}, "56062": {"name": "SAIMON AMBUROSE", "sol": "1317", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "35803": {"name": "RAJKANNAN P", "sol": "1401", "designation": "MANAGER - I line"}, "63840": {"name": "SENTHIL KUMAR M", "sol": "1401", "designation": "ASST MANAGER - II line"}, "45530": {"name": "KUMARESAN K V", "sol": "1401", "designation": "HEAD MESSENGER IN IOB"}, "53043": {"name": "BALAMURUGAN D", "sol": "1401", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "61627": {"name": "G MURUGESWARI", "sol": "1401", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55211": {"name": "AJEESH G T", "sol": "1560", "designation": "SENIOR MANAGER - I line"}, "58162": {"name": "MANIKANDAN M", "sol": "1560", "designation": "ASST MANAGER - II line"}, "66956": {"name": "RUBINI M", "sol": "1560", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "22837": {"name": "VENNIMUTHU M", "sol": "1560", "designation": "OFFICE ASSISTANT"}, "45169": {"name": "JAYAPRAKASH M", "sol": "1560", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55601": {"name": "PUNITHA", "sol": "1560", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "66824": {"name": "SANGEETHA", "sol": "1560", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "58501": {"name": "DILIP SELVAKUMAR R", "sol": "1789", "designation": "MANAGER - I line"}, "50665": {"name": "KANDEEBAN S", "sol": "1789", "designation": "ASST MANAGER - II line"}, "22817": {"name": "KATHIRESAN R", "sol": "1789", "designation": "OFFICE ASSISTANT"}, "54648": {"name": "NATARAJAN P", "sol": "1789", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61722": {"name": "MEENA A", "sol": "1789", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "52411": {"name": "VINEETH N", "sol": "1830", "designation": "MANAGER - I line"}, "53722": {"name": "DAISY OMANA S", "sol": "1830", "designation": "ASST MANAGER - II line"}, "67834": {"name": "FATHIMA NILOOFAR", "sol": "1830", "designation": "ASST MANAGER(PROB)"}, "41853": {"name": "MUTHUCHAMY D", "sol": "1830", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "56073": {"name": "BHARATHI V", "sol": "1830", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "40724": {"name": "SARAVANA KUMAR T", "sol": "1896", "designation": "MANAGER - II line"}, "55194": {"name": "MANOJ KUMAR", "sol": "1896", "designation": "MANAGER - I line"}, "66779": {"name": "MUTHUVIGNESH A", "sol": "1896", "designation": "ASST MANAGER(PROB)"}, "67026": {"name": "PARKAVI E", "sol": "1896", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "58229": {"name": "A SHANMUGAPRIYA", "sol": "1896", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47082": {"name": "PANDIAN K", "sol": "1919", "designation": "OFFICE ASSISTANT"}, "54335": {"name": "MANIKANDAN MS", "sol": "1919", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "47164": {"name": "JEGATHEESH P", "sol": "1919", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "36648": {"name": "PRAKASH B", "sol": "1919", "designation": "SENIOR MANAGER - I line"}, "38831": {"name": "ARYA R CHANDRAN", "sol": "1919", "designation": "ASST MANAGER - II line"}, "66735": {"name": "SUBASHINY K M", "sol": "1919", "designation": "ASST MANAGER(PROB)"}, "39356": {"name": "ASHAMOL C THANKAPPAN", "sol": "1931", "designation": "MANAGER - I line"}, "50550": {"name": "GOKILA G", "sol": "1931", "designation": "ASST MANAGER - II line"}, "66443": {"name": "MAINAK BAIN", "sol": "1931", "designation": "ASST MANAGER(PROB)"}, "66943": {"name": "CHAARU NIKITA CELESTIN A", "sol": "1931", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "62743": {"name": "RAMMYA", "sol": "1931", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "37115": {"name": "TITUS L R", "sol": "2098", "designation": "SPECIAL CUSTOMER SERVICE ASSOCIATE"}, "63544": {"name": "KARUPPU SAMY M", "sol": "2098", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "63791": {"name": "SUNITHA M", "sol": "2098", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "58685": {"name": "NEERAJA K PRADEEP", "sol": "2098", "designation": "SENIOR MANAGER - I line"}, "53699": {"name": "JENNY MARX P", "sol": "2098", "designation": "MANAGER - II line"}, "54822": {"name": "YALINI K", "sol": "2098", "designation": "ASST MANAGER"}, "63038": {"name": "LIPIKA PATRA", "sol": "2098", "designation": "UNAUTHORISED ABSENCE"}, "66412": {"name": "RANJANI D", "sol": "2098", "designation": "ASST MANAGER(PROB)"}, "46939": {"name": "AKBAR ALI M", "sol": "2286", "designation": "OFFICE ASSISTANT"}, "61629": {"name": "DHIVYA", "sol": "2286", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "60198": {"name": "G S PRABHU", "sol": "2286", "designation": "MANAGER - I line"}, "60408": {"name": "S BOOMADEVI", "sol": "2286", "designation": "ASST MANAGER - II line"}, "67804": {"name": "SATHIYA MOORTHY K", "sol": "2286", "designation": "ASST MANAGER(PROB)"}, "64724": {"name": "B GANESH RAM", "sol": "2287", "designation": "MANAGER - I line"}, "67039": {"name": "SWETHA V", "sol": "2287", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "53493": {"name": "KAUSHALYA DEVI C", "sol": "2287", "designation": "ASST MANAGER - II line"}, "61633": {"name": "VIJAYKESHAV J", "sol": "2287", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "39934": {"name": "ANITA S A", "sol": "2288", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "62035": {"name": "VENILA SELVERAJ", "sol": "2288", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "59030": {"name": "NALLATHAMBI P", "sol": "2288", "designation": "MANAGER - I line"}, "61934": {"name": "BABU CHOCKALINGAM", "sol": "2288", "designation": "ASST MANAGER - II line"}, "60154": {"name": "B KARTHIK", "sol": "2461", "designation": "MANAGER - I line"}, "65272": {"name": "NAVEEN ARYA", "sol": "2461", "designation": "ASST MANAGER - II line"}, "22924": {"name": "SAKTHIVEL M", "sol": "2461", "designation": "OFFICE ASSISTANT"}, "61548": {"name": "REVATHI", "sol": "2461", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "46494": {"name": "RAJ KUMAR R", "sol": "2461", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49301": {"name": "KUBERAN S", "sol": "2464", "designation": "MANAGER - I line"}, "53899": {"name": "SAVITHA PANDIDURAI", "sol": "2464", "designation": "ASST MANAGER - II line"}, "67805": {"name": "T PRAVEENRAJA", "sol": "2464", "designation": "ASST MANAGER(PROB)"}, "22016": {"name": "MARIAPPAN R", "sol": "2464", "designation": "OFFICE ASSISTANT"}, "39910": {"name": "JENIFER J", "sol": "2464", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "56108": {"name": "DINESH KUMAR M", "sol": "2574", "designation": "SENIOR MANAGER - I line"}, "56825": {"name": "PREMALATHA T", "sol": "2574", "designation": "MANAGER - II line"}, "66427": {"name": "MRINMAY KUMAR SARKAR", "sol": "2574", "designation": "ASST MANAGER(PROB)"}, "67470": {"name": "ALI ABBAS HADI", "sol": "2574", "designation": "ASST MANAGER (PROB - RURAL DEV OFFICER)"}, "22681": {"name": "BAVANI C", "sol": "2574", "designation": "OFFICE ASSISTANT"}, "64119": {"name": "SRIRAM G", "sol": "2574", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "50663": {"name": "ARUN KUMAR R", "sol": "2685", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47483": {"name": "NAVEEN RAJ S", "sol": "2685", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "49077": {"name": "FATHIMA S", "sol": "2685", "designation": "MANAGER - I line"}, "66152": {"name": "ASWIN M", "sol": "2685", "designation": "ASST MANAGER(PROB)"}, "66484": {"name": "MEENAKSHI N", "sol": "2685", "designation": "ASST MANAGER(PROB)"}, "55755": {"name": "PRABAHARAN", "sol": "2686", "designation": "MANAGER - I line"}, "63520": {"name": "PRINKA", "sol": "2686", "designation": "ASST MANAGER - II line"}, "67810": {"name": "PRAVEEN SANKAR R", "sol": "2686", "designation": "ASST MANAGER(PROB)"}, "61983": {"name": "R SIVARANJANI", "sol": "2686", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64122": {"name": "KUMARAN P", "sol": "2702", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "65451": {"name": "SURYA PRAKASH R", "sol": "2702", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "35749": {"name": "SHAJI P K", "sol": "2702", "designation": "MANAGER - I line"}, "52251": {"name": "ANILA DAVIES M", "sol": "2702", "designation": "ASST MANAGER - II line"}, "62061": {"name": "SURYA PRABHA", "sol": "2703", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "22764": {"name": "SIVAKUMAR P", "sol": "2703", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "50392": {"name": "PITCHAIATHITHIYAN M", "sol": "2703", "designation": "MANAGER - I line"}, "53148": {"name": "SURESH R", "sol": "2703", "designation": "ASST MANAGER - II line"}, "67860": {"name": "ADITI TOMAR", "sol": "2703", "designation": "ASST MANAGER(PROB)"}, "63831": {"name": "PONMUTHUKUMAR B", "sol": "2704", "designation": "ASST MANAGER -I line"}, "61599": {"name": "M BAKYALAKSHMI", "sol": "2704", "designation": "ASST MANAGER - II line"}, "61672": {"name": "LOGESHWAR R", "sol": "2704", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "49217": {"name": "SATHYA P T", "sol": "2705", "designation": "MANAGER - I line"}, "66733": {"name": "LAKSHMI A", "sol": "2705", "designation": "ASST MANAGER(PROB)"}, "63695": {"name": "GAYATHRI", "sol": "2705", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "64220": {"name": "VIJI S", "sol": "2705", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "49124": {"name": "THARAKESWARI K R", "sol": "2706", "designation": "SENIOR MANAGER - I line"}, "63679": {"name": "BRINDHA A", "sol": "2706", "designation": "ASST MANAGER - II line"}, "46328": {"name": "KULANDAIVEL M", "sol": "2706", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "46455": {"name": "SIVAMURUGAN T", "sol": "2706", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "47042": {"name": "THIRUPPATHI K", "sol": "3164", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "65911": {"name": "SIVAPREETHI M", "sol": "3164", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "38517": {"name": "VELMURUGAN C", "sol": "3164", "designation": "SENIOR MANAGER - I line"}, "63672": {"name": "DHANASANKAR BALAKRISHNAN", "sol": "3164", "designation": "ASST MANAGER - II line"}, "62649": {"name": "N HEMALATHA", "sol": "3165", "designation": "SENIOR MANAGER - I line"}, "59820": {"name": "B KARTHIKA", "sol": "3165", "designation": "ASST MANAGER - II line"}, "67717": {"name": "POOJA YADAV", "sol": "3165", "designation": "ASST MANAGER(PROB)"}, "61980": {"name": "SARAL PRIYADHARSINI A", "sol": "3165", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "63926": {"name": "KALAIVANI", "sol": "3166", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "54532": {"name": "SRINIVASAN SUBRAMANIAN", "sol": "3166", "designation": "MANAGER - I line"}, "57546": {"name": "AMBIKA V", "sol": "3166", "designation": "ASST MANAGER - II line"}, "63142": {"name": "PRADEEPSELVA", "sol": "3346", "designation": "MANAGER - I line"}, "66921": {"name": "LOGESH PANDI S", "sol": "3346", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "57320": {"name": "GOPINATH M", "sol": "3347", "designation": "SENIOR MANAGER - I line"}, "38535": {"name": "PREETHA DEVI C", "sol": "3347", "designation": "ASST MANAGER - II line"}, "63527": {"name": "B SATHEESH KUMAR", "sol": "3347", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "47481": {"name": "ARUL MURUGAN S", "sol": "3347", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "61617": {"name": "PRIYA S V", "sol": "3436", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "51984": {"name": "MAHALINGAM T", "sol": "3436", "designation": "MANAGER - II line"}, "61683": {"name": "P PRAVEEN KOP", "sol": "3436", "designation": "MANAGER - I line"}, "67068": {"name": "THAMILVANAN P", "sol": "3436", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "50059": {"name": "SARANYA R", "sol": "3437", "designation": "MANAGER - I line"}, "66155": {"name": "CHANDAN B ANAND", "sol": "3437", "designation": "ASST MANAGER(PROB)"}, "66454": {"name": "AMGOTH SINDHU", "sol": "3437", "designation": "ASST MANAGER(PROB)"}, "66981": {"name": "SIVA SANKAR S", "sol": "3437", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "43763": {"name": "SHIVA SUBRAMANIAN T", "sol": "3437", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "63471": {"name": "GOTHANDAPERUMAL K", "sol": "3548", "designation": "MANAGER - I line"}, "67069": {"name": "SHAKTHI BHAALAAJI D", "sol": "3548", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "53803": {"name": "THIRUMENI P", "sol": "3548", "designation": "SENIOR CUSTOMER SERVICE ASSOCIATE (CASH)"}, "64574": {"name": "VELUMAYIL B", "sol": "3549", "designation": "MANAGER - I line"}, "55401": {"name": "SHEETHAL R", "sol": "3549", "designation": "ASST MANAGER - II line"}, "67029": {"name": "VIJAYALAKSHMI B", "sol": "3549", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "46926": {"name": "VIJAY ANAND D", "sol": "3549", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "55447": {"name": "AVINASH C", "sol": "3920", "designation": "MANAGER - I line"}, "67052": {"name": "TAMILARASAN S", "sol": "3920", "designation": "ASSISTANT MANAGER - LOCAL BANK OFFICER (ON PROBATION)"}, "54612": {"name": "JEYAPRIYENKA", "sol": "3920", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}, "36614": {"name": "CHANDRA KUMAR P", "sol": "3933", "designation": "SENIOR REGIONAL MANAGER"}, "36937": {"name": "ANNAMALAI SM", "sol": "3933", "designation": "CHIEF MANAGER - II line"}, "43278": {"name": "VISHNU VARDHAN J M", "sol": "3933", "designation": "CHIEF MANAGER"}, "43261": {"name": "VENKATESWARAN R", "sol": "3933", "designation": "SENIOR MANAGER"}, "49628": {"name": "NISHA J", "sol": "3933", "designation": "SENIOR MANAGER(RISK)"}, "54257": {"name": "DHANASEKARAN N", "sol": "3933", "designation": "SENIOR MANAGER"}, "62467": {"name": "AMIT KUMAR SINGH", "sol": "3933", "designation": "SENIOR MANAGER"}, "63094": {"name": "DINESHKUMAR A", "sol": "3933", "designation": "SENIOR MANAGER"}, "49525": {"name": "SIVAKAMI DEVI C S", "sol": "3933", "designation": "MANAGER"}, "59111": {"name": "KRISHNA KUMAR S", "sol": "3933", "designation": "MANAGER"}, "58844": {"name": "THANGARAJESH PONNUCHAMY", "sol": "3933", "designation": "MANAGER"}, "40412": {"name": "JEYANTHI V RAYEN", "sol": "3933", "designation": "MANAGER"}, "62648": {"name": "S ARUNKUMAR", "sol": "3933", "designation": "MANAGER"}, "56063": {"name": "PRAVEEN S", "sol": "3933", "designation": "MANAGER"}, "60105": {"name": "VIDHYA V", "sol": "3933", "designation": "MANAGER"}, "63039": {"name": "SATISH PANDIAN", "sol": "3933", "designation": "MANAGER-MARKETING"}, "54920": {"name": "ANJU J", "sol": "3933", "designation": "ASST MANAGER"}, "56707": {"name": "ANJANA U S", "sol": "3933", "designation": "ASST MANAGER"}, "59087": {"name": "JOHN CHARLES ABISHEK M", "sol": "3933", "designation": "ASST MANAGER"}, "67910": {"name": "GAJANAND UPADHYAY", "sol": "3933", "designation": "ASST.MANAGER(PROB-OFFICIAL LANGUAGE)"}, "48496": {"name": "SATHISH KUMAR B", "sol": "3933", "designation": "SENIOR MANAGER"}, "36970": {"name": "SIVAMANI S", "sol": "4069", "designation": "CHIEF MANAGER - I line"}, "49670": {"name": "SOUNDARYAA R", "sol": "4069", "designation": "SENIOR MANAGER(FINANCIAL ANALYST)"}, "53840": {"name": "PARVATHY SUDHAKAR", "sol": "4069", "designation": "MANAGER"}, "55580": {"name": "SUMITHRA N", "sol": "4069", "designation": "MANAGER"}, "39775": {"name": "SAMUEL VIJAY A", "sol": "4153", "designation": "MANAGER - I line"}, "55777": {"name": "MINU PREETHI R", "sol": "4153", "designation": "ASST MANAGER - II line"}, "63738": {"name": "SHANTHA KUMAR M", "sol": "4153", "designation": "CUSTOMER SERVICE ASSOCIATE (CSA)"}};
+const STAFF_LIST = {json.dumps(staff_list)};
 
 // Pre-load tracking data from localStorage cache for 0ms load time
-let TRACKING_DATA = JSON.parse(localStorage.getItem('iob_tracking_cache') || '{ "qr": [], "sb": [], "lead": [] }');
+let TRACKING_DATA = JSON.parse(localStorage.getItem('iob_tracking_cache') || '{{ "qr": [], "sb": [], "lead": [] }}');
 let currentActiveStaff = null;
 let isFirstTimeLogin = false;
 
 // ── BROWSER NOTIFICATIONS MODULE ──
-function checkNotificationState() {
+function checkNotificationState() {{
   const btn = document.getElementById('notifToggleBtn');
   const label = document.getElementById('notifLabel');
   if (!btn || !label) return;
 
-  if (!("Notification" in window)) {
+  if (!("Notification" in window)) {{
     label.textContent = "Notifications Unsupported";
     btn.style.opacity = "0.6";
     return;
-  }
+  }}
 
-  if (Notification.permission === "granted") {
+  if (Notification.permission === "granted") {{
     label.textContent = "Notifications: Active";
     btn.classList.add('active');
-  } else if (Notification.permission === "denied") {
+  }} else if (Notification.permission === "denied") {{
     label.textContent = "Notifications: Blocked";
     btn.classList.remove('active');
-  } else {
+  }} else {{
     label.textContent = "Notifications: Off (Click)";
     btn.classList.remove('active');
-  }
-}
+  }}
+}}
 
-function toggleNotificationPermission() {
-  if (!("Notification" in window)) {
+function toggleNotificationPermission() {{
+  if (!("Notification" in window)) {{
     showToast("Browser does not support desktop notifications", "error");
     return;
-  }
+  }}
 
-  if (Notification.permission === "granted") {
+  if (Notification.permission === "granted") {{
     triggerBrowserNotification("IOB Dindigul Regional Office", "Test Notification: Desktop alerts are active and working!");
     showToast("🔔 Test notification sent to desktop!", "success");
-  } else {
-    Notification.requestPermission().then(permission => {
+  }} else {{
+    Notification.requestPermission().then(permission => {{
       checkNotificationState();
-      if (permission === "granted") {
+      if (permission === "granted") {{
         showToast("🔔 Desktop Notifications Enabled!", "success");
         triggerBrowserNotification("IOB Dindigul Regional Office", "Notifications enabled successfully! You will receive live alerts.");
-      } else {
+      }} else {{
         showToast("Notification permission blocked in browser settings", "error");
-      }
-    });
-  }
-}
+      }}
+    }});
+  }}
+}}
 
-function triggerBrowserNotification(title, body) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification(title, {
+function triggerBrowserNotification(title, body) {{
+  if ("Notification" in window && Notification.permission === "granted") {{
+    try {{
+      new Notification(title, {{
         body: body,
         icon: "iob_icon.png"
-      });
-    } catch(e) {
+      }});
+    }} catch(e) {{
       console.error("Notification error:", e);
-    }
-  }
-}
+    }}
+  }}
+}}
 
-// Initialize Splash & Lottie
-window.addEventListener('DOMContentLoaded', () => {
+// Initialize Splash Screen
+window.addEventListener('DOMContentLoaded', () => {{
   checkNotificationState();
   
   // Render cached status table in 0ms
   renderStatusTable();
 
-  lottie.loadAnimation({
-    container: document.getElementById('lottie-splash'),
-    renderer: 'svg', loop: true, autoplay: true,
-    animationData: LOTTIE_DATA
-  });
-  lottie.loadAnimation({
-    container: document.getElementById('header-lottie'),
-    renderer: 'svg', loop: true, autoplay: true,
-    animationData: LOTTIE_DATA
-  });
-
   let p = 0;
   const bar = document.getElementById('splash-bar');
-  const timer = setInterval(() => {
-    p = Math.min(p + 20, 95);
+  const timer = setInterval(() => {{
+    p = Math.min(p + 25, 95);
     bar.style.width = p + '%';
-  }, 100);
+  }}, 100);
 
-  setTimeout(() => {
+  setTimeout(() => {{
     clearInterval(timer);
     bar.style.width = '100%';
-    setTimeout(() => {
+    setTimeout(() => {{
       document.getElementById('splash').classList.add('hide');
-    }, 300);
-  }, 800);
+    }}, 400);
+  }}, 900);
 
   setupMCC('qr');
   setupMCC('sb');
@@ -1369,14 +1101,14 @@ window.addEventListener('DOMContentLoaded', () => {
   loadStatusData();
   setInterval(() => loadStatusData(false), 20000);
 
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.mcc-wrapper')) {
+  document.addEventListener('click', e => {{
+    if (!e.target.closest('.mcc-wrapper')) {{
       document.querySelectorAll('.mcc-dropdown').forEach(d => d.classList.remove('open'));
-    }
-  });
-});
+    }}
+  }});
+}});
 
-function onStaffRollInputModal(roll) {
+function onStaffRollInputModal(roll) {{
   const rollClean = roll.trim();
   const badge = document.getElementById('modal-staff-badge');
   const passEl = document.getElementById('modal-staff-pass');
@@ -1385,7 +1117,7 @@ function onStaffRollInputModal(roll) {
   const newPassBox = document.getElementById('newPassContainer');
   const confirmPassBox = document.getElementById('confirmPassContainer');
 
-  if (!rollClean) {
+  if (!rollClean) {{
     badge.style.display = 'none';
     firstNotice.classList.add('hidden');
     newPassBox.classList.add('hidden');
@@ -1393,170 +1125,170 @@ function onStaffRollInputModal(roll) {
     currentActiveStaff = null;
     isFirstTimeLogin = false;
     return;
-  }
+  }}
 
   const staff = STAFF_LIST[rollClean];
-  if (staff) {
-    currentActiveStaff = { roll: rollClean, ...staff };
+  if (staff) {{
+    currentActiveStaff = {{ roll: rollClean, ...staff }};
 
     const hasCustomPass = localStorage.getItem('staff_pass_' + rollClean) ? true : false;
     isFirstTimeLogin = !hasCustomPass;
 
-    if (isFirstTimeLogin) {
+    if (isFirstTimeLogin) {{
       firstNotice.classList.remove('hidden');
       newPassBox.classList.remove('hidden');
       confirmPassBox.classList.remove('hidden');
       document.getElementById('passLabel').textContent = "Current Password (Default: Roll No)";
       if (!passEl.value) passEl.value = rollClean;
-    } else {
+    }} else {{
       firstNotice.classList.add('hidden');
       newPassBox.classList.add('hidden');
       confirmPassBox.classList.add('hidden');
       document.getElementById('passLabel').textContent = "Password";
       const savedPass = localStorage.getItem('staff_pass_' + rollClean);
       if (!passEl.value) passEl.value = savedPass || rollClean;
-    }
+    }}
 
     // Lookup branch details
-    const branch = BRANCHES[staff.sol] || { name: 'Branch ' + staff.sol };
-    badge.innerHTML = `✓ <strong>${staff.name}</strong> (${staff.designation}) — <strong>Branch:</strong> ${staff.sol} (${branch.name})`;
+    const branch = BRANCHES[staff.sol] || {{ name: 'Branch ' + staff.sol }};
+    badge.innerHTML = `✓ <strong>${{staff.name}}</strong> (${{staff.designation}}) — <strong>Branch:</strong> ${{staff.sol}} (${{branch.name}})`;
     badge.style.display = 'block';
 
     // Auto-fill SOL ID and Branch Name in background form if empty or incomplete
-    ['qr', 'sb', 'lead'].forEach(prefix => {
+    ['qr', 'sb', 'lead'].forEach(prefix => {{
       const solEl = document.getElementById(prefix + '-solid');
-      if (solEl && !solEl.value) {
+      if (solEl && !solEl.value) {{
         solEl.value = staff.sol;
         onSolInput(solEl, prefix);
-      }
-    });
+      }}
+    }});
 
     const contactNameEl = document.getElementById('lead-contactname');
     if (contactNameEl && !contactNameEl.value) contactNameEl.value = staff.name;
 
-  } else {
+  }} else {{
     currentActiveStaff = null;
     isFirstTimeLogin = false;
     badge.style.display = 'none';
     firstNotice.classList.add('hidden');
     newPassBox.classList.add('hidden');
     confirmPassBox.classList.add('hidden');
-  }
-}
+  }}
+}}
 
-function onInitiateSubmit() {
-  if (!currentType) { showToast('Please select service / lead type first', 'error'); return; }
+function onInitiateSubmit() {{
+  if (!currentType) {{ showToast('Please select service / lead type first', 'error'); return; }}
   if (!validateFormFields()) return;
 
   // Open Floating Authentication Modal
   document.getElementById('staffAuthModal').classList.add('open');
   const rollInput = document.getElementById('modal-staff-roll');
-  if (currentActiveStaff) {
+  if (currentActiveStaff) {{
     rollInput.value = currentActiveStaff.roll;
     onStaffRollInputModal(currentActiveStaff.roll);
-  } else {
+  }} else {{
     rollInput.focus();
-  }
-}
+  }}
+}}
 
-function closeStaffAuthModal() {
+function closeStaffAuthModal() {{
   document.getElementById('staffAuthModal').classList.remove('open');
-}
+}}
 
-function confirmAuthAndSubmit() {
+function confirmAuthAndSubmit() {{
   const roll = document.getElementById('modal-staff-roll').value.trim();
   const pass = document.getElementById('modal-staff-pass').value.trim();
 
-  if (!roll || !STAFF_LIST[roll]) {
+  if (!roll || !STAFF_LIST[roll]) {{
     showToast('Please enter a valid Staff Roll Number', 'error');
     document.getElementById('modal-staff-roll').focus();
     return;
-  }
+  }}
 
   const expectedPass = localStorage.getItem('staff_pass_' + roll) || roll;
-  if (pass !== expectedPass) {
+  if (pass !== expectedPass) {{
     showToast('Incorrect Current Password for Roll Number ' + roll, 'error');
     document.getElementById('modal-staff-pass').focus();
     return;
-  }
+  }}
 
   // Handle First-Time Login Password Change Mandatory Prompt
-  if (isFirstTimeLogin) {
+  if (isFirstTimeLogin) {{
     const newPass = document.getElementById('modal-staff-newpass').value.trim();
     const confirmPass = document.getElementById('modal-staff-confirmpass').value.trim();
 
-    if (!newPass) {
+    if (!newPass) {{
       showToast('First login requires creating a new custom password', 'error');
       document.getElementById('modal-staff-newpass').focus();
       return;
-    }
+    }}
 
-    if (newPass === roll) {
+    if (newPass === roll) {{
       showToast('New password cannot be the default Roll Number', 'error');
       document.getElementById('modal-staff-newpass').focus();
       return;
-    }
+    }}
 
-    if (newPass !== confirmPass) {
+    if (newPass !== confirmPass) {{
       showToast('New passwords do not match. Please re-check', 'error');
       document.getElementById('modal-staff-confirmpass').focus();
       return;
-    }
+    }}
 
     // Save newly created password
     localStorage.setItem('staff_pass_' + roll, newPass);
     showToast('✅ New password created successfully!', 'success');
-  }
+  }}
 
-  currentActiveStaff = { roll: roll, ...STAFF_LIST[roll] };
+  currentActiveStaff = {{ roll: roll, ...STAFF_LIST[roll] }};
   closeStaffAuthModal();
   executeSubmission();
-}
+}}
 
-function openPassChangeModal() {
+function openPassChangeModal() {{
   document.getElementById('passChangeModal').classList.add('open');
   if (currentActiveStaff) document.getElementById('change-roll').value = currentActiveStaff.roll;
-}
+}}
 
-function closePassChangeModal() {
+function closePassChangeModal() {{
   document.getElementById('passChangeModal').classList.remove('open');
-}
+}}
 
-function saveNewPassword() {
+function saveNewPassword() {{
   const roll = document.getElementById('change-roll').value.trim();
   const oldPass = document.getElementById('change-oldpass').value.trim();
   const newPass = document.getElementById('change-newpass').value.trim();
 
-  if (!roll || !STAFF_LIST[roll]) { showToast('Please enter a valid Staff Roll Number', 'error'); return; }
+  if (!roll || !STAFF_LIST[roll]) {{ showToast('Please enter a valid Staff Roll Number', 'error'); return; }}
   const expectedOld = localStorage.getItem('staff_pass_' + roll) || roll;
-  if (oldPass !== expectedOld) { showToast('Current password does not match', 'error'); return; }
-  if (!newPass) { showToast('Please enter a valid new password', 'error'); return; }
+  if (oldPass !== expectedOld) {{ showToast('Current password does not match', 'error'); return; }}
+  if (!newPass) {{ showToast('Please enter a valid new password', 'error'); return; }}
 
   localStorage.setItem('staff_pass_' + roll, newPass);
   showToast('✅ Password changed successfully!', 'success');
   closePassChangeModal();
-  if (currentActiveStaff && currentActiveStaff.roll === roll) {
+  if (currentActiveStaff && currentActiveStaff.roll === roll) {{
     document.getElementById('modal-staff-pass').value = newPass;
-  }
-}
+  }}
+}}
 
-function switchNavTab(tab) {
+function switchNavTab(tab) {{
   document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
 
-  if (tab === 'apply') {
+  if (tab === 'apply') {{
     document.getElementById('page-apply').classList.remove('hidden');
     document.getElementById('page-status').classList.add('hidden');
-  } else {
+  }} else {{
     document.getElementById('page-apply').classList.add('hidden');
     document.getElementById('page-status').classList.remove('hidden');
     renderStatusTable();
     loadStatusData();
-  }
-}
+  }}
+}}
 
 let currentType = null;
-function setType(t) {
+function setType(t) {{
   currentType = t;
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + t).classList.add('active');
@@ -1571,25 +1303,25 @@ function setType(t) {
   lead.classList.add('hidden');
 
   let firstSection = null;
-  if (t === 'qr') {
+  if (t === 'qr') {{
     qr.classList.remove('hidden');
     firstSection = qr;
-  } else if (t === 'soundbox') {
+  }} else if (t === 'soundbox') {{
     sb.classList.remove('hidden');
     firstSection = sb;
-  } else if (t === 'lead') {
+  }} else if (t === 'lead') {{
     lead.classList.remove('hidden');
     firstSection = lead;
-  }
+  }}
 
   sz.classList.remove('hidden');
 
-  if (firstSection) {
-    firstSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
+  if (firstSection) {{
+    firstSection.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+  }}
+}}
 
-function onLeadProductChange(val) {
+function onLeadProductChange(val) {{
   document.getElementById('lead-banner-pos').classList.add('hidden');
   document.getElementById('lead-banner-iobpay').classList.add('hidden');
   document.getElementById('lead-banner-qrstandee').classList.add('hidden');
@@ -1597,104 +1329,104 @@ function onLeadProductChange(val) {
   if (val.includes('3 in 1 POS')) document.getElementById('lead-banner-pos').classList.remove('hidden');
   else if (val.includes('IOB Pay')) document.getElementById('lead-banner-iobpay').classList.remove('hidden');
   else if (val.includes('QR Standee')) document.getElementById('lead-banner-qrstandee').classList.remove('hidden');
-}
+}}
 
-function toggleQrSbFields(checked) {
+function toggleQrSbFields(checked) {{
   const fields = document.getElementById('qr-sb-fields');
   if (checked) fields.classList.remove('hidden');
   else fields.classList.add('hidden');
-}
+}}
 
-function onSolInput(el, prefix) {
-  const raw = el.value.replace(/\D/g, '');
+function onSolInput(el, prefix) {{
+  const raw = el.value.replace(/\\D/g, '');
   const errEl = document.getElementById(prefix + '-sol-error');
 
-  if (!raw) {
+  if (!raw) {{
     document.getElementById(prefix + '-branchname').value = '';
     if (prefix === 'sb') document.getElementById('sb-region').value = 'Dindigul';
     if (errEl) errEl.style.display = 'none';
     el.classList.remove('error');
     return;
-  }
+  }}
 
   const padded = raw.padStart(4, '0');
   const b = BRANCHES[padded];
 
-  if (b) {
+  if (b) {{
     const bName = document.getElementById(prefix + '-branchname');
     bName.value = b.name;
     bName.classList.add('autofilled');
 
-    if (prefix === 'sb') {
+    if (prefix === 'sb') {{
       const bReg = document.getElementById('sb-region');
       bReg.value = 'Dindigul';
       bReg.classList.add('autofilled');
 
       const pc = document.getElementById('sb-pincode');
       if (!pc.value && b.pincode) pc.value = b.pincode;
-    }
+    }}
 
     if (errEl) errEl.style.display = 'none';
     el.classList.remove('error');
-  } else {
+  }} else {{
     document.getElementById(prefix + '-branchname').value = '';
     if (prefix === 'sb') document.getElementById('sb-region').value = 'Dindigul';
 
-    if (errEl) {
+    if (errEl) {{
       errEl.textContent = '❌ Invalid SOL ID: Branch not found in branches.csv';
       errEl.style.display = 'block';
-    }
+    }}
     el.classList.add('error');
-  }
-}
+  }}
+}}
 
-function setupMCC(prefix) {
+function setupMCC(prefix) {{
   const search = document.getElementById(prefix + '-mcc-search');
   const drop = document.getElementById(prefix + '-mcc-dropdown');
   const hidden = document.getElementById(prefix + '-mcc-value');
   const sel = document.getElementById(prefix + '-mcc-selected');
 
-  search.addEventListener('input', () => {
+  search.addEventListener('input', () => {{
     const q = search.value.toLowerCase().trim();
     drop.innerHTML = '';
-    if (!q) { drop.classList.remove('open'); return; }
+    if (!q) {{ drop.classList.remove('open'); return; }}
 
     const matches = MCC_LIST.filter(m => m.code.includes(q) || m.desc.toLowerCase().includes(q)).slice(0, 35);
-    if (matches.length === 0) {
+    if (matches.length === 0) {{
       drop.innerHTML = '<div class="mcc-item" style="color:var(--muted)">No MCC code found</div>';
-    } else {
-      matches.forEach(m => {
+    }} else {{
+      matches.forEach(m => {{
         const item = document.createElement('div');
         item.className = 'mcc-item';
-        item.innerHTML = `<span class="code">${m.code}</span>${m.desc}`;
-        item.onclick = () => {
+        item.innerHTML = `<span class="code">${{m.code}}</span>${{m.desc}}`;
+        item.onclick = () => {{
           hidden.value = m.code;
           search.value = m.code + ' - ' + m.desc;
           sel.textContent = 'Selected: ' + m.code + ' (' + m.desc + ')';
           sel.classList.add('show');
           drop.classList.remove('open');
-        };
+        }};
         drop.appendChild(item);
-      });
-    }
+      }});
+    }}
     drop.classList.add('open');
-  });
+  }});
 
-  search.addEventListener('focus', () => {
+  search.addEventListener('focus', () => {{
     if (search.value) drop.classList.add('open');
-  });
-}
+  }});
+}}
 
-function getGPS(prefix) {
+function getGPS(prefix) {{
   const btn = document.getElementById(prefix + '-gps-btn');
   const status = document.getElementById(prefix + '-gps-status');
-  if (!navigator.geolocation) { showToast('GPS not supported by your browser', 'error'); return; }
+  if (!navigator.geolocation) {{ showToast('GPS not supported by your browser', 'error'); return; }}
   btn.disabled = true;
   btn.textContent = '⏳ Locating...';
   status.textContent = 'Fetching current position...';
 
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    pos => {{
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
       document.getElementById(prefix + '-lat').value = lat;
@@ -1702,96 +1434,96 @@ function getGPS(prefix) {
       status.textContent = '✓ Location captured (Accuracy: ±' + Math.round(pos.coords.accuracy) + 'm)';
       btn.disabled = false;
       btn.textContent = '📍 Capture GPS';
-    },
-    err => {
+    }},
+    err => {{
       status.textContent = 'Location error: ' + err.message;
       btn.disabled = false;
       btn.textContent = '📍 Capture GPS';
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
+    }},
+    {{ enableHighAccuracy: true, timeout: 10000 }}
   );
-}
+}}
 
-function validateFormFields() {
+function validateFormFields() {{
   let valid = true;
   document.querySelectorAll('.field input, .field select').forEach(e => e.classList.remove('error'));
 
-  function check(id) {
+  function check(id) {{
     const el = document.getElementById(id);
-    if (!el || !el.value.trim()) {
+    if (!el || !el.value.trim()) {{
       if (el) el.classList.add('error');
       valid = false;
-    }
-  }
+    }}
+  }}
 
-  if (currentType === 'qr') {
+  if (currentType === 'qr') {{
     check('qr-merchantname'); check('qr-accountno');
     check('qr-ifsc'); check('qr-mobile'); check('qr-email'); check('qr-merchanttype');
     check('qr-lat'); check('qr-lng'); check('qr-addr1'); check('qr-postoffice');
     check('qr-pincode'); check('qr-district'); check('qr-subdistrict');
-    if (!document.getElementById('qr-mcc-value').value) {
+    if (!document.getElementById('qr-mcc-value').value) {{
       document.getElementById('qr-mcc-search').classList.add('error');
       valid = false;
-    }
-    if (document.getElementById('qr-require-sb').checked) {
-      const solRaw = document.getElementById('qr-solid').value.replace(/\D/g, '');
+    }}
+    if (document.getElementById('qr-require-sb').checked) {{
+      const solRaw = document.getElementById('qr-solid').value.replace(/\\D/g, '');
       const padded = solRaw.padStart(4, '0');
-      if (!solRaw || !BRANCHES[padded]) {
+      if (!solRaw || !BRANCHES[padded]) {{
         document.getElementById('qr-solid').classList.add('error');
         showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
         valid = false;
-      }
-    }
-  }
+      }}
+    }}
+  }}
 
-  if (currentType === 'soundbox') {
-    const solRaw = document.getElementById('sb-solid').value.replace(/\D/g, '');
+  if (currentType === 'soundbox') {{
+    const solRaw = document.getElementById('sb-solid').value.replace(/\\D/g, '');
     const padded = solRaw.padStart(4, '0');
-    if (!solRaw || !BRANCHES[padded]) {
+    if (!solRaw || !BRANCHES[padded]) {{
       document.getElementById('sb-solid').classList.add('error');
       showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
       valid = false;
-    }
+    }}
     check('sb-vpa'); check('sb-accountname');
     check('sb-mobile'); check('sb-address'); check('sb-pincode');
     check('sb-city'); check('sb-state');
-    if (!document.getElementById('sb-mcc-value').value) {
+    if (!document.getElementById('sb-mcc-value').value) {{
       document.getElementById('sb-mcc-search').classList.add('error');
       valid = false;
-    }
-  }
+    }}
+  }}
 
-  if (currentType === 'lead') {
-    const solRaw = document.getElementById('lead-solid').value.replace(/\D/g, '');
+  if (currentType === 'lead') {{
+    const solRaw = document.getElementById('lead-solid').value.replace(/\\D/g, '');
     const padded = solRaw.padStart(4, '0');
-    if (!solRaw || !BRANCHES[padded]) {
+    if (!solRaw || !BRANCHES[padded]) {{
       document.getElementById('lead-solid').classList.add('error');
       showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
       valid = false;
-    }
+    }}
     check('lead-accountno'); check('lead-merchantname');
     check('lead-mobile'); check('lead-devices');
     check('lead-contactname'); check('lead-contactmobile');
 
     const acc = document.getElementById('lead-accountno').value.trim();
-    if (acc.length !== 15) {
+    if (acc.length !== 15) {{
       document.getElementById('lead-accountno').classList.add('error');
       showToast('Current Account number must be exactly 15 digits', 'error');
       valid = false;
-    }
-  }
+    }}
+  }}
 
   if (!valid) showToast('Please fill in all mandatory fields before submitting', 'error');
   return valid;
-}
+}}
 
-function collectQR() {
+function collectQR() {{
   const lat = parseFloat(document.getElementById('qr-lat').value || 0).toFixed(6);
   const lng = parseFloat(document.getElementById('qr-lng').value || 0).toFixed(6);
   const isSbRequired = document.getElementById('qr-require-sb').checked;
-  const staff = currentActiveStaff || {};
+  const staff = currentActiveStaff || {{}};
 
-  return {
+  return {{
     MERCHANTNAME: document.getElementById('qr-merchantname').value.trim(),
     MERCHANTVPA: document.getElementById('qr-merchantvpa').value.trim() || "Pending Generation",
     ACCOUNTNO: document.getElementById('qr-accountno').value.trim(),
@@ -1817,15 +1549,15 @@ function collectQR() {
     SOUNDBOX_LANG: isSbRequired ? (document.querySelector('input[name="qr-sb-lang"]:checked')?.value || 'ta') : "",
     STAFF_ROLL: staff.roll || "",
     STAFF_NAME: staff.name || ""
-  };
-}
+  }};
+}}
 
-function collectSB() {
-  const solRaw = document.getElementById('sb-solid').value.replace(/\D/g,'');
+function collectSB() {{
+  const solRaw = document.getElementById('sb-solid').value.replace(/\\D/g,'');
   const lang = document.querySelector('input[name="sb-lang"]:checked')?.value || 'ta';
-  const staff = currentActiveStaff || {};
+  const staff = currentActiveStaff || {{}};
 
-  return {
+  return {{
     SOL_ID: solRaw.padStart(4, '0'),
     BRANCH_NAME: document.getElementById('sb-branchname').value.trim(),
     REGION: "Dindigul",
@@ -1840,15 +1572,15 @@ function collectSB() {
     LANGUAGE: lang,
     STAFF_ROLL: staff.roll || "",
     STAFF_NAME: staff.name || ""
-  };
-}
+  }};
+}}
 
-function collectLead() {
-  const solRaw = document.getElementById('lead-solid').value.replace(/\D/g,'');
+function collectLead() {{
+  const solRaw = document.getElementById('lead-solid').value.replace(/\\D/g,'');
   const product = document.querySelector('input[name="lead-product"]:checked')?.value || '3 in 1 POS (QR Code + POS + Soundbox)';
-  const staff = currentActiveStaff || {};
+  const staff = currentActiveStaff || {{}};
 
-  return {
+  return {{
     PRODUCT: product,
     SOL_ID: solRaw.padStart(4, '0'),
     BRANCH_NAME: document.getElementById('lead-branchname').value.trim(),
@@ -1860,35 +1592,35 @@ function collectLead() {
     CONTACT_MOBILE: document.getElementById('lead-contactmobile').value.trim(),
     STAFF_ROLL: staff.roll || "",
     STAFF_NAME: staff.name || ""
-  };
-}
+  }};
+}}
 
-async function executeSubmission() {
-  const payload = { type: currentType };
+async function executeSubmission() {{
+  const payload = {{ type: currentType }};
   let newItem = null;
   let merchantTitle = "";
 
-  if (currentType === 'qr') {
+  if (currentType === 'qr') {{
     newItem = collectQR();
     merchantTitle = newItem.MERCHANTNAME;
     payload.qr = newItem;
     if (!TRACKING_DATA.qr) TRACKING_DATA.qr = [];
-    TRACKING_DATA.qr.unshift({ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now' });
-  }
-  if (currentType === 'soundbox') {
+    TRACKING_DATA.qr.unshift({{ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now' }});
+  }}
+  if (currentType === 'soundbox') {{
     newItem = collectSB();
     merchantTitle = newItem.ACCOUNT_NAME;
     payload.sb = newItem;
     if (!TRACKING_DATA.sb) TRACKING_DATA.sb = [];
-    TRACKING_DATA.sb.unshift({ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now' });
-  }
-  if (currentType === 'lead') {
+    TRACKING_DATA.sb.unshift({{ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now' }});
+  }}
+  if (currentType === 'lead') {{
     newItem = collectLead();
     merchantTitle = newItem.MERCHANT_NAME;
     payload.lead = newItem;
     if (!TRACKING_DATA.lead) TRACKING_DATA.lead = [];
-    TRACKING_DATA.lead.unshift({ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now', UPDATED_DATE: 'Just now' });
-  }
+    TRACKING_DATA.lead.unshift({{ ...newItem, STATUS: 'Pending Review', CREATED_DATE: 'Just now', UPDATED_DATE: 'Just now' }});
+  }}
 
   // OPTIMISTIC IMMEDIATE UPDATE (0ms LAG)
   localStorage.setItem('iob_tracking_cache', JSON.stringify(TRACKING_DATA));
@@ -1900,27 +1632,27 @@ async function executeSubmission() {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  try {
-    fetch(APPS_SCRIPT_URL, {
+  try {{
+    fetch(APPS_SCRIPT_URL, {{
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: {{ 'Content-Type': 'text/plain;charset=utf-8' }},
       body: JSON.stringify(payload)
-    }).then(() => {
+    }}).then(() => {{
       setTimeout(() => loadStatusData(false), 1500);
-    });
+    }});
 
     resetForm();
 
-  } catch(e) {
+  }} catch(e) {{
     console.error("Submission fetch error:", e);
-  } finally {
+  }} finally {{
     btn.disabled = false;
     btn.textContent = 'Submit Application / Lead';
-  }
-}
+  }}
+}}
 
-function resetForm() {
+function resetForm() {{
   document.getElementById('mainForm').reset();
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   ['qr-section', 'sb-section', 'lead-section', 'submit-zone'].forEach(id => document.getElementById(id).classList.add('hidden'));
@@ -1933,58 +1665,58 @@ function resetForm() {
   onLeadProductChange('3 in 1 POS (QR Code + POS + Soundbox)');
   currentType = null;
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+  window.scrollTo({{ top: 0, behavior: 'smooth' }});
+}}
 
 // ─────────────────────────────────────────────
 // TRACKING & STATUS TAB (CACHE PRE-WARMED & AUTO-POLLING)
 // ─────────────────────────────────────────────
-async function loadStatusData(showToastNotice = false) {
-  try {
+async function loadStatusData(showToastNotice = false) {{
+  try {{
     const res = await fetch(APPS_SCRIPT_URL);
     const data = await res.json();
-    if (data && (data.qr || data.sb || data.lead)) {
+    if (data && (data.qr || data.sb || data.lead)) {{
       TRACKING_DATA = data;
       localStorage.setItem('iob_tracking_cache', JSON.stringify(data));
       renderStatusTable();
       if (showToastNotice) showToast("✓ Status synced with server", "success");
-    }
-  } catch(e) {
+    }}
+  }} catch(e) {{
     console.error("Status load error:", e);
-  }
-}
+  }}
+}}
 
-function renderStatusTable() {
+function renderStatusTable() {{
   const query = document.getElementById('statusSearch').value.toLowerCase().trim();
   const tbody = document.getElementById('statusTableBody');
 
   let items = [];
-  (TRACKING_DATA.qr || []).forEach(item => {
-    items.push({ ...item, _type: 'QR', _name: item.MERCHANTNAME, _vpa: item.MERCHANTVPA, _acc: item.ACCOUNTNO, _mobile: item.MOBILENO, _loc: item.DISTRICT || item.CITY || '-' });
-  });
-  (TRACKING_DATA.sb || []).forEach(item => {
-    items.push({ ...item, _type: 'Soundbox', _name: item.ACCOUNT_NAME, _vpa: item.VPA, _acc: '-', _mobile: item.MOBILE_NUMBER, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
-  });
-  (TRACKING_DATA.lead || []).forEach(item => {
-    items.push({ ...item, _type: 'Lead', _name: item.MERCHANT_NAME, _vpa: item.PRODUCT, _acc: item.ACCOUNT_NO, _mobile: item.MOBILE_NO, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
-  });
+  (TRACKING_DATA.qr || []).forEach(item => {{
+    items.push({{ ...item, _type: 'QR', _name: item.MERCHANTNAME, _vpa: item.MERCHANTVPA, _acc: item.ACCOUNTNO, _mobile: item.MOBILENO, _loc: item.DISTRICT || item.CITY || '-' }});
+  }});
+  (TRACKING_DATA.sb || []).forEach(item => {{
+    items.push({{ ...item, _type: 'Soundbox', _name: item.ACCOUNT_NAME, _vpa: item.VPA, _acc: '-', _mobile: item.MOBILE_NUMBER, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' }});
+  }});
+  (TRACKING_DATA.lead || []).forEach(item => {{
+    items.push({{ ...item, _type: 'Lead', _name: item.MERCHANT_NAME, _vpa: item.PRODUCT, _acc: item.ACCOUNT_NO, _mobile: item.MOBILE_NO, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' }});
+  }});
 
-  if (query) {
-    items = items.filter(item => {
+  if (query) {{
+    items = items.filter(item => {{
       return (item._name || '').toLowerCase().includes(query) ||
              (item._vpa || '').toLowerCase().includes(query) ||
              String(item._mobile || '').includes(query) ||
              String(item._acc || '').includes(query) ||
              (item._loc || '').toLowerCase().includes(query);
-    });
-  }
+    }});
+  }}
 
-  if (items.length === 0) {
+  if (items.length === 0) {{
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No matching items found.</td></tr>`;
     return;
-  }
+  }}
 
-  tbody.innerHTML = items.map(item => {
+  tbody.innerHTML = items.map(item => {{
     let typeBadge = '';
     if (item._type === 'QR') typeBadge = '<span class="badge-type qr">📲 QR Code</span>';
     else if (item._type === 'Soundbox') typeBadge = '<span class="badge-type sb">🔊 Soundbox</span>';
@@ -1992,51 +1724,57 @@ function renderStatusTable() {
 
     const st = item.STATUS || 'Pending Review';
     let statusBadge = '';
-    if (st === 'Completed' || st === 'Merchant Onboarded') {
+    if (st === 'Completed' || st === 'Merchant Onboarded') {{
       statusBadge = `<span class="badge-status completed">✓ Onboarded</span>`;
-    } else if (st === 'Forwarded to Vendor') {
+    }} else if (st === 'Forwarded to Vendor') {{
       statusBadge = `<span class="badge-status vendor">🚚 With Vendor</span>`;
-    } else if (st === 'Rejected / Closed') {
+    }} else if (st === 'Rejected / Closed') {{
       statusBadge = `<span class="badge-status rejected">❌ Closed</span>`;
-    } else {
+    }} else {{
       statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
-    }
+    }}
 
-    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 Created: ${item.CREATED_DATE}</div>` : '';
-    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `⏱ Updated: ${item.COMPLETED_DATE || item.UPDATED_DATE}` : '';
-    const remarksStr = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${item.VENDOR_REMARKS}</div>` : '';
+    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 Created: ${{item.CREATED_DATE}}</div>` : '';
+    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `⏱ Updated: ${{item.COMPLETED_DATE || item.UPDATED_DATE}}` : '';
+    const remarksStr = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${{item.VENDOR_REMARKS}}</div>` : '';
 
     let detailCol = '';
-    if (item._type === 'Lead') {
-      detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${item.NO_OF_DEVICES || 1}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${item.CONTACT_NAME || ''} (${item.CONTACT_MOBILE || ''})</div>`;
-    } else {
+    if (item._type === 'Lead') {{
+      detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${{item.NO_OF_DEVICES || 1}}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${{item.CONTACT_NAME || ''}} (${{item.CONTACT_MOBILE || ''}})</div>`;
+    }} else {{
       detailCol = item.QR_PDF_URL 
-        ? `<a href="${item.QR_PDF_URL}" target="_blank" class="btn-pdf">📄 Download QR PDF</a>` 
+        ? `<a href="${{item.QR_PDF_URL}}" target="_blank" class="btn-pdf">📄 Download QR PDF</a>` 
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
-    }
+    }}
 
     return `
       <tr>
-        <td>${typeBadge}</td>
-        <td><strong>${item._name || '-'}</strong></td>
-        <td><div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div></td>
-        <td>${item._mobile || '-'}</td>
-        <td>${item._loc || '-'}</td>
-        <td>${statusBadge}${createdStr}<div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${dateStr}</div>${remarksStr}</td>
-        <td>${detailCol}</td>
+        <td>${{typeBadge}}</td>
+        <td><strong>${{item._name || '-'}}</strong></td>
+        <td><div>${{item._vpa || '-'}}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${{item._acc || '-'}}</div></td>
+        <td>${{item._mobile || '-'}}</td>
+        <td>${{item._loc || '-'}}</td>
+        <td>${{statusBadge}}${{createdStr}}<div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${{dateStr}}</div>${{remarksStr}}</td>
+        <td>${{detailCol}}</td>
       </tr>
     `;
-  }).join('');
-}
+  }}).join('');
+}}
 
 let toastTimer;
-function showToast(msg, type='') {
+function showToast(msg, type='') {{
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = '', 4000);
-}
+}}
 </script>
 </body>
 </html>
+"""
+
+with open(os.path.join(form_dir, "build_html.py"), "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("Updated build_html.py with 100% self-contained native animated SVG emblem!")
