@@ -102,6 +102,28 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // ACTION: INCREMENT ATTACHMENT DOWNLOAD COUNTER
+    if (data.action === "incrementDownload") {
+      var sheet = ss.getSheetByName(data.sheetName);
+      if (!sheet) throw new Error("Sheet not found: " + data.sheetName);
+      
+      var rowIndex = parseInt(data.rowIndex);
+      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      
+      var dlCol = headers.indexOf("DOWNLOAD_COUNT") + 1;
+      if (dlCol === 0) {
+        dlCol = headers.length + 1;
+        sheet.getRange(1, dlCol).setValue("DOWNLOAD_COUNT");
+      }
+      
+      var currentCount = parseInt(sheet.getRange(rowIndex, dlCol).getValue() || 0);
+      var newCount = currentCount + 1;
+      sheet.getRange(rowIndex, dlCol).setValue(newCount);
+      
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", count: newCount }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // ACTION: NEW SUBMISSION (QR, Soundbox, or Lead)
     var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
 
@@ -142,7 +164,7 @@ function getQRHeaders() {
     "ACTIVE", "ONBORDINGTYPE", "GSTNO", "EMAILID", "MERCHANTTYPE", "LATITUDE",
     "LONGITUDE", "ADDRESS1", "ADDRESS2", "POSTOFFICENAME", "PINCODE", "STATE",
     "DISTRICT", "SUBDISTRICT", "SOUNDBOX_REQUIRED", "SOL_ID", "SOUNDBOX_LANG",
-    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL"
+    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL", "DOWNLOAD_COUNT"
   ];
 }
 
@@ -150,7 +172,7 @@ function getSBHeaders() {
   return [
     "SOL_ID", "BRANCH_NAME", "REGION", "VPA", "ACCOUNT_NAME", "ADDRESS",
     "PIN_CODE", "CITY", "STATE", "MCC", "MOBILE_NUMBER", "LANGUAGE",
-    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL"
+    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL", "DOWNLOAD_COUNT"
   ];
 }
 

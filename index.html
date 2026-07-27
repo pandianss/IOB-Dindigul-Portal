@@ -330,6 +330,10 @@
     transition: all 0.2s;
   }
   .btn-pdf:hover { background: #dcfce7; }
+  .dl-badge {
+    background: #e8a020; color: #0d2354; font-size: 0.72rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 99px; margin-left: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
 
   /* ── TOAST ── */
   #toast {
@@ -1963,19 +1967,79 @@ async function loadStatusData() {
   }
 }
 
+function formatBranchLoc(solId, branchName, district) {
+  if (solId) {
+    const padded = String(solId).padStart(4, '0');
+    const b = BRANCHES[padded];
+    if (b && b.name) {
+      return `${b.name} (${padded})`;
+    }
+    if (branchName && !branchName.startsWith('Branch ')) {
+      return `${branchName} (${padded})`;
+    }
+    return `Branch ${padded} (${padded})`;
+  }
+  return branchName || district || '-';
+}
+
+function trackDownload(sheetName, rowIndex, el) {
+  const badge = el.querySelector('.dl-badge-count');
+  if (badge) {
+    let current = parseInt(badge.textContent || '0');
+    badge.textContent = current + 1;
+  }
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'incrementDownload', sheetName: sheetName, rowIndex: rowIndex })
+    });
+  } catch(e) {
+    console.error("Track download error:", e);
+  }
+}
+
 function renderStatusTable() {
   const query = document.getElementById('statusSearch').value.toLowerCase().trim();
   const tbody = document.getElementById('statusTableBody');
 
   let items = [];
   (TRACKING_DATA.qr || []).forEach(item => {
-    items.push({ ...item, _type: 'QR', _name: item.MERCHANTNAME, _vpa: item.MERCHANTVPA, _acc: item.ACCOUNTNO, _mobile: item.MOBILENO, _loc: item.DISTRICT || item.CITY || '-' });
+    items.push({
+      ...item,
+      _type: 'QR',
+      _sheetName: 'QR_Template',
+      _name: item.MERCHANTNAME,
+      _vpa: item.MERCHANTVPA,
+      _acc: item.ACCOUNTNO,
+      _mobile: item.MOBILENO,
+      _loc: formatBranchLoc(item.SOL_ID, null, item.DISTRICT || item.CITY)
+    });
   });
   (TRACKING_DATA.sb || []).forEach(item => {
-    items.push({ ...item, _type: 'Soundbox', _name: item.ACCOUNT_NAME, _vpa: item.VPA, _acc: '-', _mobile: item.MOBILE_NUMBER, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+    items.push({
+      ...item,
+      _type: 'Soundbox',
+      _sheetName: 'Soundbox_Template',
+      _name: item.ACCOUNT_NAME,
+      _vpa: item.VPA,
+      _acc: '-',
+      _mobile: item.MOBILE_NUMBER,
+      _loc: formatBranchLoc(item.SOL_ID, item.BRANCH_NAME, item.CITY)
+    });
   });
   (TRACKING_DATA.lead || []).forEach(item => {
-    items.push({ ...item, _type: 'Lead', _name: item.MERCHANT_NAME, _vpa: item.PRODUCT, _acc: item.ACCOUNT_NO, _mobile: item.MOBILE_NO, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+    items.push({
+      ...item,
+      _type: 'Lead',
+      _sheetName: 'Leads_Template',
+      _name: item.MERCHANT_NAME,
+      _vpa: item.PRODUCT,
+      _acc: item.ACCOUNT_NO,
+      _mobile: item.MOBILE_NO,
+      _loc: formatBranchLoc(item.SOL_ID, item.BRANCH_NAME, null)
+    });
   });
 
   if (query) {
@@ -1984,7 +2048,8 @@ function renderStatusTable() {
              (item._vpa || '').toLowerCase().includes(query) ||
              String(item._mobile || '').includes(query) ||
              String(item._acc || '').includes(query) ||
-             (item._loc || '').toLowerCase().includes(query);
+             (item._loc || '').toLowerCase().includes(query) ||
+             String(item.SOL_ID || '').includes(query);
     });
   }
 
@@ -2019,8 +2084,9 @@ function renderStatusTable() {
     if (item._type === 'Lead') {
       detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${item.NO_OF_DEVICES || 1}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${item.CONTACT_NAME || ''} (${item.CONTACT_MOBILE || ''})</div>`;
     } else {
+      const dlCount = item.DOWNLOAD_COUNT || 0;
       detailCol = item.QR_PDF_URL 
-        ? `<a href="${item.QR_PDF_URL}" target="_blank" class="btn-pdf">📄 Download QR PDF</a>` 
+        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this)" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>` 
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
     }
 
@@ -2030,7 +2096,7 @@ function renderStatusTable() {
         <td><strong>${item._name || '-'}</strong></td>
         <td><div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div></td>
         <td>${item._mobile || '-'}</td>
-        <td>${item._loc || '-'}</td>
+        <td><strong>${item._loc || '-'}</strong></td>
         <td>${statusBadge}${createdStr}<div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${dateStr}</div>${remarksStr}</td>
         <td>${detailCol}</td>
       </tr>

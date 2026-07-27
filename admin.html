@@ -272,8 +272,17 @@
     transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; text-align: center;
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
-  #toast.success { background: var(--success); }
-  #toast.error { background: var(--error); }
+  .btn-pdf {
+    background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0;
+    border-radius: 8px; padding: 5px 10px; font-size: 0.76rem;
+    font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+    transition: all 0.2s;
+  }
+  .btn-pdf:hover { background: #dcfce7; }
+  .dl-badge {
+    background: #e8a020; color: #0d2354; font-size: 0.72rem; font-weight: 800;
+    padding: 2px 7px; border-radius: 99px; margin-left: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
 
   .hidden { display: none !important; }
   .empty-state { padding: 48px 16px; text-align: center; color: var(--muted); font-size: 0.9rem; }
@@ -673,18 +682,78 @@ function renderTable() {
     <th>Action</th>
   `;
 
+function formatBranchLoc(solId, branchName, district) {
+  if (solId) {
+    const padded = String(solId).padStart(4, '0');
+    const b = BRANCHES[padded];
+    if (b && b.name) {
+      return `${b.name} (${padded})`;
+    }
+    if (branchName && !branchName.startsWith('Branch ')) {
+      return `${branchName} (${padded})`;
+    }
+    return `Branch ${padded} (${padded})`;
+  }
+  return branchName || district || '-';
+}
+
+function trackDownload(sheetName, rowIndex, el) {
+  const badge = el.querySelector('.dl-badge-count');
+  if (badge) {
+    let current = parseInt(badge.textContent || '0');
+    badge.textContent = current + 1;
+  }
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'incrementDownload', sheetName: sheetName, rowIndex: rowIndex })
+    });
+  } catch(e) {
+    console.error("Track download error:", e);
+  }
+}
+
   let items = [];
   
   (ALL_DATA.qr || []).forEach(item => {
-    items.push({ ...item, _type: 'QR', _name: item.MERCHANTNAME, _vpa: item.MERCHANTVPA, _acc: item.ACCOUNTNO, _mobile: item.MOBILENO, _loc: item.DISTRICT || item.CITY || '-' });
+    items.push({
+      ...item,
+      _type: 'QR',
+      _sheetName: 'QR_Template',
+      _name: item.MERCHANTNAME,
+      _vpa: item.MERCHANTVPA,
+      _acc: item.ACCOUNTNO,
+      _mobile: item.MOBILENO,
+      _loc: formatBranchLoc(item.SOL_ID, null, item.DISTRICT || item.CITY)
+    });
   });
   
   (ALL_DATA.sb || []).forEach(item => {
-    items.push({ ...item, _type: 'Soundbox', _name: item.ACCOUNT_NAME, _vpa: item.VPA, _acc: '-', _mobile: item.MOBILE_NUMBER, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+    items.push({
+      ...item,
+      _type: 'Soundbox',
+      _sheetName: 'Soundbox_Template',
+      _name: item.ACCOUNT_NAME,
+      _vpa: item.VPA,
+      _acc: '-',
+      _mobile: item.MOBILE_NUMBER,
+      _loc: formatBranchLoc(item.SOL_ID, item.BRANCH_NAME, item.CITY)
+    });
   });
 
   (ALL_DATA.lead || []).forEach(item => {
-    items.push({ ...item, _type: 'Lead', _name: item.MERCHANT_NAME, _vpa: item.PRODUCT, _acc: item.ACCOUNT_NO, _mobile: item.MOBILE_NO, _loc: (item.BRANCH_NAME || '') + ' (' + (item.SOL_ID || '') + ')' });
+    items.push({
+      ...item,
+      _type: 'Lead',
+      _sheetName: 'Leads_Template',
+      _name: item.MERCHANT_NAME,
+      _vpa: item.PRODUCT,
+      _acc: item.ACCOUNT_NO,
+      _mobile: item.MOBILE_NO,
+      _loc: formatBranchLoc(item.SOL_ID, item.BRANCH_NAME, null)
+    });
   });
 
   // Filter by Tab (Pending vs Forwarded to Vendor vs Completed)
@@ -739,10 +808,15 @@ function renderTable() {
     const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${item.VENDOR_REMARKS}</div>` : '';
 
     let detailsDisplay = '';
+    const dlCount = item.DOWNLOAD_COUNT || 0;
+    const pdfBtn = item.QR_PDF_URL 
+      ? `<div style="margin-top:4px"><a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this)" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a></div>`
+      : '';
+
     if (item._type === 'Lead') {
       detailsDisplay = `<div><strong>Product:</strong> ${item.PRODUCT || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item.ACCOUNT_NO || '-'}</div>`;
     } else {
-      detailsDisplay = `<div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div>`;
+      detailsDisplay = `<div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div>${pdfBtn}`;
     }
 
     return `
@@ -751,7 +825,7 @@ function renderTable() {
         <td><strong>${item._name || '-'}</strong></td>
         <td>${detailsDisplay}</td>
         <td><div>${item._mobile || '-'}</div>${staffInfo}</td>
-        <td>${item._loc || '-'}</td>
+        <td><strong>${item._loc || '-'}</strong></td>
         <td>${statusBadge}${createdStr}${remarksInfo}</td>
         <td>${actionBtn}</td>
       </tr>
