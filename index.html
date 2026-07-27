@@ -1284,20 +1284,6 @@
           </div>
         </div>
 
-        <!-- STAFF ATTENDANCE & ON-FIELD SOURCING CARD (REPORTED BY BRANCH HEAD) -->
-        <div id="staff-attendance-card" class="hidden" style="background:#f8fafc;border:1.5px solid #cbd5e1;padding:16px;border-radius:12px;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-            <div style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark)">
-              👥 Staff Data & Daily Attendance (Reported by Branch Head)
-            </div>
-            <span style="font-size:0.75rem;color:var(--muted);background:#e2e8f0;padding:3px 10px;border-radius:12px;font-weight:600">Prefilled Staff + Jewel Appraisers + BC Mitras</span>
-          </div>
-
-          <div id="staff-attendance-list-container" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:10px">
-            <!-- Dynamically populated list of prefilled staff + JA + BC with attendance selectors -->
-          </div>
-        </div>
-
         <!-- RO GUARDIAN CLUSTER SECTION -->
         <div id="guardian-cluster-container" class="hidden">
           <div style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:12px">
@@ -1330,18 +1316,24 @@
             </div>
           </div>
 
-          <!-- SECTION 2: ACCOUNTS OPENED (SB & CD SEPARATELY + STEP-UP RD) -->
+          <!-- SECTION 2: ACCOUNTS OPENED (SB OPENED, CD OPENED, TD OPENED & STEP-UP RD) -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            📈 2. ACCOUNTS OPENING (SB & CD SEPARATE + STEP-UP RD)
+            📈 2. ACCOUNTS OPENING (SB, CD, TD & STEP-UP RD)
           </div>
-          <div class="col-3">
+          <div class="col-2">
             <div class="field">
-              <label>SB Accounts Opened Today <span class="req">*</span></label>
+              <label>SB Opened Today <span class="req">*</span></label>
               <input type="number" id="biz-sb-opened" placeholder="e.g. 5" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>CD Accounts Opened Today <span class="req">*</span></label>
+              <label>CD Opened Today <span class="req">*</span></label>
               <input type="number" id="biz-cd-opened" placeholder="e.g. 1" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2" style="margin-top:8px">
+            <div class="field">
+              <label>TD Opened Today</label>
+              <input type="number" id="biz-td-opened" placeholder="e.g. 2" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
               <label>Step-up RD Accounts Opened</label>
@@ -1349,9 +1341,9 @@
             </div>
           </div>
 
-          <!-- SECTION 3: PREMIUM & HIGH-VALUE ACCOUNTS (PREMIUM SEPARATE FROM ULTRA HNI) -->
+          <!-- SECTION 3: PREMIUM & HIGH-VALUE ACCOUNTS -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            💎 3. PREMIUM & HIGH-VALUE ACCOUNTS (SEPARATED)
+            💎 3. PREMIUM & HIGH-VALUE ACCOUNTS
           </div>
           <div class="col-3">
             <div class="field">
@@ -1368,28 +1360,24 @@
             </div>
           </div>
 
-          <!-- SECTION 4: DIGITAL PRODUCTS (EACH SEPARATE) -->
+          <!-- SECTION 4: DIGITAL PRODUCTS & CHANNELS -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            💳 4. DIGITAL PRODUCTS & ALTERNATE CHANNELS (SEPARATED)
+            💳 4. DIGITAL PRODUCTS & ALTERNATE CHANNELS
           </div>
-          <div class="col-3">
+          <div class="col-2">
             <div class="field">
               <label>Credit Cards Issued</label>
               <input type="number" id="biz-credit-cards" placeholder="e.g. 3" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>IOB Connect Activations</label>
+              <label>IOB Connect Activations (Covers Mobile Banking)</label>
               <input type="number" id="biz-iob-connect" placeholder="e.g. 6" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>New Internet Banking (Net Banking)</label>
-              <input type="number" id="biz-net-banking" placeholder="e.g. 4" oninput="updateWAReportPreview()">
             </div>
           </div>
           <div class="col-2" style="margin-top:8px">
             <div class="field">
-              <label>Mobile Banking Activations</label>
-              <input type="number" id="biz-mobile-banking" placeholder="e.g. 5" oninput="updateWAReportPreview()">
+              <label>New Internet Banking (Net Banking)</label>
+              <input type="number" id="biz-net-banking" placeholder="e.g. 4" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
               <label>WhatsApp Banking Registrations</label>
@@ -1442,9 +1430,44 @@
             </div>
           </div>
 
-          <!-- SECTION 6: SAFE DEPOSIT LOCKERS -->
+          <!-- SECTION 6: INOPERATIVE, INACTIVE & DEAF ACCOUNTS ACTIVATION (COUNT & AMOUNT SEPARATELY) -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🔐 6. SAFE DEPOSIT LOCKERS
+            🔄 6. INOPERATIVE, INACTIVE & DEAF ACCOUNTS ACTIVATION (COUNT & AMOUNT)
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Inoperative Accounts Activated — Count</label>
+              <input type="number" id="biz-inop-count" placeholder="e.g. 15" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Inoperative Accounts Activated — Amount (₹)</label>
+              <input type="number" id="biz-inop-amt" placeholder="e.g. 185000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Inactive Accounts Activated — Count</label>
+              <input type="number" id="biz-inact-count" placeholder="e.g. 8" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Inactive Accounts Activated — Amount (₹)</label>
+              <input type="number" id="biz-inact-amt" placeholder="e.g. 92000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>DEAF Accounts Claimed / Reactivated — Count</label>
+              <input type="number" id="biz-deaf-count" placeholder="e.g. 2" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>DEAF Accounts Claimed / Reactivated — Amount (₹)</label>
+              <input type="number" id="biz-deaf-amt" placeholder="e.g. 21000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 7: SAFE DEPOSIT LOCKERS -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            🔐 7. SAFE DEPOSIT LOCKERS
           </div>
           <div class="col-2">
             <div class="field">
@@ -1457,9 +1480,9 @@
             </div>
           </div>
 
-          <!-- SECTION 7: GOVT SOCIAL SECURITY SCHEMES (EACH SEPARATE) -->
+          <!-- SECTION 8: GOVT SOCIAL SECURITY SCHEMES (EACH SEPARATE) -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🏛️ 7. GOVERNMENT SOCIAL SECURITY SCHEMES (SEPARATED)
+            🏛️ 8. GOVERNMENT SOCIAL SECURITY SCHEMES (SEPARATED)
           </div>
           <div class="col-3">
             <div class="field">
@@ -2221,26 +2244,13 @@ function generateWAReportText() {
   const creditCards = document.getElementById('biz-credit-cards')?.value || '0';
   const iobConnect = document.getElementById('biz-iob-connect')?.value || '0';
   const netBanking = document.getElementById('biz-net-banking')?.value || '0';
-  const mobileBanking = document.getElementById('biz-mobile-banking')?.value || '0';
-  const whatsappBanking = document.getElementById('biz-whatsapp-banking')?.value || '0';
-
-  const retailCount = document.getElementById('biz-retail-count')?.value || '0';
-  const retailAmt = document.getElementById('biz-retail-amt')?.value || '0';
-  const smeCount = document.getElementById('biz-sme-count')?.value || '0';
-  const smeAmt = document.getElementById('biz-sme-amt')?.value || '0';
-  const agriCount = document.getElementById('biz-agri-count')?.value || '0';
-  const agriAmt = document.getElementById('biz-agri-amt')?.value || '0';
-  const jewelFresh = document.getElementById('biz-jewel-fresh')?.value || '-';
-  const jewelRenewal = document.getElementById('biz-jewel-renewal')?.value || '-';
-
-  const lockersVacant = document.getElementById('biz-lockers-vacant')?.value || '0';
-  const lockersIssued = document.getElementById('biz-lockers-issued')?.value || '0';
-
-  const nps = document.getElementById('biz-nps')?.value || '0';
-  const apy = document.getElementById('biz-apy')?.value || '0';
-  const ssy = document.getElementById('biz-ssy')?.value || '0';
-  const pmsby = document.getElementById('biz-pmsby')?.value || '0';
-  const pmjjby = document.getElementById('biz-pmjjby')?.value || '0';
+  const tdOpened = document.getElementById('biz-td-opened')?.value || '0';
+  const inopCount = document.getElementById('biz-inop-count')?.value || '0';
+  const inopAmt = document.getElementById('biz-inop-amt')?.value || '0';
+  const inactCount = document.getElementById('biz-inact-count')?.value || '0';
+  const inactAmt = document.getElementById('biz-inact-amt')?.value || '0';
+  const deafCount = document.getElementById('biz-deaf-count')?.value || '0';
+  const deafAmt = document.getElementById('biz-deaf-amt')?.value || '0';
 
   if (currentBizCadre === 'guardian') {
     const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
@@ -2274,7 +2284,7 @@ function generateWAReportText() {
       branchSummaries.push(
         `${icon} *${idx + 1}. ${b.name.toUpperCase()} (${sol})* — *${statusTag}*\n` +
         `• 1st Line Head: ${officers.headName}\n` +
-        `• SB Accounts Opened Today: ${sbOpenedVal} SB Accounts`
+        `• SB Opened Today: ${sbOpenedVal} SB Accounts`
       );
     });
 
@@ -2305,9 +2315,9 @@ ${branchSummaries.join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚙️ *OPERATIONAL ACTIVATION & RECOVERY:*
-🔄 Inoperative Accounts Activated: 15 (Amt: ₹1,85,000)
-💤 Inactive Accounts Activated: 8 (Amt: ₹92,000)
-🏛️ DEAF Accounts Claimed: 2 (Amt: ₹21,000)
+🔄 Inoperative Accounts Activated: ${inopCount} (Amt: ₹${inopAmt})
+💤 Inactive Accounts Activated: ${inactCount} (Amt: ₹${inactAmt})
+🏛️ DEAF Accounts Claimed: ${deafCount} (Amt: ₹${deafAmt})
 
 📋 *COMPLIANCE & DATA QUALITY:*
 ✅ Re-KYC Completed: 12 Accounts
@@ -2318,17 +2328,6 @@ ${branchSummaries.join('\n\n')}
 #IOBCompliance #OperationsAudit #DindigulRegion`;
   }
 
-  let attBlock = '';
-  const attSelects = document.querySelectorAll('.staff-att-select');
-  if (attSelects.length > 0) {
-    let lines = [];
-    attSelects.forEach(sel => {
-      const name = sel.getAttribute('data-name');
-      lines.push(`• ${name}: ${sel.value}`);
-    });
-    attBlock = `\n👥 *STAFF & BC/JA ATTENDANCE (${attSelects.length} PERSONS):*\n` + lines.join('\n') + `\n`;
-  }
-
   return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
 📊 *DAILY GENERAL BUSINESS REPORT — 1ST LINE*
 📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
@@ -2337,15 +2336,16 @@ ${branchSummaries.join('\n\n')}
 🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
 👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-${attBlock}
+
 💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
 🔹 SB Growth: ₹${sbGrowth}
 🔹 CD Growth: ₹${cdGrowth}
 🔹 Term Deposits: ₹${tdGrowth}
 
-📈 *2. CASA & RD ACCOUNTS OPENING:*
-✨ SB Accounts Opened: ${sbOpened}
-💼 CD Accounts Opened: ${cdOpened}
+📈 *2. ACCOUNTS OPENED & RD:*
+✨ SB Opened Today: ${sbOpened}
+💼 CD Opened Today: ${cdOpened}
+🏦 TD Opened Today: ${tdOpened}
 🔄 Step-up RD Accounts: ${stepupRd}
 
 💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*
@@ -2353,11 +2353,10 @@ ${attBlock}
 👑 SB Ultra HNI Accounts: ${sbUltraHni}
 💎 SB Diamond & Platinum: ${sbDiamondPlat}
 
-💳 *4. DIGITAL PRODUCTS & ALTERNATE CHANNELS:*
+💳 *4. DIGITAL PRODUCTS & CHANNELS:*
 💳 Credit Cards Issued: ${creditCards}
-📲 IOB Connect Activated: ${iobConnect}
+📲 IOB Connect Activations: ${iobConnect}
 💻 New Internet Banking (Net): ${netBanking}
-📱 Mobile Banking Activations: ${mobileBanking}
 💬 WhatsApp Banking Registrations: ${whatsappBanking}
 
 🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*
@@ -2367,11 +2366,16 @@ ${attBlock}
 👑 Jewel Loans Fresh: ${jewelFresh}
 🔄 Jewel Loans Renewal: ${jewelRenewal}
 
-🔐 *6. SAFE DEPOSIT LOCKERS:*
+🔄 *6. ACCOUNT ACTIVATIONS & RECOVERY:*
+⚡ Inoperative Activated: ${inopCount} Accts (Amt: ₹${inopAmt})
+💤 Inactive Activated: ${inactCount} Accts (Amt: ₹${inactAmt})
+🏛️ DEAF Claimed: ${deafCount} Accts (Amt: ₹${deafAmt})
+
+🔐 *7. SAFE DEPOSIT LOCKERS:*
 🔓 Lockers Vacant: ${lockersVacant}
 🔒 Lockers Issued Today: ${lockersIssued}
 
-🏛️ *7. GOVERNMENT SOCIAL SECURITY SCHEMES:*
+🏛️ *8. GOVERNMENT SOCIAL SECURITY SCHEMES:*
 🎗️ NPS: ${nps} | 🏛️ APY: ${apy} | 👧 SSY: ${ssy}
 🛡️ PMSBY: ${pmsby} | ❤️ PMJJBY: ${pmjjby}
 
