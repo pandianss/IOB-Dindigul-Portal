@@ -12,11 +12,15 @@ function doGet(e) {
   var qrSheet = ss.getSheetByName("QR_Template");
   var sbSheet = ss.getSheetByName("Soundbox_Template");
   var leadSheet = ss.getSheetByName("Leads_Template");
+  var bizSheet = ss.getSheetByName("Daily_Reporting");
+  var baseSheet = ss.getSheetByName("Base_Targets");
   
   var response = {
     qr: qrSheet ? readSheetDataFast(qrSheet, getQRHeaders()) : [],
     sb: sbSheet ? readSheetDataFast(sbSheet, getSBHeaders()) : [],
-    lead: leadSheet ? readSheetDataFast(leadSheet, getLeadHeaders()) : []
+    lead: leadSheet ? readSheetDataFast(leadSheet, getLeadHeaders()) : [],
+    biz: bizSheet ? readSheetDataFast(bizSheet, getBizHeaders()) : [],
+    base: baseSheet ? readSheetDataFast(baseSheet, getBaseHeaders()) : []
   };
   
   return ContentService.createTextOutput(JSON.stringify(response))
@@ -124,7 +128,18 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // ACTION: NEW SUBMISSION (QR, Soundbox, or Lead)
+    // ACTION: UPLOAD BASE TARGETS & YESTERDAY FIGURES (Admin Batch Upload)
+    if (data.action === "uploadBaseTargets") {
+      var baseSheet = getOrCreateSheet(ss, "Base_Targets", getBaseHeaders());
+      var rows = data.rows || [];
+      for (var b = 0; b < rows.length; b++) {
+        appendDataRow(baseSheet, rows[b], getBaseHeaders());
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Base targets uploaded successfully", count: rows.length }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ACTION: NEW SUBMISSION (QR, Soundbox, Lead, or Business)
     var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
 
     if (data.type === "qr") {
@@ -143,6 +158,11 @@ function doPost(e) {
       if (!data.lead.UPDATED_DATE) data.lead.UPDATED_DATE = nowStr;
       appendDataRow(leadSheet, data.lead, getLeadHeaders());
       sendNewSubmissionNotification("Merchant Product Lead (" + (data.lead.PRODUCT || "POS") + ")", data.lead);
+    } else if (data.type === "biz") {
+      var bizSheet = getOrCreateSheet(ss, "Daily_Reporting", getBizHeaders());
+      if (!data.biz.CREATED_DATE) data.biz.CREATED_DATE = nowStr;
+      appendDataRow(bizSheet, data.biz, getBizHeaders());
+      sendNewSubmissionNotification("General Business Daily Report (" + (data.biz.BRANCH_NAME || data.biz.SOL_ID) + ")", data.biz);
     } else {
       throw new Error("Invalid submission type");
     }
@@ -181,6 +201,27 @@ function getLeadHeaders() {
     "PRODUCT", "SOL_ID", "BRANCH_NAME", "ACCOUNT_NO", "MERCHANT_NAME",
     "MOBILE_NO", "NO_OF_DEVICES", "CONTACT_NAME", "CONTACT_MOBILE",
     "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "UPDATED_DATE", "VENDOR_REMARKS"
+  ];
+}
+
+function getBizHeaders() {
+  return [
+    "SOL_ID", "BRANCH_NAME", "REPORT_DATE", "STAFF_ROLL", "STAFF_NAME", "ROLE",
+    "SB_GROWTH", "CD_GROWTH", "TD_GROWTH", "ACCTS_OPENED", "ACCTS_DIAMOND", "ACCTS_PLATINUM",
+    "ACCTS_ULTRA_HNI", "ACCTS_PREMIUM", "ACCTS_GOVT", "ACCTS_TEMPLE", "ACCTS_CONTRACTORS",
+    "LOW_BAL_FUNDED", "CREDIT_CARDS", "IOB_CONNECT", "NET_BANKING", "CASA_WINBACK",
+    "NPS", "SSY", "PPF", "JL_FRESH", "JL_RENEWAL", "INOPERATIVE_COUNT", "INOPERATIVE_AMT",
+    "INACTIVE_COUNT", "INACTIVE_AMT", "DEAF_COUNT", "DEAF_AMT", "REKYC_COUNT",
+    "NOMINATION_COUNT", "DQI_SCORE", "POWERPLAY_INTENT", "CREATED_DATE"
+  ];
+}
+
+function getBaseHeaders() {
+  return [
+    "SOL_ID", "BRANCH_NAME", "YEST_BAL_SB", "YEST_BAL_CD", "YEST_BAL_TD",
+    "BAL_31MAR_SB", "BAL_31MAR_CD", "BAL_31MAR_TD", "UPTOYEST_ACCTS_SB", "UPTOYEST_ACCTS_CD",
+    "BASE_INOPERATIVE_ACCTS", "BASE_INOPERATIVE_AMT", "BASE_INACTIVE_ACCTS", "BASE_INACTIVE_AMT",
+    "BASE_DEAF_ACCTS", "BASE_DEAF_AMT"
   ];
 }
 

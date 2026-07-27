@@ -367,6 +367,7 @@
       <button class="tab-btn" id="tab-vendor" onclick="switchTab('vendor')">🚚 Forwarded to Vendor</button>
       <button class="tab-btn" id="tab-completed" onclick="switchTab('completed')">✅ Onboarded / Done</button>
       <button class="tab-btn" id="tab-staff" onclick="switchTab('staff')">🔑 Staff Password Reset</button>
+      <button class="tab-btn" id="tab-targets" onclick="switchTab('targets')">📥 Ingest Base Targets & Figures</button>
     </div>
 
     <div class="search-box">
@@ -376,7 +377,7 @@
   </div>
 
   <!-- TABLE CARD -->
-  <div class="table-card">
+  <div class="table-card" id="mainTableCard">
     <div class="table-responsive">
       <table id="appTable">
         <thead>
@@ -388,6 +389,24 @@
           <tr><td colspan="7" class="empty-state">Loading application data...</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- TARGETS INGESTION CARD -->
+  <div id="targetsCardContainer" class="hidden" style="margin-top:16px">
+    <div class="card" style="background:#fff;padding:24px;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:8px">
+        📥 Data Ingestion: Base Targets & Yesterday Closing Figures
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">
+        Upload batch CSV files containing prefilled figures as of yesterday (SB, CD, TD balances, 31-Mar bases, inoperative accounts).
+      </p>
+
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <input type="file" id="baseTargetCsvInput" accept=".csv" style="font-size:0.85rem">
+        <button type="button" class="btn-confirm" onclick="uploadBaseTargetCsv()">🚀 Ingest Targets CSV</button>
+      </div>
+      <div id="targetUploadStatus" style="font-size:0.82rem;font-weight:600;margin-top:12px;color:var(--iob-blue-light)"></div>
     </div>
   </div>
 
@@ -599,8 +618,79 @@ function updateStats() {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  renderTable();
+  const btn = document.getElementById('tab-' + tab);
+  if (btn) btn.classList.add('active');
+
+  const mainTable = document.getElementById('mainTableCard');
+  const targetsCard = document.getElementById('targetsCardContainer');
+
+  if (tab === 'targets') {
+    if (mainTable) mainTable.classList.add('hidden');
+    if (targetsCard) targetsCard.classList.remove('hidden');
+  } else {
+    if (mainTable) mainTable.classList.remove('hidden');
+    if (targetsCard) targetsCard.classList.add('hidden');
+    renderTable();
+  }
+}
+
+async function uploadBaseTargetCsv() {
+  const fileInput = document.getElementById('baseTargetCsvInput');
+  const statusEl = document.getElementById('targetUploadStatus');
+  if (!fileInput || !fileInput.files.length) {
+    showToast("Please select a CSV file first!", "error");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  statusEl.textContent = `Reading ${file.name}...`;
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length < 2) {
+        showToast("CSV file is empty or invalid", "error");
+        statusEl.textContent = "CSV file is empty!";
+        return;
+      }
+
+      const headers = lines[0].split(",").map(h => h.trim().replace(/['"]/g, ""));
+      const parsedRows = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const columns = lines[i].split(",").map(c => c.trim().replace(/['"]/g, ""));
+        if (columns.length >= 2) {
+          let rowObj = {};
+          headers.forEach((h, colIdx) => {
+            rowObj[h] = columns[colIdx] || "";
+          });
+          parsedRows.push(rowObj);
+        }
+      }
+
+      statusEl.textContent = `Ingesting ${parsedRows.length} branch rows...`;
+
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'uploadBaseTargets',
+          rows: parsedRows
+        })
+      });
+
+      showToast(`✅ Successfully ingested ${parsedRows.length} branch base target records!`, 'success');
+      statusEl.textContent = `✓ Ingested ${parsedRows.length} branch target records.`;
+      fileInput.value = '';
+    } catch(err) {
+      console.error(err);
+      showToast("Ingestion failed: " + err.message, "error");
+      statusEl.textContent = "Ingestion error!";
+    }
+  };
+  reader.readAsText(file);
 }
 
 function filterTable() {
