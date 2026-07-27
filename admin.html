@@ -895,13 +895,13 @@ const ALL_PARAMS = [
 ];
 
 let roleParamMapping = JSON.parse(localStorage.getItem('iob_role_param_matrix') || '{}');
-if (!roleParamMapping["1st"]) {
+if (!roleParamMapping["1st"] || !Array.isArray(roleParamMapping["1st"]) || roleParamMapping["1st"].length === 0) {
   roleParamMapping = {
-    "1st": ["sb_growth", "cd_growth", "td_growth", "casa_opened", "premium_accts", "digital_products", "iob_connect", "jewel_loans", "staff_attendance"],
-    "2nd": ["inoperative_act", "deaf_claims", "rekyc_dqi", "staff_attendance"],
-    "po": ["casa_opened", "digital_products", "iob_connect"],
-    "lbo": ["casa_opened", "digital_products", "jewel_loans"],
-    "guardian": ["sb_growth", "cd_growth", "casa_opened", "digital_products", "inoperative_act"]
+    "1st": ALL_PARAMS.map(p => p.id),
+    "2nd": ["inop_act", "inact_act", "deaf_act", "rekyc_dqi", "retail_loans", "sme_loans", "agri_loans", "jewel_loans"],
+    "po": ["sb_opened", "cd_opened", "td_opened", "stepup_rd", "credit_cards", "iob_connect", "net_banking", "whatsapp_banking"],
+    "lbo": ["sb_opened", "cd_opened", "td_opened", "credit_cards", "iob_connect", "jewel_loans"],
+    "guardian": ["sb_growth", "cd_growth", "td_growth", "sb_opened", "cd_opened", "td_opened", "credit_cards", "iob_connect", "retail_loans", "sme_loans", "agri_loans"]
   };
 }
 

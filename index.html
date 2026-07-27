@@ -2036,6 +2036,29 @@ function getFullStaffList() {
   return STAFF_LIST;
 }
 
+
+function getAllottedParams(cadre) {
+  const mapping = JSON.parse(localStorage.getItem('iob_role_param_matrix') || 'null');
+  if (mapping && mapping[cadre] && Array.isArray(mapping[cadre]) && mapping[cadre].length > 0) {
+    return mapping[cadre];
+  }
+  if (cadre === '2nd') {
+    return ["inop_act", "inact_act", "deaf_act", "rekyc_dqi", "retail_loans", "sme_loans", "agri_loans", "jewel_loans"];
+  }
+  if (cadre === 'po' || cadre === 'lbo') {
+    return ["sb_opened", "cd_opened", "td_opened", "stepup_rd", "credit_cards", "iob_connect", "net_banking", "whatsapp_banking", "jewel_loans"];
+  }
+  if (cadre === 'guardian') {
+    return ["sb_growth", "cd_growth", "td_growth", "sb_opened", "cd_opened", "td_opened", "credit_cards", "iob_connect", "retail_loans", "sme_loans", "agri_loans"];
+  }
+  return [
+    "sb_growth", "cd_growth", "td_growth", "sb_opened", "cd_opened", "td_opened", "stepup_rd",
+    "sb_premium", "sb_ultra_hni", "sb_diamond_plat", "credit_cards", "iob_connect", "net_banking",
+    "whatsapp_banking", "retail_loans", "sme_loans", "agri_loans", "jewel_loans", "inop_act",
+    "inact_act", "deaf_act", "lockers", "nps", "apy", "ssy", "pmsby", "pmjjby", "rekyc_dqi"
+  ];
+}
+
 function verifyAndLoadStaffReport(val) {
   const roll = String(val).trim();
   const badge = document.getElementById('verified-officer-badge');
@@ -2229,6 +2252,9 @@ function renderGuardianCluster() {
     const b = BRANCHES[sol] || { sol: sol, name: 'Branch ' + sol, district: 'Dindigul' };
     activeCluster.push({ sol: String(sol).padStart(4, '0'), ...b });
   });
+
+  const allowedG = getAllottedParams('guardian');
+  const showG = (pId) => allowedG.includes(pId);
 
   container.innerHTML = activeCluster.map((b, idx) => {
     const officers = getBranchOfficers(b.sol);
@@ -2491,6 +2517,87 @@ ${branchSummaries.join('\n\n')}
     officerRoleLabel = "PO / LBO OFFICER";
   }
 
+  const allowed = getAllottedParams(currentBizCadre);
+  const isOk = (paramId) => allowed.includes(paramId);
+
+  let reportSections = [];
+
+  // Section 1: Deposit Growth
+  if (isOk('sb_growth') || isOk('cd_growth') || isOk('td_growth')) {
+    let linesSec = [];
+    if (isOk('sb_growth')) linesSec.push(`🔹 SB Growth: ₹${sbGrowth}`);
+    if (isOk('cd_growth')) linesSec.push(`🔹 CD Growth: ₹${cdGrowth}`);
+    if (isOk('td_growth')) linesSec.push(`🔹 Term Deposits: ₹${tdGrowth}`);
+    reportSections.push(`💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*\n` + linesSec.join('\n'));
+  }
+
+  // Section 2: Accounts Opened & RD
+  if (isOk('sb_opened') || isOk('cd_opened') || isOk('td_opened') || isOk('stepup_rd')) {
+    let linesSec = [];
+    if (isOk('sb_opened')) linesSec.push(`✨ SB Opened Today: ${sbOpened}`);
+    if (isOk('cd_opened')) linesSec.push(`💼 CD Opened Today: ${cdOpened}`);
+    if (isOk('td_opened')) linesSec.push(`🏦 TD Opened Today: ${tdOpened}`);
+    if (isOk('stepup_rd')) linesSec.push(`🔄 Step-up RD Accounts: ${stepupRd}`);
+    reportSections.push(`📈 *2. ACCOUNTS OPENED & RD:*\n` + linesSec.join('\n'));
+  }
+
+  // Section 3: High Value & Premium
+  if (isOk('sb_premium') || isOk('sb_ultra_hni') || isOk('sb_diamond_plat')) {
+    let linesSec = [];
+    if (isOk('sb_premium')) linesSec.push(`⭐ SB Premium Accounts: ${sbPremium}`);
+    if (isOk('sb_ultra_hni')) linesSec.push(`👑 SB Ultra HNI Accounts: ${sbUltraHni}`);
+    if (isOk('sb_diamond_plat')) linesSec.push(`💎 SB Diamond & Platinum: ${sbDiamondPlat}`);
+    reportSections.push(`💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*\n` + linesSec.join('\n'));
+  }
+
+  // Section 4: Digital Products & Channels
+  if (isOk('credit_cards') || isOk('iob_connect') || isOk('net_banking') || isOk('whatsapp_banking')) {
+    let linesSec = [];
+    if (isOk('credit_cards')) linesSec.push(`💳 Credit Cards Issued: ${creditCards}`);
+    if (isOk('iob_connect')) linesSec.push(`📲 IOB Connect Activations: ${iobConnect}`);
+    if (isOk('net_banking')) linesSec.push(`💻 New Internet Banking (Net): ${netBanking}`);
+    if (isOk('whatsapp_banking')) linesSec.push(`💬 WhatsApp Banking Registrations: ${whatsappBanking}`);
+    reportSections.push(`💳 *4. DIGITAL PRODUCTS & CHANNELS:*\n` + linesSec.join('\n'));
+  }
+
+  // Section 5: Core Loans & Credit Sanctions
+  if (isOk('retail_loans') || isOk('sme_loans') || isOk('agri_loans') || isOk('jewel_loans')) {
+    let linesSec = [];
+    if (isOk('retail_loans')) linesSec.push(`🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})`);
+    if (isOk('sme_loans')) linesSec.push(`🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})`);
+    if (isOk('agri_loans')) linesSec.push(`🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})`);
+    if (isOk('jewel_loans')) linesSec.push(`👑 Jewel Loans Fresh: ${jewelFresh}\n🔄 Jewel Loans Renewal: ${jewelRenewal}`);
+    reportSections.push(`🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*\n` + linesSec.join('\n'));
+  }
+
+  // Section 6: Activations & Recovery
+  if (isOk('inop_act') || isOk('inact_act') || isOk('deaf_act')) {
+    let linesSec = [];
+    if (isOk('inop_act')) linesSec.push(`⚡ Inoperative Activated: ${inopCount} Accts (Amt: ₹${inopAmt})`);
+    if (isOk('inact_act')) linesSec.push(`💤 Inactive Activated: ${inactCount} Accts (Amt: ₹${inactAmt})`);
+    if (isOk('deaf_act')) linesSec.push(`🏛️ DEAF Claimed: ${deafCount} Accts (Amt: ₹${deafAmt})`);
+    linesSec.push(`💰 NPA Cash Recovery: ${npaCount} Accts (Amt: ₹${npaAmt})`);
+    reportSections.push(`🔄 *6. ACCOUNT ACTIVATIONS & NPA CASH RECOVERY:*\n` + linesSec.join('\n') + campBlock);
+  } else if (campBlock) {
+    reportSections.push(campBlock);
+  }
+
+  // Section 7: Lockers
+  if (isOk('lockers')) {
+    reportSections.push(`🔐 *7. SAFE DEPOSIT LOCKERS:*\n🔓 Lockers Vacant: ${lockersVacant}\n🔒 Lockers Issued Today: ${lockersIssued}`);
+  }
+
+  // Section 8: Govt Schemes
+  if (isOk('nps') || isOk('apy') || isOk('ssy') || isOk('pmsby') || isOk('pmjjby')) {
+    let linesSec = [];
+    if (isOk('nps')) linesSec.push(`🎗️ NPS: ${nps}`);
+    if (isOk('apy')) linesSec.push(`🏛️ APY: ${apy}`);
+    if (isOk('ssy')) linesSec.push(`👧 SSY: ${ssy}`);
+    if (isOk('pmsby')) linesSec.push(`🛡️ PMSBY: ${pmsby}`);
+    if (isOk('pmjjby')) linesSec.push(`❤️ PMJJBY: ${pmjjby}`);
+    reportSections.push(`🏛️ *8. GOVERNMENT SOCIAL SECURITY SCHEMES:*\n` + linesSec.join(' | '));
+  }
+
   return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
 ${cadreTitle}
 📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
@@ -2500,48 +2607,7 @@ ${cadreTitle}
 👤 *${officerRoleLabel}:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
-🔹 SB Growth: ₹${sbGrowth}
-🔹 CD Growth: ₹${cdGrowth}
-🔹 Term Deposits: ₹${tdGrowth}
-
-📈 *2. ACCOUNTS OPENED & RD:*
-✨ SB Opened Today: ${sbOpened}
-💼 CD Opened Today: ${cdOpened}
-🏦 TD Opened Today: ${tdOpened}
-🔄 Step-up RD Accounts: ${stepupRd}
-
-💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*
-⭐ SB Premium Accounts: ${sbPremium}
-👑 SB Ultra HNI Accounts: ${sbUltraHni}
-💎 SB Diamond & Platinum: ${sbDiamondPlat}
-
-💳 *4. DIGITAL PRODUCTS & CHANNELS:*
-💳 Credit Cards Issued: ${creditCards}
-📲 IOB Connect Activations: ${iobConnect}
-💻 New Internet Banking (Net): ${netBanking}
-💬 WhatsApp Banking Registrations: ${whatsappBanking}
-
-🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*
-🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})
-🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})
-🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})
-👑 Jewel Loans Fresh: ${jewelFresh}
-🔄 Jewel Loans Renewal: ${jewelRenewal}
-
-🔄 *6. ACCOUNT ACTIVATIONS & NPA CASH RECOVERY:*
-⚡ Inoperative Activated: ${inopCount} Accts (Amt: ₹${inopAmt})
-💤 Inactive Activated: ${inactCount} Accts (Amt: ₹${inactAmt})
-🏛️ DEAF Claimed: ${deafCount} Accts (Amt: ₹${deafAmt})
-💰 NPA Cash Recovery: ${npaCount} Accts (Amt: ₹${npaAmt})
-${campBlock}
-🔐 *7. SAFE DEPOSIT LOCKERS:*
-🔓 Lockers Vacant: ${lockersVacant}
-🔒 Lockers Issued Today: ${lockersIssued}
-
-🏛️ *8. GOVERNMENT SOCIAL SECURITY SCHEMES:*
-🎗️ NPS: ${nps} | 🏛️ APY: ${apy} | 👧 SSY: ${ssy}
-🛡️ PMSBY: ${pmsby} | ❤️ PMJJBY: ${pmjjby}
+${reportSections.join('\n\n')}
 
 #IOBDindigul #DailyBusinessReport #IOBGrowth`;
 }
