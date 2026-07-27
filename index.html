@@ -1231,26 +1231,55 @@
           <div class="card-icon">📱</div>
           <div>
             <div class="card-title">Daily Business & WhatsApp Group Reporting Engine</div>
-            <div class="card-sub">Generate prefilled WhatsApp daily business reports for Branch Heads, 2nd Line, POs, LBOs & RO Guardians</div>
+            <div class="card-sub">Enter Staff Roll Number to auto-verify Branch, Cadre & Prefilled Targets for WhatsApp Group reporting</div>
           </div>
         </div>
 
-        <!-- CADRE SELECTOR -->
-        <div class="cadre-selector" id="bizCadreSelector">
-          <button type="button" class="cadre-btn active" onclick="setBizCadre(this, '1st')">👑 1st Line (Branch Head)</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre(this, '2nd')">🛡️ 2nd Line Officer</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre(this, 'po')">🌱 PO / LBO Sourcing</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre(this, 'guardian')">🛡️ RO Guardian Cluster</button>
+        <!-- STEP 1: STAFF ROLL VERIFICATION & AUTO-LOOKUP -->
+        <div style="background:rgba(26,58,122,0.03);border:1.5px solid rgba(26,58,122,0.15);padding:16px;border-radius:12px;margin-bottom:16px">
+          <div class="field" style="margin-bottom:0">
+            <label style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark)">🔑 Enter Staff Roll Number <span class="req">*</span></label>
+            <div style="display:flex;gap:12px;margin-top:6px">
+              <input type="text" id="biz-roll-input" list="staff-datalist" placeholder="Type Roll No (e.g. 48243, 63039, 55213)" oninput="verifyAndLoadStaffReport(this.value)" style="font-weight:800;font-size:1.05rem;letter-spacing:0.5px">
+              <button type="button" class="btn-confirm" style="padding:10px 20px;font-size:0.88rem;white-space:nowrap" onclick="verifyAndLoadStaffReport(document.getElementById('biz-roll-input').value)">🔍 Verify & Load</button>
+            </div>
+          </div>
+
+          <!-- VERIFIED OFFICER BADGE CARD -->
+          <div id="verified-officer-badge" class="hidden" style="background:#fff;border:2px solid var(--iob-blue-dark);padding:16px;border-radius:10px;margin-top:14px;box-shadow:var(--shadow-sm)">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+              <div>
+                <div style="font-size:1.05rem;font-weight:800;color:var(--iob-blue-dark)" id="officer-name-display">👤 DILEEP G (Roll: 48243)</div>
+                <div style="font-size:0.83rem;color:var(--muted)" id="officer-desig-display">Designation: CHIEF MANAGER — Branch Head (1st Line)</div>
+                <div style="font-size:0.83rem;font-weight:700;color:var(--iob-blue-light)" id="officer-sol-display">Branch: SOL 0174 — Theni Allinagaram</div>
+              </div>
+              <div id="cadre-badge-tag" style="background:var(--gradient-header);color:#fff;padding:8px 18px;border-radius:20px;font-size:0.82rem;font-weight:800;box-shadow:0 2px 6px rgba(13,35,84,0.25)">
+                👑 1st Line (Branch Head)
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="col-2" style="margin-bottom:16px">
-          <div class="field">
-            <label>Select SOL / Branch <span class="req">*</span></label>
-            <input type="text" id="biz-sol" list="sol-datalist" placeholder="Type SOL (e.g. 0174)" oninput="onBizSolChange(this.value)">
+        <!-- PREFILLED YESTERDAY FIGURES CARD -->
+        <div id="prefilled-yest-card" class="hidden" style="background:#fff8e6;border:1px solid #ffe082;padding:14px 16px;border-radius:10px;margin-bottom:16px">
+          <div style="font-size:0.85rem;font-weight:700;color:#8f6b00;margin-bottom:6px">📊 PREFILLED BASE & YESTERDAY FIGURES (AS OF YESTERDAY)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;font-size:0.8rem;color:#5d4037">
+            <div>🔹 SB Yest Balance: <strong id="prefill-sb-bal">₹14,20,500</strong></div>
+            <div>🔹 CD Yest Balance: <strong id="prefill-cd-bal">₹4,10,200</strong></div>
+            <div>🔹 TD Yest Balance: <strong id="prefill-td-bal">₹28,50,000</strong></div>
+            <div>🔹 31-Mar SB Base: <strong id="prefill-31mar-sb">₹12,00,000</strong></div>
+            <div>✨ MTD CASA Accounts: <strong id="prefill-mtd-accts">42 Accounts</strong></div>
           </div>
-          <div class="field">
-            <label>Select Reporting Officer <span class="req">*</span></label>
-            <input type="text" id="biz-staff" list="staff-datalist" placeholder="Staff Roll / Name" oninput="onBizStaffChange(this.value)">
+        </div>
+
+        <!-- CADRE SELECTOR OVERRIDE -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:6px">Role Cadre (Auto-Detected / Switch Role):</div>
+          <div class="cadre-selector" id="bizCadreSelector">
+            <button type="button" class="cadre-btn active" id="cadre-btn-1st" onclick="setBizCadre(this, '1st')">👑 1st Line (Branch Head)</button>
+            <button type="button" class="cadre-btn" id="cadre-btn-2nd" onclick="setBizCadre(this, '2nd')">🛡️ 2nd Line Officer</button>
+            <button type="button" class="cadre-btn" id="cadre-btn-po" onclick="setBizCadre(this, 'po')">🌱 PO / LBO Sourcing</button>
+            <button type="button" class="cadre-btn" id="cadre-btn-guardian" onclick="setBizCadre(this, 'guardian')">🛡️ RO Guardian Cluster</button>
           </div>
         </div>
 
@@ -1267,7 +1296,7 @@
         <!-- SINGLE BRANCH ENTRY / PREFILLED METRICS -->
         <div id="single-branch-biz-fields">
           <div style="font-size:0.85rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:8px">
-            📈 Daily Performance & Growth Figures (Today)
+            📈 Enter Today's Performance & Sourcing Figures
           </div>
 
           <div class="col-3">
@@ -1314,7 +1343,7 @@
           </div>
 
           <div class="wa-preview-box" id="wa-report-preview">
-            Select a SOL / Officer to generate standard WhatsApp report...
+            Enter Staff Roll Number to generate standard WhatsApp report...
           </div>
         </div>
 
@@ -1766,36 +1795,93 @@ function setBizCadre(btn, cadre) {
 }
 
 function initBizReportingTab() {
-  const solInput = document.getElementById('biz-sol');
-  if (solInput && !solInput.value) {
-    solInput.value = '0174';
-  }
-  updateWAReportPreview();
-}
-
-function onBizSolChange(val) {
-  currentBizSol = String(val).trim().padStart(4, '0');
-  if (currentBizCadre === 'guardian') {
-    renderGuardianCluster();
-  }
-  updateWAReportPreview();
-}
-
-function onBizStaffChange(val) {
-  const clean = val.trim();
-  if (STAFF_LIST[clean]) {
-    currentBizStaff = { roll: clean, ...STAFF_LIST[clean] };
-    if (currentBizStaff.sol) {
-      const solEl = document.getElementById('biz-sol');
-      if (solEl) solEl.value = currentBizStaff.sol;
-      currentBizSol = currentBizStaff.sol;
-    }
+  const rollInput = document.getElementById('biz-roll-input');
+  if (currentActiveStaff && currentActiveStaff.roll) {
+    if (rollInput) rollInput.value = currentActiveStaff.roll;
+    verifyAndLoadStaffReport(currentActiveStaff.roll);
+  } else if (rollInput && rollInput.value) {
+    verifyAndLoadStaffReport(rollInput.value);
   } else {
+    if (rollInput) rollInput.value = '48243';
+    verifyAndLoadStaffReport('48243');
+  }
+}
+
+function verifyAndLoadStaffReport(val) {
+  const roll = String(val).trim();
+  const badge = document.getElementById('verified-officer-badge');
+  const yestCard = document.getElementById('prefilled-yest-card');
+  
+  if (!roll || !STAFF_LIST[roll]) {
+    if (badge) badge.classList.add('hidden');
+    if (yestCard) yestCard.classList.add('hidden');
     currentBizStaff = null;
+    updateWAReportPreview();
+    return;
   }
-  if (currentBizCadre === 'guardian') {
+
+  const staff = STAFF_LIST[roll];
+  currentBizStaff = { roll, ...staff };
+  currentBizSol = staff.sol || '0174';
+
+  const b = BRANCHES[currentBizSol] || { name: 'Branch ' + currentBizSol };
+
+  // Auto-detect Cadre/Role based on designation and SOL
+  let cadre = '1st';
+  const desig = (staff.designation || '').toUpperCase();
+  
+  if (staff.sol === '3933' || desig.includes('GUARDIAN') || desig.includes('MARKETING') || desig.includes('REGIONAL')) {
+    cadre = 'guardian';
+  } else if (desig.includes('II LINE') || desig.includes('2ND LINE')) {
+    cadre = '2nd';
+  } else if (desig.includes('PROB') || desig.includes('LOCAL BANK OFFICER') || desig.includes('LBO')) {
+    cadre = 'po';
+  } else {
+    cadre = '1st';
+  }
+
+  currentBizCadre = cadre;
+
+  // Update Badge UI
+  const nameEl = document.getElementById('officer-name-display');
+  const desigEl = document.getElementById('officer-desig-display');
+  const solEl = document.getElementById('officer-sol-display');
+  const cadreTag = document.getElementById('cadre-badge-tag');
+
+  if (nameEl) nameEl.textContent = `👤 ${staff.name} (Roll: ${roll})`;
+  if (desigEl) desigEl.textContent = `Designation: ${staff.designation}`;
+  if (solEl) solEl.textContent = `Branch: SOL ${currentBizSol} — ${b.name}`;
+
+  if (cadreTag) {
+    if (cadre === 'guardian') cadreTag.textContent = '🛡️ RO Guardian Officer';
+    else if (cadre === '2nd') cadreTag.textContent = '🛡️ 2nd Line Officer';
+    else if (cadre === 'po') cadreTag.textContent = '🌱 PO / LBO Sourcing';
+    else cadreTag.textContent = '👑 1st Line (Branch Head)';
+  }
+
+  if (badge) badge.classList.remove('hidden');
+
+  // Highlight active cadre button
+  document.querySelectorAll('.cadre-btn').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('cadre-btn-' + cadre);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  // Prefill Yesterday figures
+  if (yestCard) yestCard.classList.remove('hidden');
+
+  // Toggle Cluster vs Single Branch
+  const clusterBox = document.getElementById('guardian-cluster-container');
+  const singleBox = document.getElementById('single-branch-biz-fields');
+
+  if (cadre === 'guardian') {
+    if (clusterBox) clusterBox.classList.remove('hidden');
+    if (singleBox) singleBox.classList.add('hidden');
     renderGuardianCluster();
+  } else {
+    if (clusterBox) clusterBox.classList.add('hidden');
+    if (singleBox) singleBox.classList.remove('hidden');
   }
+
   updateWAReportPreview();
 }
 
