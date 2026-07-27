@@ -38,13 +38,7 @@
   }
 
   /* ── SPLASH SCREEN ── */
-  #splash {
-    position: fixed; inset: 0; z-index: 999;
-    background: linear-gradient(135deg, var(--iob-blue-dark) 0%, var(--iob-blue) 60%, var(--iob-blue-light) 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 20px; transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-  #splash.hide { opacity: 0; pointer-events: none; transform: translateY(-20px); }
+  #splash { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
   #lottie-splash { width: 140px; height: 140px; }
   #splash-title { color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }
   /* ── OFFICIAL IOB EMBLEM ANIMATION ── */
@@ -404,22 +398,7 @@
 </head>
 <body>
 
-<!-- SPLASH -->
-<div id="splash">
-  <div class="splash-emblem">
-    <img src="iob_icon.png" class="splash-emblem-img" alt="IOB Emblem">
-  </div>
-  <div id="splash-title">IOB Dindigul Regional Office</div>
-  <div id="splash-sub">Merchant Services & Leads Portal</div>
-  <div id="splash-progress"><div id="splash-bar"></div></div>
-</div>
-<script>
-  // Instant Splash Screen Fail-Safe (guarantees dismiss within 800ms)
-  setTimeout(function() {
-    var s = document.getElementById('splash');
-    if (s) s.classList.add('hide');
-  }, 800);
-</script>
+
 
 <!-- HEADER -->
 <header>
