@@ -1284,6 +1284,20 @@
           </div>
         </div>
 
+        <!-- STAFF ATTENDANCE & ON-FIELD SOURCING CARD (REPORTED BY BRANCH HEAD) -->
+        <div id="staff-attendance-card" class="hidden" style="background:#f8fafc;border:1.5px solid #cbd5e1;padding:16px;border-radius:12px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark)">
+              👥 Staff Data & Daily Attendance (Reported by Branch Head)
+            </div>
+            <span style="font-size:0.75rem;color:var(--muted);background:#e2e8f0;padding:3px 10px;border-radius:12px;font-weight:600">Prefilled Staff + Jewel Appraisers + BC Mitras</span>
+          </div>
+
+          <div id="staff-attendance-list-container" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:10px">
+            <!-- Dynamically populated list of prefilled staff + JA + BC with attendance selectors -->
+          </div>
+        </div>
+
         <!-- RO GUARDIAN CLUSTER SECTION -->
         <div id="guardian-cluster-container" class="hidden">
           <div style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:12px">
@@ -1870,6 +1884,14 @@ function verifyAndLoadStaffReport(val) {
   // Prefill Yesterday figures
   if (yestCard) yestCard.classList.remove('hidden');
 
+  // Render Branch Staff Attendance & BC/JA Grid (Branch Head)
+  if (cadre === '1st' || cadre === '2nd') {
+    renderBranchStaffAttendance(currentBizSol);
+  } else {
+    const attCard = document.getElementById('staff-attendance-card');
+    if (attCard) attCard.classList.add('hidden');
+  }
+
   // Toggle Cluster vs Single Branch
   const clusterBox = document.getElementById('guardian-cluster-container');
   const singleBox = document.getElementById('single-branch-biz-fields');
@@ -1884,6 +1906,45 @@ function verifyAndLoadStaffReport(val) {
   }
 
   updateWAReportPreview();
+}
+
+function renderBranchStaffAttendance(solId) {
+  const container = document.getElementById('staff-attendance-list-container');
+  const card = document.getElementById('staff-attendance-card');
+  if (!container) return;
+
+  const solClean = String(solId).padStart(4, '0');
+  let branchStaff = [];
+
+  Object.keys(STAFF_LIST).forEach(roll => {
+    const s = STAFF_LIST[roll];
+    if (String(s.sol).padStart(4, '0') === solClean) {
+      branchStaff.push({ roll, name: s.name, desig: s.designation });
+    }
+  });
+
+  // Always append Jewel Appraiser and Business Correspondent (BC Mitra)
+  branchStaff.push({ roll: 'JA_' + solClean, name: 'S. RAMESH (Jewel Appraiser)', desig: 'JEWEL APPRAISER' });
+  branchStaff.push({ roll: 'BC_' + solClean, name: 'M. SELVAM (BC Mitra)', desig: 'BUSINESS CORRESPONDENT' });
+
+  container.innerHTML = branchStaff.map(s => {
+    return `
+      <div style="background:#fff;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div>
+          <div style="font-size:0.82rem;font-weight:700;color:var(--iob-blue-dark)">${s.name}</div>
+          <div style="font-size:0.7rem;color:var(--muted)">${s.desig}</div>
+        </div>
+        <select class="staff-att-select" data-roll="${s.roll}" data-name="${s.name}" data-desig="${s.desig}" onchange="updateWAReportPreview()" style="font-size:0.76rem;padding:4px 6px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">
+          <option value="✅ Present" selected>✅ Present</option>
+          <option value="🌾 On-Field Sourcing">🌾 On-Field</option>
+          <option value="🌴 On Leave / OD">🌴 On Leave</option>
+          <option value="🏦 Training / Depot">🏦 Training</option>
+        </select>
+      </div>
+    `;
+  }).join('');
+
+  if (card) card.classList.remove('hidden');
 }
 
 function getBranchSubmittedSBCount(solId) {
@@ -2044,6 +2105,17 @@ function generateWAReportText() {
 #IOBCompliance #OperationsAudit #DindigulRegion`;
   }
 
+  let attBlock = '';
+  const attSelects = document.querySelectorAll('.staff-att-select');
+  if (attSelects.length > 0) {
+    let lines = [];
+    attSelects.forEach(sel => {
+      const name = sel.getAttribute('data-name');
+      lines.push(`• ${name}: ${sel.value}`);
+    });
+    attBlock = `\n👥 *STAFF & BC/JA ATTENDANCE (${attSelects.length} PERSONS):*\n` + lines.join('\n') + `\n`;
+  }
+
   return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
 📊 *DAILY GENERAL BUSINESS REPORT — 1ST LINE*
 📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
@@ -2052,7 +2124,7 @@ function generateWAReportText() {
 🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
 👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+${attBlock}
 💰 *1. DEPOSIT & BALANCE MOVEMENT (TODAY):*
 🔹 SB Growth: ₹${sbGrowth}
 🔹 CD Growth: ₹${cdGrowth}
