@@ -460,6 +460,29 @@
         </div>
       </div>
 
+      <!-- ONGOING REGIONAL CAMPAIGNS CONFIGURATION SECTION -->
+      <div style="margin-top:24px;padding-top:20px;border-top:2px dashed var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:1.05rem;font-weight:700;color:var(--iob-blue-dark)">
+              📢 Ongoing Regional Campaigns Configuration (Multiple Running Simultaneously)
+            </div>
+            <div style="font-size:0.82rem;color:var(--muted)">
+              Configure active region-wide campaigns, benchmark units (Count, Amount ₹, Reduction ₹), and display status
+            </div>
+          </div>
+          <button type="button" class="btn-confirm" style="font-size:0.82rem;padding:6px 14px" onclick="addNewAdminCampaign()">➕ Add New Campaign</button>
+        </div>
+
+        <div id="adminCampaignsListContainer" style="display:flex;flex-direction:column;gap:10px">
+          <!-- Dynamically rendered campaign rows -->
+        </div>
+
+        <div style="margin-top:14px;text-align:right">
+          <button type="button" class="btn-confirm" onclick="saveAdminCampaigns()">💾 Save Active Campaigns</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -756,6 +779,8 @@ function renderParamMatrix() {
       ${roleCols}
     </tr>`;
   }).join('');
+
+  renderAdminCampaigns();
 }
 
 async function saveRoleParamMapping() {
@@ -821,6 +846,90 @@ function saveGuardianTaggingInAdmin() {
   }
 
   showToast(`✅ Successfully tagged ${sols.length} SOL branches to RO Guardian Roll ${roll}!`, "success");
+}
+
+let adminCampaigns = JSON.parse(localStorage.getItem('iob_active_campaigns') || 'null');
+if (!adminCampaigns || !Array.isArray(adminCampaigns) || adminCampaigns.length === 0) {
+  adminCampaigns = [
+    { id: "camp_casa_winback", name: "CASA Winback Drive 2026", type: "count", unit: "Accounts", active: true },
+    { id: "camp_npa_red", name: "NPA Reduction & Recovery Drive", type: "reduction", unit: "₹ Reduction", active: true },
+    { id: "camp_jewel_utsav", name: "Monsoon Jewel Loan Sourcing Campaign", type: "amount", unit: "₹ Amount", active: true }
+  ];
+}
+
+function renderAdminCampaigns() {
+  const container = document.getElementById('adminCampaignsListContainer');
+  if (!container) return;
+
+  container.innerHTML = adminCampaigns.map((c, idx) => {
+    return `
+      <div style="display:flex;gap:10px;align-items:center;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #cbd5e1;flex-wrap:wrap">
+        <input type="text" class="camp-name-input" data-idx="${idx}" value="${c.name}" placeholder="Campaign Name" style="flex:2;min-width:200px;padding:7px 10px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;font-weight:700">
+        <select class="camp-type-select" data-idx="${idx}" style="padding:7px 10px;font-size:0.83rem;border-radius:6px;border:1px solid #cbd5e1">
+          <option value="count" ${c.type === 'count' ? 'selected' : ''}>Count (Accounts / Units)</option>
+          <option value="amount" ${c.type === 'amount' ? 'selected' : ''}>Amount (₹ Growth)</option>
+          <option value="reduction" ${c.type === 'reduction' ? 'selected' : ''}>Reduction (₹ NPA/Deficit)</option>
+        </select>
+        <input type="text" class="camp-unit-input" data-idx="${idx}" value="${c.unit || ''}" placeholder="Unit Label (e.g. ₹ Reduction)" style="width:140px;padding:7px 10px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1">
+        <label style="font-size:0.83rem;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" class="camp-active-chk" data-idx="${idx}" ${c.active ? 'checked' : ''}> Active
+        </label>
+        <button type="button" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;padding:6px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer;font-weight:700" onclick="removeAdminCampaign(${idx})">🗑️ Delete</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function addNewAdminCampaign() {
+  adminCampaigns.push({
+    id: "camp_" + Date.now(),
+    name: "New Regional Campaign",
+    type: "count",
+    unit: "Count",
+    active: true
+  });
+  renderAdminCampaigns();
+}
+
+function removeAdminCampaign(idx) {
+  adminCampaigns.splice(idx, 1);
+  renderAdminCampaigns();
+}
+
+function saveAdminCampaigns() {
+  const names = document.querySelectorAll('.camp-name-input');
+  const types = document.querySelectorAll('.camp-type-select');
+  const units = document.querySelectorAll('.camp-unit-input');
+  const actives = document.querySelectorAll('.camp-active-chk');
+
+  let updatedList = [];
+  names.forEach((el, idx) => {
+    updatedList.push({
+      id: adminCampaigns[idx] ? adminCampaigns[idx].id : "camp_" + Date.now() + "_" + idx,
+      name: el.value.trim() || "Campaign " + (idx + 1),
+      type: types[idx].value,
+      unit: units[idx].value.trim() || "Count",
+      active: actives[idx].checked
+    });
+  });
+
+  adminCampaigns = updatedList;
+  localStorage.setItem('iob_active_campaigns', JSON.stringify(updatedList));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveCampaigns',
+        campaigns: updatedList
+      })
+    });
+  } catch(e) {
+    console.error(e);
+  }
+
+  showToast(`✅ Successfully saved ${updatedList.length} active regional campaigns!`, "success");
 }
 
 async function uploadBaseTargetCsv() {

@@ -1430,9 +1430,9 @@
             </div>
           </div>
 
-          <!-- SECTION 6: INOPERATIVE, INACTIVE & DEAF ACCOUNTS ACTIVATION (COUNT & AMOUNT SEPARATELY) -->
+          <!-- SECTION 6: INOPERATIVE, INACTIVE, DEAF & NPA RECOVERY -->
           <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🔄 6. INOPERATIVE, INACTIVE & DEAF ACCOUNTS ACTIVATION (COUNT & AMOUNT)
+            🔄 6. INOPERATIVE, INACTIVE, DEAF ACTIVATION & NPA CASH RECOVERY
           </div>
           <div class="col-2">
             <div class="field">
@@ -1456,12 +1456,22 @@
           </div>
           <div class="col-2">
             <div class="field">
-              <label>DEAF Accounts Claimed / Reactivated — Count</label>
+              <label>DEAF Accounts Claimed — Count</label>
               <input type="number" id="biz-deaf-count" placeholder="e.g. 2" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>DEAF Accounts Claimed / Reactivated — Amount (₹)</label>
+              <label>DEAF Accounts Claimed — Amount (₹)</label>
               <input type="number" id="biz-deaf-amt" placeholder="e.g. 21000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>NPA Cash Recovery — Accounts Count</label>
+              <input type="number" id="biz-npa-count" placeholder="e.g. 3" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>NPA Cash Recovery — Total Amount Recovered (₹)</label>
+              <input type="number" id="biz-npa-amt" placeholder="e.g. 450000" oninput="updateWAReportPreview()">
             </div>
           </div>
 
@@ -1507,6 +1517,14 @@
               <label>PMJJBY (Life Insurance Policies)</label>
               <input type="number" id="biz-pmjjby" placeholder="e.g. 8" oninput="updateWAReportPreview()">
             </div>
+          </div>
+
+          <!-- SECTION 9: ONGOING REGIONAL CAMPAIGNS (CONFIGURED BY ADMIN) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            📢 9. ONGOING REGIONAL CAMPAIGNS (CONFIGURED BY ADMIN)
+          </div>
+          <div id="dynamic-campaigns-container" class="col-2">
+            <!-- Dynamically rendered by JS from admin configured campaigns -->
           </div>
 
         </div>
@@ -1976,6 +1994,7 @@ function setBizCadre(btn, cadre) {
 }
 
 function initBizReportingTab() {
+  renderDynamicCampaigns();
   const rollInput = document.getElementById('biz-roll-input');
   if (currentActiveStaff && currentActiveStaff.roll) {
     if (rollInput) rollInput.value = currentActiveStaff.roll;
@@ -1986,6 +2005,41 @@ function initBizReportingTab() {
     if (rollInput) rollInput.value = '48243';
     verifyAndLoadStaffReport('48243');
   }
+}
+
+const DEFAULT_CAMPAIGNS = [
+  { id: "camp_casa_winback", name: "CASA Winback Drive 2026", type: "count", unit: "Accounts", active: true },
+  { id: "camp_npa_red", name: "NPA Reduction & Recovery Drive", type: "reduction", unit: "₹ Reduction", active: true },
+  { id: "camp_jewel_utsav", name: "Monsoon Jewel Loan Sourcing Campaign", type: "amount", unit: "₹ Amount", active: true }
+];
+
+function getActiveCampaigns() {
+  const saved = JSON.parse(localStorage.getItem('iob_active_campaigns') || 'null');
+  if (saved && Array.isArray(saved) && saved.length > 0) {
+    return saved.filter(c => c.active !== false);
+  }
+  return DEFAULT_CAMPAIGNS.filter(c => c.active !== false);
+}
+
+function renderDynamicCampaigns() {
+  const container = document.getElementById('dynamic-campaigns-container');
+  if (!container) return;
+
+  const campaigns = getActiveCampaigns();
+  if (campaigns.length === 0) {
+    container.innerHTML = `<div style="grid-column:1/-1;font-size:0.82rem;color:var(--muted);font-style:italic">No active campaigns configured by Admin currently.</div>`;
+    return;
+  }
+
+  container.innerHTML = campaigns.map(c => {
+    let unitLabel = c.unit || (c.type === 'amount' || c.type === 'reduction' ? '₹ Amount' : 'Count');
+    return `
+      <div class="field">
+        <label>📢 ${c.name} (${unitLabel})</label>
+        <input type="text" class="dynamic-camp-input" data-id="${c.id}" data-name="${c.name}" data-unit="${unitLabel}" placeholder="e.g. 5 ${unitLabel}" oninput="updateWAReportPreview()">
+      </div>
+    `;
+  }).join('');
 }
 
 function verifyAndLoadStaffReport(val) {
@@ -2251,6 +2305,8 @@ function generateWAReportText() {
   const inactAmt = document.getElementById('biz-inact-amt')?.value || '0';
   const deafCount = document.getElementById('biz-deaf-count')?.value || '0';
   const deafAmt = document.getElementById('biz-deaf-amt')?.value || '0';
+  const npaCount = document.getElementById('biz-npa-count')?.value || '0';
+  const npaAmt = document.getElementById('biz-npa-amt')?.value || '0';
 
   if (currentBizCadre === 'guardian') {
     const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
@@ -2366,11 +2422,66 @@ ${branchSummaries.join('\n\n')}
 👑 Jewel Loans Fresh: ${jewelFresh}
 🔄 Jewel Loans Renewal: ${jewelRenewal}
 
-🔄 *6. ACCOUNT ACTIVATIONS & RECOVERY:*
+  let campBlock = '';
+  const campInputs = document.querySelectorAll('.dynamic-camp-input');
+  if (campInputs.length > 0) {
+    let campLines = [];
+    campInputs.forEach(inp => {
+      const cName = inp.getAttribute('data-name');
+      const val = inp.value.trim();
+      if (val) {
+        campLines.push(`• ${cName}: ${val}`);
+      }
+    });
+    if (campLines.length > 0) {
+      campBlock = `\n📢 *ONGOING REGIONAL CAMPAIGNS:* \n` + campLines.join('\n') + `\n`;
+    }
+  }
+
+  return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
+📊 *DAILY GENERAL BUSINESS REPORT — 1ST LINE*
+📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
+👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
+🔹 SB Growth: ₹${sbGrowth}
+🔹 CD Growth: ₹${cdGrowth}
+🔹 Term Deposits: ₹${tdGrowth}
+
+📈 *2. ACCOUNTS OPENED & RD:*
+✨ SB Opened Today: ${sbOpened}
+💼 CD Opened Today: ${cdOpened}
+🏦 TD Opened Today: ${tdOpened}
+🔄 Step-up RD Accounts: ${stepupRd}
+
+💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*
+⭐ SB Premium Accounts: ${sbPremium}
+👑 SB Ultra HNI Accounts: ${sbUltraHni}
+💎 SB Diamond & Platinum: ${sbDiamondPlat}
+
+💳 *4. DIGITAL PRODUCTS & CHANNELS:*
+💳 Credit Cards Issued: ${creditCards}
+📲 IOB Connect Activations: ${iobConnect}
+💻 New Internet Banking (Net): ${netBanking}
+💬 WhatsApp Banking Registrations: ${whatsappBanking}
+
+🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*
+🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})
+🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})
+🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})
+👑 Jewel Loans Fresh: ${jewelFresh}
+🔄 Jewel Loans Renewal: ${jewelRenewal}
+
+🔄 *6. ACCOUNT ACTIVATIONS & NPA CASH RECOVERY:*
 ⚡ Inoperative Activated: ${inopCount} Accts (Amt: ₹${inopAmt})
 💤 Inactive Activated: ${inactCount} Accts (Amt: ₹${inactAmt})
 🏛️ DEAF Claimed: ${deafCount} Accts (Amt: ₹${deafAmt})
-
+💰 NPA Cash Recovery: ${npaCount} Accts (Amt: ₹${npaAmt})
+${campBlock}
 🔐 *7. SAFE DEPOSIT LOCKERS:*
 🔓 Lockers Vacant: ${lockersVacant}
 🔒 Lockers Issued Today: ${lockersIssued}
