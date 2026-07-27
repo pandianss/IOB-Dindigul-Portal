@@ -396,18 +396,71 @@
   <!-- TARGETS INGESTION CARD -->
   <div id="targetsCardContainer" class="hidden" style="margin-top:16px">
     <div class="card" style="background:#fff;padding:24px;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid var(--border)">
-      <div style="font-size:1.1rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:8px">
-        📥 Data Ingestion: Base Targets & Yesterday Closing Figures
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--iob-blue-dark)">
+            📥 Data Ingestion: Base Targets & Yesterday Closing Figures
+          </div>
+          <div style="font-size:0.83rem;color:var(--muted)">
+            Batch upload CSV files containing prefilled yesterday closing balances (SB, CD, TD), 31-Mar bases, and target benchmarks
+          </div>
+        </div>
+        <button type="button" class="btn-confirm" style="background:var(--success);font-size:0.85rem;padding:8px 16px" onclick="downloadBaseTargetsCSVTemplate()">📥 Download CSV Template</button>
       </div>
-      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px">
-        Upload batch CSV files containing prefilled figures as of yesterday (SB, CD, TD balances, 31-Mar bases, inoperative accounts).
-      </p>
 
-      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:rgba(26,58,122,0.03);padding:16px;border-radius:10px;border:1px solid rgba(26,58,122,0.15)">
         <input type="file" id="baseTargetCsvInput" accept=".csv" style="font-size:0.85rem">
         <button type="button" class="btn-confirm" onclick="uploadBaseTargetCsv()">🚀 Ingest Targets CSV</button>
       </div>
-      <div id="targetUploadStatus" style="font-size:0.82rem;font-weight:600;margin-top:12px;color:var(--iob-blue-light)"></div>
+      <div id="targetUploadStatus" style="font-size:0.82rem;font-weight:600;margin-top:10px;color:var(--iob-blue-light)"></div>
+
+      <!-- HEADER LEGEND & DATA COLUMN DICTIONARY TABLE -->
+      <div style="margin-top:24px;padding-top:20px;border-top:2px dashed var(--border)">
+        <div style="font-size:1.05rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:4px">
+          📖 CSV Header Legend & Parameter Dictionary
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">
+          Ensure your CSV file contains the exact header names specified below. All 22 prefilled metrics and targets are covered:
+        </div>
+
+        <div class="table-responsive">
+          <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+            <thead>
+              <tr style="background:var(--gradient-header);color:#fff;text-align:left">
+                <th style="padding:8px 12px">CSV Header Name</th>
+                <th style="padding:8px 12px">Type</th>
+                <th style="padding:8px 12px">Parameter Description & Portal Location</th>
+                <th style="padding:8px 12px">Sample Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">SOL_Code</td><td>Text</td><td>4-digit SOL Branch Code</td><td><code>0174</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Branch_Name</td><td>Text</td><td>Branch Name</td><td><code>Theni Allinagaram</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Yesterday_Bal_SB</td><td>Number</td><td>Prefilled Yesterday SB Balance (₹)</td><td><code>1420500</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Yesterday_Bal_CD</td><td>Number</td><td>Prefilled Yesterday CD Balance (₹)</td><td><code>410200</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Yesterday_Bal_TD</td><td>Number</td><td>Prefilled Yesterday TD Balance (₹)</td><td><code>2850000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Bal_31Mar_SB</td><td>Number</td><td>31-March SB Base Balance (₹)</td><td><code>1200000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Bal_31Mar_CD</td><td>Number</td><td>31-March CD Base Balance (₹)</td><td><code>350000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Bal_31Mar_TD</td><td>Number</td><td>31-March TD Base Balance (₹)</td><td><code>2500000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_SB_Opened</td><td>Number</td><td>Daily Target SB Accounts Opened</td><td><code>5</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_CD_Opened</td><td>Number</td><td>Daily Target CD Accounts Opened</td><td><code>2</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_TD_Opened</td><td>Number</td><td>Daily Target TD Accounts Opened</td><td><code>2</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_Inoperative_Accts</td><td>Number</td><td>Base Inoperative Accounts Count</td><td><code>45</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_Inoperative_Amt</td><td>Number</td><td>Base Inoperative Total Amount (₹)</td><td><code>1850000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_Inactive_Accts</td><td>Number</td><td>Base Inactive Accounts Count</td><td><code>20</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_Inactive_Amt</td><td>Number</td><td>Base Inactive Total Amount (₹)</td><td><code>920000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_DEAF_Accts</td><td>Number</td><td>Base DEAF Accounts Count</td><td><code>5</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_DEAF_Amt</td><td>Number</td><td>Base DEAF Total Amount (₹)</td><td><code>210000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_NPA_Accts</td><td>Number</td><td>Base NPA Accounts Count</td><td><code>18</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Base_NPA_Amt</td><td>Number</td><td>Base NPA Total Amount (₹)</td><td><code>3500000</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_Credit_Cards</td><td>Number</td><td>Daily Target Credit Cards Issued</td><td><code>3</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_IOB_Connect</td><td>Number</td><td>Daily Target IOB Connect Activations</td><td><code>6</code></td></tr>
+              <tr style="border-bottom:1px solid #e2e8f0"><td style="padding:8px 12px;font-weight:700">Target_Lockers_Issued</td><td>Number</td><td>Daily Target Safe Deposit Lockers</td><td><code>1</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -930,6 +983,38 @@ function saveAdminCampaigns() {
   }
 
   showToast(`✅ Successfully saved ${updatedList.length} active regional campaigns!`, "success");
+}
+
+function downloadBaseTargetsCSVTemplate() {
+  const headers = [
+    "SOL_Code", "Branch_Name", "Yesterday_Bal_SB", "Yesterday_Bal_CD", "Yesterday_Bal_TD",
+    "Bal_31Mar_SB", "Bal_31Mar_CD", "Bal_31Mar_TD", "Target_SB_Opened", "Target_CD_Opened",
+    "Target_TD_Opened", "Base_Inoperative_Accts", "Base_Inoperative_Amt", "Base_Inactive_Accts",
+    "Base_Inactive_Amt", "Base_DEAF_Accts", "Base_DEAF_Amt", "Base_NPA_Accts", "Base_NPA_Amt",
+    "Target_Credit_Cards", "Target_IOB_Connect", "Target_Lockers_Issued"
+  ];
+
+  const sampleRows = [
+    ["0174", "Theni Allinagaram", "1420500", "410200", "2850000", "1200000", "350000", "2500000", "5", "2", "2", "45", "1850000", "20", "920000", "5", "210000", "18", "3500000", "3", "6", "1"],
+    ["0175", "Ayakudi", "980000", "150000", "1200000", "850000", "120000", "1000000", "5", "1", "1", "30", "1100000", "15", "450000", "3", "120000", "12", "1800000", "2", "4", "1"],
+    ["0176", "Cumbum", "2100000", "650000", "3400000", "1800000", "500000", "3000000", "10", "3", "4", "60", "2400000", "35", "1400000", "8", "350000", "25", "5200000", "5", "10", "2"],
+    ["0230", "Vedasandur", "1650000", "320000", "2100000", "1400000", "280000", "1900000", "5", "2", "2", "40", "1600000", "22", "880000", "6", "240000", "16", "2900000", "3", "6", "1"],
+    ["0232", "Pannaikadu", "750000", "90000", "850000", "650000", "75000", "750000", "5", "1", "1", "25", "850000", "12", "340000", "2", "80000", "8", "1200000", "2", "3", "1"],
+    ["0332", "Dindigul Main", "3800000", "1200000", "5600000", "3200000", "1000000", "5000000", "12", "4", "5", "85", "3800000", "48", "2100000", "12", "550000", "32", "7800000", "6", "12", "3"],
+    ["0376", "Palani", "2900000", "850000", "4200000", "2500000", "750000", "3800000", "10", "3", "4", "70", "2900000", "38", "1650000", "9", "420000", "22", "4800000", "5", "9", "2"],
+    ["3436", "Theni Road", "1120000", "210000", "1450000", "950000", "180000", "1250000", "5", "1", "2", "32", "1250000", "18", "620000", "4", "150000", "10", "2100000", "3", "5", "1"]
+  ];
+
+  let csvContent = headers.join(",") + "\n" + sampleRows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "IOB_Base_Targets_Template.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("✅ Base & Targets CSV Template downloaded successfully!", "success");
 }
 
 async function uploadBaseTargetCsv() {
