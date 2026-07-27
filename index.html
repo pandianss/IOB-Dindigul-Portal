@@ -1310,39 +1310,182 @@
 
         <!-- SINGLE BRANCH ENTRY / PREFILLED METRICS -->
         <div id="single-branch-biz-fields">
-          <div style="font-size:0.85rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:8px">
-            📈 Enter Today's Performance & Sourcing Figures
+          
+          <!-- SECTION 1: BALANCE & GROWTH MOVEMENT -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:12px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            💰 1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY)
           </div>
-
           <div class="col-3">
             <div class="field">
-              <label>SB Growth (₹) <span class="req">*</span></label>
+              <label>SB Growth Over Yesterday (₹) <span class="req">*</span></label>
               <input type="number" id="biz-sb-growth" placeholder="e.g. 150000" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>CD Growth (₹) <span class="req">*</span></label>
+              <label>CD Growth Over Yesterday (₹) <span class="req">*</span></label>
               <input type="number" id="biz-cd-growth" placeholder="e.g. 50000" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>TD Growth (₹)</label>
+              <label>TD Growth Over Yesterday (₹)</label>
               <input type="number" id="biz-td-growth" placeholder="e.g. 200000" oninput="updateWAReportPreview()">
             </div>
           </div>
 
+          <!-- SECTION 2: ACCOUNTS OPENED (SB & CD SEPARATELY + STEP-UP RD) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            📈 2. ACCOUNTS OPENING (SB & CD SEPARATE + STEP-UP RD)
+          </div>
           <div class="col-3">
             <div class="field">
-              <label>Total CASA Accounts Opened <span class="req">*</span></label>
-              <input type="number" id="biz-accts-opened" placeholder="e.g. 5" oninput="updateWAReportPreview()">
+              <label>SB Accounts Opened Today <span class="req">*</span></label>
+              <input type="number" id="biz-sb-opened" placeholder="e.g. 5" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
-              <label>Credit Cards Sourced</label>
+              <label>CD Accounts Opened Today <span class="req">*</span></label>
+              <input type="number" id="biz-cd-opened" placeholder="e.g. 1" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Step-up RD Accounts Opened</label>
+              <input type="number" id="biz-stepup-rd" placeholder="e.g. 3" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 3: PREMIUM & HIGH-VALUE ACCOUNTS (PREMIUM SEPARATE FROM ULTRA HNI) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            💎 3. PREMIUM & HIGH-VALUE ACCOUNTS (SEPARATED)
+          </div>
+          <div class="col-3">
+            <div class="field">
+              <label>SB Premium Accounts</label>
+              <input type="number" id="biz-sb-premium" placeholder="e.g. 2" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>SB Ultra HNI Accounts</label>
+              <input type="number" id="biz-sb-ultra-hni" placeholder="e.g. 1" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>SB Diamond & Platinum Accounts</label>
+              <input type="number" id="biz-sb-diamond-plat" placeholder="e.g. 2" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 4: DIGITAL PRODUCTS (EACH SEPARATE) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            💳 4. DIGITAL PRODUCTS & ALTERNATE CHANNELS (SEPARATED)
+          </div>
+          <div class="col-3">
+            <div class="field">
+              <label>Credit Cards Issued</label>
               <input type="number" id="biz-credit-cards" placeholder="e.g. 3" oninput="updateWAReportPreview()">
             </div>
             <div class="field">
               <label>IOB Connect Activations</label>
               <input type="number" id="biz-iob-connect" placeholder="e.g. 6" oninput="updateWAReportPreview()">
             </div>
+            <div class="field">
+              <label>New Internet Banking (Net Banking)</label>
+              <input type="number" id="biz-net-banking" placeholder="e.g. 4" oninput="updateWAReportPreview()">
+            </div>
           </div>
+          <div class="col-2" style="margin-top:8px">
+            <div class="field">
+              <label>Mobile Banking Activations</label>
+              <input type="number" id="biz-mobile-banking" placeholder="e.g. 5" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>WhatsApp Banking Registrations</label>
+              <input type="number" id="biz-whatsapp-banking" placeholder="e.g. 8" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 5: CORE LOAN SANCTIONS (COUNT & AMOUNT FOR THE DAY) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            🏦 5. CORE CREDIT & LOAN SANCTIONS TODAY (COUNT & AMOUNT)
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Core Retail Sanctions — Count</label>
+              <input type="number" id="biz-retail-count" placeholder="e.g. 2" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Core Retail Sanctions — Total Amount (₹)</label>
+              <input type="number" id="biz-retail-amt" placeholder="e.g. 1500000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Core SME Sanctions — Total Count</label>
+              <input type="number" id="biz-sme-count" placeholder="e.g. 1" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Core SME Sanctions — Total Amount (₹)</label>
+              <input type="number" id="biz-sme-amt" placeholder="e.g. 2500000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Core Agri Sanctions — Total Count</label>
+              <input type="number" id="biz-agri-count" placeholder="e.g. 4" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Core Agri Sanctions — Total Amount (₹)</label>
+              <input type="number" id="biz-agri-amt" placeholder="e.g. 800000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Jewel Loans Fresh — Count & Amt (₹)</label>
+              <input type="text" id="biz-jewel-fresh" placeholder="e.g. 3 loans / ₹4,50,000" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Jewel Loans Renewal — Count & Amt (₹)</label>
+              <input type="text" id="biz-jewel-renewal" placeholder="e.g. 2 loans / ₹2,10,000" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 6: SAFE DEPOSIT LOCKERS -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            🔐 6. SAFE DEPOSIT LOCKERS
+          </div>
+          <div class="col-2">
+            <div class="field">
+              <label>Lockers Vacant Today</label>
+              <input type="number" id="biz-lockers-vacant" placeholder="e.g. 12" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>Lockers Issued Today</label>
+              <input type="number" id="biz-lockers-issued" placeholder="e.g. 1" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
+          <!-- SECTION 7: GOVT SOCIAL SECURITY SCHEMES (EACH SEPARATE) -->
+          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
+            🏛️ 7. GOVERNMENT SOCIAL SECURITY SCHEMES (SEPARATED)
+          </div>
+          <div class="col-3">
+            <div class="field">
+              <label>NPS (National Pension Scheme)</label>
+              <input type="number" id="biz-nps" placeholder="e.g. 2" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>APY (Atal Pension Yojana)</label>
+              <input type="number" id="biz-apy" placeholder="e.g. 4" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>SSY (Sukanya Samriddhi Yojana)</label>
+              <input type="number" id="biz-ssy" placeholder="e.g. 3" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+          <div class="col-2" style="margin-top:8px">
+            <div class="field">
+              <label>PMSBY (Accident Insurance Policies)</label>
+              <input type="number" id="biz-pmsby" placeholder="e.g. 15" oninput="updateWAReportPreview()">
+            </div>
+            <div class="field">
+              <label>PMJJBY (Life Insurance Policies)</label>
+              <input type="number" id="biz-pmjjby" placeholder="e.g. 8" oninput="updateWAReportPreview()">
+            </div>
+          </div>
+
         </div>
 
         <!-- LIVE WHATSAPP REPORT PREVIEW BOX -->
@@ -2063,12 +2206,41 @@ function generateWAReportText() {
   const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1);
   const yestStr = yestDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const sbGrowth = document.getElementById('biz-sb-growth')?.value || '1,50,000';
-  const cdGrowth = document.getElementById('biz-cd-growth')?.value || '50,000';
-  const tdGrowth = document.getElementById('biz-td-growth')?.value || '2,00,000';
-  const acctsOpened = document.getElementById('biz-accts-opened')?.value || '5';
-  const creditCards = document.getElementById('biz-credit-cards')?.value || '3';
-  const iobConnect = document.getElementById('biz-iob-connect')?.value || '6';
+  const sbGrowth = document.getElementById('biz-sb-growth')?.value || '0';
+  const cdGrowth = document.getElementById('biz-cd-growth')?.value || '0';
+  const tdGrowth = document.getElementById('biz-td-growth')?.value || '0';
+
+  const sbOpened = document.getElementById('biz-sb-opened')?.value || '0';
+  const cdOpened = document.getElementById('biz-cd-opened')?.value || '0';
+  const stepupRd = document.getElementById('biz-stepup-rd')?.value || '0';
+
+  const sbPremium = document.getElementById('biz-sb-premium')?.value || '0';
+  const sbUltraHni = document.getElementById('biz-sb-ultra-hni')?.value || '0';
+  const sbDiamondPlat = document.getElementById('biz-sb-diamond-plat')?.value || '0';
+
+  const creditCards = document.getElementById('biz-credit-cards')?.value || '0';
+  const iobConnect = document.getElementById('biz-iob-connect')?.value || '0';
+  const netBanking = document.getElementById('biz-net-banking')?.value || '0';
+  const mobileBanking = document.getElementById('biz-mobile-banking')?.value || '0';
+  const whatsappBanking = document.getElementById('biz-whatsapp-banking')?.value || '0';
+
+  const retailCount = document.getElementById('biz-retail-count')?.value || '0';
+  const retailAmt = document.getElementById('biz-retail-amt')?.value || '0';
+  const smeCount = document.getElementById('biz-sme-count')?.value || '0';
+  const smeAmt = document.getElementById('biz-sme-amt')?.value || '0';
+  const agriCount = document.getElementById('biz-agri-count')?.value || '0';
+  const agriAmt = document.getElementById('biz-agri-amt')?.value || '0';
+  const jewelFresh = document.getElementById('biz-jewel-fresh')?.value || '-';
+  const jewelRenewal = document.getElementById('biz-jewel-renewal')?.value || '-';
+
+  const lockersVacant = document.getElementById('biz-lockers-vacant')?.value || '0';
+  const lockersIssued = document.getElementById('biz-lockers-issued')?.value || '0';
+
+  const nps = document.getElementById('biz-nps')?.value || '0';
+  const apy = document.getElementById('biz-apy')?.value || '0';
+  const ssy = document.getElementById('biz-ssy')?.value || '0';
+  const pmsby = document.getElementById('biz-pmsby')?.value || '0';
+  const pmjjby = document.getElementById('biz-pmjjby')?.value || '0';
 
   if (currentBizCadre === 'guardian') {
     const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
@@ -2083,17 +2255,17 @@ function generateWAReportText() {
       const b = BRANCHES[sol] || { name: 'Branch ' + sol };
       const officers = getBranchOfficers(sol);
       const inputEl = document.querySelector(`.guardian-branch-sb-input[data-sol="${sol}"]`);
-      const sbOpened = inputEl ? Number(inputEl.value || 0) : getBranchSubmittedSBCount(sol);
+      const sbOpenedVal = inputEl ? Number(inputEl.value || 0) : getBranchSubmittedSBCount(sol);
 
-      totalCASA += sbOpened;
+      totalCASA += sbOpenedVal;
       let statusTag = '🟡 ON TRACK';
       let icon = '🟡';
 
-      if (sbOpened < 5) {
+      if (sbOpenedVal < 5) {
         statusTag = '🔴 CRITICAL (< 5 SB)';
         icon = '🔴';
         redCount++;
-      } else if (sbOpened >= 10) {
+      } else if (sbOpenedVal >= 10) {
         statusTag = '🟢 TARGET ACHIEVED (≥ 10 SB)';
         icon = '🟢';
         greenCount++;
@@ -2102,7 +2274,7 @@ function generateWAReportText() {
       branchSummaries.push(
         `${icon} *${idx + 1}. ${b.name.toUpperCase()} (${sol})* — *${statusTag}*\n` +
         `• 1st Line Head: ${officers.headName}\n` +
-        `• SB Accounts Opened Today: ${sbOpened} SB Accounts`
+        `• SB Accounts Opened Today: ${sbOpenedVal} SB Accounts`
       );
     });
 
@@ -2166,19 +2338,42 @@ ${branchSummaries.join('\n\n')}
 👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${attBlock}
-💰 *1. DEPOSIT & BALANCE MOVEMENT (TODAY):*
+💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
 🔹 SB Growth: ₹${sbGrowth}
 🔹 CD Growth: ₹${cdGrowth}
 🔹 Term Deposits: ₹${tdGrowth}
 
-📈 *2. CASA ACCOUNT OPENING:*
-✨ Total Accounts Opened Today: ${acctsOpened} Accounts
-💎 High-Value Accounts: 1 Platinum, 2 Diamond
-💵 Low Balance Accounts Funded: 12 Accounts
+📈 *2. CASA & RD ACCOUNTS OPENING:*
+✨ SB Accounts Opened: ${sbOpened}
+💼 CD Accounts Opened: ${cdOpened}
+🔄 Step-up RD Accounts: ${stepupRd}
 
-💳 *3. DIGITAL BUSINESS:*
-📲 Credit Cards Sourced: ${creditCards} Cards
-📱 IOB Connect Activated: ${iobConnect} Users
+💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*
+⭐ SB Premium Accounts: ${sbPremium}
+👑 SB Ultra HNI Accounts: ${sbUltraHni}
+💎 SB Diamond & Platinum: ${sbDiamondPlat}
+
+💳 *4. DIGITAL PRODUCTS & ALTERNATE CHANNELS:*
+💳 Credit Cards Issued: ${creditCards}
+📲 IOB Connect Activated: ${iobConnect}
+💻 New Internet Banking (Net): ${netBanking}
+📱 Mobile Banking Activations: ${mobileBanking}
+💬 WhatsApp Banking Registrations: ${whatsappBanking}
+
+🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*
+🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})
+🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})
+🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})
+👑 Jewel Loans Fresh: ${jewelFresh}
+🔄 Jewel Loans Renewal: ${jewelRenewal}
+
+🔐 *6. SAFE DEPOSIT LOCKERS:*
+🔓 Lockers Vacant: ${lockersVacant}
+🔒 Lockers Issued Today: ${lockersIssued}
+
+🏛️ *7. GOVERNMENT SOCIAL SECURITY SCHEMES:*
+🎗️ NPS: ${nps} | 🏛️ APY: ${apy} | 👧 SSY: ${ssy}
+🛡️ PMSBY: ${pmsby} | ❤️ PMJJBY: ${pmjjby}
 
 #IOBDindigul #DailyBusinessReport #IOBGrowth`;
 }
