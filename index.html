@@ -1795,7 +1795,7 @@ function onStaffRollInputModal(roll) {
     return;
   }
 
-  const staff = STAFF_LIST[rollClean];
+  const staff = getFullStaffList()[rollClean];
   if (staff) {
     currentActiveStaff = { roll: rollClean, ...staff };
 
@@ -1867,7 +1867,7 @@ function confirmAuthAndSubmit() {
   const roll = document.getElementById('modal-staff-roll').value.trim();
   const pass = document.getElementById('modal-staff-pass').value.trim();
 
-  if (!roll || !STAFF_LIST[roll]) {
+  if (!roll || !getFullStaffList()[roll]) {
     showToast('Please enter a valid Staff Roll Number', 'error');
     document.getElementById('modal-staff-roll').focus();
     return;
@@ -2042,12 +2042,21 @@ function renderDynamicCampaigns() {
   }).join('');
 }
 
+function getFullStaffList() {
+  const saved = JSON.parse(localStorage.getItem('iob_staff_directory') || 'null');
+  if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+    return { ...STAFF_LIST, ...saved };
+  }
+  return STAFF_LIST;
+}
+
 function verifyAndLoadStaffReport(val) {
   const roll = String(val).trim();
   const badge = document.getElementById('verified-officer-badge');
   const yestCard = document.getElementById('prefilled-yest-card');
+  const staffDict = getFullStaffList();
   
-  if (!roll || !STAFF_LIST[roll]) {
+  if (!roll || !staffDict[roll]) {
     if (badge) badge.classList.add('hidden');
     if (yestCard) yestCard.classList.add('hidden');
     currentBizStaff = null;
@@ -2055,7 +2064,7 @@ function verifyAndLoadStaffReport(val) {
     return;
   }
 
-  const staff = STAFF_LIST[roll];
+  const staff = staffDict[roll];
   currentBizStaff = { roll, ...staff };
   currentBizSol = staff.sol || '0174';
 

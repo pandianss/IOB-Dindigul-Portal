@@ -369,6 +369,7 @@
       <button class="tab-btn" id="tab-staff" onclick="switchTab('staff')">🔑 Staff Password Reset</button>
       <button class="tab-btn" id="tab-targets" onclick="switchTab('targets')">📥 Ingest Base Targets & Figures</button>
       <button class="tab-btn" id="tab-params" onclick="switchTab('params')">⚙️ Role & Parameter Assignment</button>
+      <button class="tab-btn" id="tab-directory" onclick="switchTab('directory')">👥 Staff Directory & Guardians</button>
     </div>
 
     <div class="search-box">
@@ -537,6 +538,86 @@
       </div>
 
     </div>
+  </div>
+
+  <!-- STAFF DIRECTORY & GUARDIANS MANAGEMENT CONTAINER -->
+  <div id="directoryCardContainer" class="hidden" style="margin-top:16px">
+    
+    <!-- CARD 1: GUARDIAN OFFICERS BRANCH TAGGING CONFIGURATION -->
+    <div class="card" style="background:#fff;padding:24px;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--iob-blue-dark)">
+            🛡️ Dynamic RO Guardian Officer Branch Tagging Configuration
+          </div>
+          <div style="font-size:0.83rem;color:var(--muted)">
+            RO Officers with assigned cluster SOL branches (prepopulated from RO Staff directory). Edit tagged SOLs per officer below:
+          </div>
+        </div>
+        <button type="button" class="btn-confirm" style="font-size:0.85rem;padding:8px 16px" onclick="saveAllGuardianTagging()">💾 Save All Guardian Tagging</button>
+      </div>
+
+      <div class="table-responsive">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+          <thead>
+            <tr style="background:var(--gradient-header);color:#fff;text-align:left">
+              <th style="padding:10px 14px;width:90px">Roll No</th>
+              <th style="padding:10px 14px">Guardian Officer Name</th>
+              <th style="padding:10px 14px">Designation</th>
+              <th style="padding:10px 14px">Tagged Branch SOL Codes (Comma-separated)</th>
+              <th style="padding:10px 14px;text-align:center;width:100px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="guardianOfficersTbody">
+            <!-- Populated dynamically by renderGuardianTaggingTable() -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CARD 2: FULL REGIONAL STAFF DIRECTORY (ADD, EDIT, DELETE) -->
+    <div class="card" style="background:#fff;padding:24px;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--iob-blue-dark)">
+            👥 Regional Staff Directory Management (Add, Edit, Delete)
+          </div>
+          <div style="font-size:0.83rem;color:var(--muted)">
+            Manage all staff members across 58 branches and Regional Office Dindigul. Fully extendable over time.
+          </div>
+        </div>
+        <button type="button" class="btn-confirm" style="background:var(--success);font-size:0.85rem;padding:8px 16px" onclick="openStaffModal(null)">➕ Add New Staff Member</button>
+      </div>
+
+      <!-- SEARCH & FILTER BAR FOR STAFF DIRECTORY -->
+      <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="staffDirSearch" placeholder="Search Roll, Name, Designation..." style="flex:1;min-width:240px;padding:8px 12px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark)" oninput="renderStaffDirectoryTable()">
+        <select id="staffDirSolFilter" style="padding:8px 12px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:700" onchange="renderStaffDirectoryTable()">
+          <option value="">All Branches / Offices</option>
+          <option value="0892">0892 — Regional Office Dindigul</option>
+          <!-- Additional options populated dynamically -->
+        </select>
+      </div>
+
+      <div class="table-responsive">
+        <table style="width:100%;border-collapse:collapse;font-size:0.83rem">
+          <thead>
+            <tr style="background:var(--gradient-header);color:#fff;text-align:left">
+              <th style="padding:10px 12px;width:90px">Roll No</th>
+              <th style="padding:10px 12px">Staff Name</th>
+              <th style="padding:10px 12px">Designation</th>
+              <th style="padding:10px 12px">SOL Branch</th>
+              <th style="padding:10px 12px">Cadre Category</th>
+              <th style="padding:10px 12px;text-align:center;width:140px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="staffDirectoryTbody">
+            <!-- Populated dynamically by renderStaffDirectoryTable() -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
 </main>
@@ -753,20 +834,31 @@ function switchTab(tab) {
   const mainTable = document.getElementById('mainTableCard');
   const targetsCard = document.getElementById('targetsCardContainer');
   const paramsCard = document.getElementById('paramsCardContainer');
+  const directoryCard = document.getElementById('directoryCardContainer');
 
   if (tab === 'targets') {
     if (mainTable) mainTable.classList.add('hidden');
     if (targetsCard) targetsCard.classList.remove('hidden');
     if (paramsCard) paramsCard.classList.add('hidden');
+    if (directoryCard) directoryCard.classList.add('hidden');
   } else if (tab === 'params') {
     if (mainTable) mainTable.classList.add('hidden');
     if (targetsCard) targetsCard.classList.add('hidden');
     if (paramsCard) paramsCard.classList.remove('hidden');
+    if (directoryCard) directoryCard.classList.add('hidden');
     renderParamMatrix();
+  } else if (tab === 'directory') {
+    if (mainTable) mainTable.classList.add('hidden');
+    if (targetsCard) targetsCard.classList.add('hidden');
+    if (paramsCard) paramsCard.classList.add('hidden');
+    if (directoryCard) directoryCard.classList.remove('hidden');
+    renderGuardianTaggingTable();
+    renderStaffDirectoryTable();
   } else {
     if (mainTable) mainTable.classList.remove('hidden');
     if (targetsCard) targetsCard.classList.add('hidden');
     if (paramsCard) paramsCard.classList.add('hidden');
+    if (directoryCard) directoryCard.classList.add('hidden');
     renderTable();
   }
 }
@@ -983,6 +1075,284 @@ function saveAdminCampaigns() {
   }
 
   showToast(`✅ Successfully saved ${updatedList.length} active regional campaigns!`, "success");
+}
+
+// ── CUSTOM / OVERRIDDEN STAFF DIRECTORY & GUARDIAN TAGGING ENGINE ──
+
+function getFullStaffList() {
+  const saved = JSON.parse(localStorage.getItem('iob_staff_directory') || 'null');
+  if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+    return { ...STAFF_LIST, ...saved };
+  }
+  return STAFF_LIST;
+}
+
+function getGuardianTaggedMap() {
+  const saved = JSON.parse(localStorage.getItem('iob_guardian_branch_map') || 'null');
+  if (saved && typeof saved === 'object') {
+    return { "63039": ["3436", "0232", "2286", "0174", "0176", "1560", "2702"], ...saved };
+  }
+  return { "63039": ["3436", "0232", "2286", "0174", "0176", "1560", "2702"] };
+}
+
+function renderGuardianTaggingTable() {
+  const tbody = document.getElementById('guardianOfficersTbody');
+  if (!tbody) return;
+
+  const staff = getFullStaffList();
+  const guardianMap = getGuardianTaggedMap();
+
+  // Find all RO Officers (SOL 3933 / 0892 or having guardian tag/cadre)
+  let guardianOfficers = [];
+  Object.keys(staff).forEach(roll => {
+    const s = staff[roll];
+    if (s.sol === '3933' || s.sol === '0892' || s.cadre === 'guardian' || guardianMap[roll]) {
+      guardianOfficers.push({ roll, ...s });
+    }
+  });
+
+  if (guardianOfficers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No RO Guardian Officers found in directory.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = guardianOfficers.map(g => {
+    const taggedSols = guardianMap[g.roll] || [];
+    const solsStr = taggedSols.join(', ');
+    return `
+      <tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:10px 14px;font-weight:700;color:var(--iob-blue-dark)">${g.roll}</td>
+        <td style="padding:10px 14px;font-weight:700">${g.name}</td>
+        <td style="padding:10px 14px;font-size:0.8rem;color:var(--muted)">${g.designation}</td>
+        <td style="padding:10px 14px">
+          <input type="text" class="guardian-sols-input" data-roll="${g.roll}" value="${solsStr}" placeholder="e.g. 3436, 0232, 2286, 0174" style="width:100%;padding:6px 10px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:600">
+        </td>
+        <td style="padding:10px 14px;text-align:center">
+          <button type="button" class="btn-confirm" style="padding:5px 12px;font-size:0.8rem" onclick="saveSingleGuardianTagging('${g.roll}')">💾 Save</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function saveSingleGuardianTagging(roll) {
+  const inputEl = document.querySelector(`.guardian-sols-input[data-roll="${roll}"]`);
+  if (!inputEl) return;
+
+  const raw = inputEl.value.trim();
+  const sols = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+  let map = getGuardianTaggedMap();
+  map[roll] = sols;
+
+  localStorage.setItem('iob_guardian_branch_map', JSON.stringify(map));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveGuardianMap',
+        roll: roll,
+        sols: sols,
+        map: map
+      })
+    });
+  } catch(e) {
+    console.error(e);
+  }
+
+  showToast(`✅ Tagged ${sols.length} SOL branches to RO Guardian Roll ${roll}!`, "success");
+}
+
+function saveAllGuardianTagging() {
+  const inputs = document.querySelectorAll('.guardian-sols-input');
+  let map = getGuardianTaggedMap();
+
+  inputs.forEach(inp => {
+    const roll = inp.getAttribute('data-roll');
+    const raw = inp.value.trim();
+    const sols = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    map[roll] = sols;
+  });
+
+  localStorage.setItem('iob_guardian_branch_map', JSON.stringify(map));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveGuardianMapMaster',
+        map: map
+      })
+    });
+  } catch(e) {
+    console.error(e);
+  }
+
+  showToast(`✅ Successfully saved all RO Guardian branch tagging configurations!`, "success");
+}
+
+// ── REGIONAL STAFF DIRECTORY MANAGEMENT (ADD, EDIT, DELETE) ──
+
+function renderStaffDirectoryTable() {
+  const tbody = document.getElementById('staffDirectoryTbody');
+  if (!tbody) return;
+
+  const searchQuery = (document.getElementById('staffDirSearch')?.value || '').toLowerCase().trim();
+  const solFilter = (document.getElementById('staffDirSolFilter')?.value || '').trim();
+
+  const staff = getFullStaffList();
+  let rolls = Object.keys(staff);
+
+  rolls = rolls.filter(roll => {
+    const s = staff[roll];
+    if (solFilter && s.sol !== solFilter) return false;
+    if (searchQuery) {
+      const matchRoll = roll.includes(searchQuery);
+      const matchName = (s.name || '').toLowerCase().includes(searchQuery);
+      const matchDesig = (s.designation || '').toLowerCase().includes(searchQuery);
+      const matchSol = (s.sol || '').includes(searchQuery);
+      return matchRoll || matchName || matchDesig || matchSol;
+    }
+    return true;
+  });
+
+  if (rolls.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No matching staff members found in directory.</td></tr>`;
+    return;
+  }
+
+  rolls = rolls.slice(0, 100);
+
+  tbody.innerHTML = rolls.map(roll => {
+    const s = staff[roll];
+    const bName = s.sol === '3933' || s.sol === '0892' ? 'Regional Office Dindigul' : (BRANCHES[s.sol] ? BRANCHES[s.sol].name : 'Branch ' + s.sol);
+    return `
+      <tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:8px 12px;font-weight:700;color:var(--iob-blue-dark)">${roll}</td>
+        <td style="padding:8px 12px;font-weight:700">${s.name}</td>
+        <td style="padding:8px 12px;font-size:0.8rem;color:var(--muted)">${s.designation}</td>
+        <td style="padding:8px 12px"><code>${s.sol}</code> — ${bName}</td>
+        <td style="padding:8px 12px"><span style="background:#e2e8f0;padding:3px 8px;border-radius:10px;font-size:0.75rem;font-weight:700">${s.cadre || 'General'}</span></td>
+        <td style="padding:8px 12px;text-align:center">
+          <button type="button" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700;margin-right:4px" onclick="openStaffModal('${roll}')">✏️ Edit</button>
+          <button type="button" style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700" onclick="deleteStaffMember('${roll}')">🗑️ Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openStaffModal(roll) {
+  const modal = document.getElementById('staffEditModal');
+  const title = document.getElementById('staffModalTitle');
+  const rollInput = document.getElementById('modalStaffRoll');
+
+  if (!modal) return;
+
+  if (roll && getFullStaffList()[roll]) {
+    const s = getFullStaffList()[roll];
+    title.textContent = `Edit Staff Member — Roll ${roll}`;
+    rollInput.value = roll;
+    rollInput.readOnly = true;
+    document.getElementById('modalStaffName').value = s.name || '';
+    document.getElementById('modalStaffDesignation').value = s.designation || '';
+    document.getElementById('modalStaffSol').value = s.sol || '';
+    document.getElementById('modalStaffCadre').value = s.cadre || '1st';
+    document.getElementById('modalStaffMobile').value = s.mobile || '';
+    document.getElementById('modalStaffEmail').value = s.email || '';
+  } else {
+    title.textContent = "Add New Staff Member";
+    rollInput.value = "";
+    rollInput.readOnly = false;
+    document.getElementById('staffMemberForm').reset();
+  }
+
+  modal.classList.add('open');
+}
+
+function closeStaffModal() {
+  const modal = document.getElementById('staffEditModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function saveStaffFromModal() {
+  const roll = document.getElementById('modalStaffRoll').value.trim();
+  const name = document.getElementById('modalStaffName').value.trim().toUpperCase();
+  const designation = document.getElementById('modalStaffDesignation').value.trim().toUpperCase();
+  const sol = document.getElementById('modalStaffSol').value.trim();
+  const cadre = document.getElementById('modalStaffCadre').value;
+  const mobile = document.getElementById('modalStaffMobile').value.trim();
+  const email = document.getElementById('modalStaffEmail').value.trim();
+
+  if (!roll || !name || !designation || !sol) {
+    showToast("Please fill all required fields", "error");
+    return;
+  }
+
+  let staff = getFullStaffList();
+  staff[roll] = {
+    name,
+    designation,
+    sol,
+    cadre,
+    mobile,
+    email
+  };
+
+  localStorage.setItem('iob_staff_directory', JSON.stringify(staff));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveStaffMember',
+        roll: roll,
+        staff: staff[roll],
+        fullDirectory: staff
+      })
+    });
+  } catch(e) {
+    console.error(e);
+  }
+
+  closeStaffModal();
+  renderStaffDirectoryTable();
+  renderGuardianTaggingTable();
+  showToast(`✅ Successfully saved staff member ${name} (Roll: ${roll})!`, "success");
+}
+
+function deleteStaffMember(roll) {
+  const staff = getFullStaffList();
+  if (!staff[roll]) return;
+
+  if (!confirm(`Are you sure you want to delete staff member ${staff[roll].name} (Roll: ${roll})?`)) {
+    return;
+  }
+
+  delete staff[roll];
+  localStorage.setItem('iob_staff_directory', JSON.stringify(staff));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'deleteStaffMember',
+        roll: roll,
+        fullDirectory: staff
+      })
+    });
+  } catch(e) {
+    console.error(e);
+  }
+
+  renderStaffDirectoryTable();
+  renderGuardianTaggingTable();
+  showToast(`🗑️ Staff member (Roll: ${roll}) deleted successfully`, "warning");
 }
 
 function downloadBaseTargetsCSVTemplate() {
