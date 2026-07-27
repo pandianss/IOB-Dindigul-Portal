@@ -2463,26 +2463,7 @@ ${branchSummaries.join('\n\n')}
 #ROGuardianReport #DindigulCluster #IOBPerformance`;
   }
 
-  if (currentBizCadre === '2nd') {
-    return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
-⚙️ *DAILY OPERATIONS & COMPLIANCE REPORT — 2ND LINE*
-📅 *Date:* ${todayStr} | *Branch:* ${b.name.toUpperCase()} (${sol})
-👤 *OFFICER:* ${staffName} (Roll: ${staffRoll})
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚙️ *OPERATIONAL ACTIVATION & RECOVERY:*
-🔄 Inoperative Accounts Activated: ${inopCount} (Amt: ₹${inopAmt})
-💤 Inactive Accounts Activated: ${inactCount} (Amt: ₹${inactAmt})
-🏛️ DEAF Accounts Claimed: ${deafCount} (Amt: ₹${deafAmt})
-
-📋 *COMPLIANCE & DATA QUALITY:*
-✅ Re-KYC Completed: 12 Accounts
-📝 Nomination Updated: 18 Accounts
-🎯 DQI Progress Score: 92%
-⚡ Powerplay Intent: Achieved
-
-#IOBCompliance #OperationsAudit #DindigulRegion`;
-  }
 
   let campBlock = '';
   const campInputs = document.querySelectorAll('.dynamic-camp-input');
@@ -2500,13 +2481,23 @@ ${branchSummaries.join('\n\n')}
     }
   }
 
+  let cadreTitle = "📊 DAILY GENERAL BUSINESS REPORT — 1ST LINE";
+  let officerRoleLabel = "BRANCH HEAD";
+  if (currentBizCadre === '2nd') {
+    cadreTitle = "🛡️ DAILY OPERATIONS & BUSINESS REPORT — 2ND LINE";
+    officerRoleLabel = "2ND LINE OFFICER";
+  } else if (currentBizCadre === 'po') {
+    cadreTitle = "🌱 DAILY SOURCING & BUSINESS REPORT — PO / LBO";
+    officerRoleLabel = "PO / LBO OFFICER";
+  }
+
   return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
-📊 *DAILY GENERAL BUSINESS REPORT — 1ST LINE*
+${cadreTitle}
 📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
-👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
+👤 *${officerRoleLabel}:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
