@@ -1975,22 +1975,37 @@ function getBranchOfficers(solId) {
   return { headName, secondName };
 }
 
+const GUARDIAN_TAGGED_BRANCHES = {
+  // Satish Pandian & Sathish Kumar B (Theni Cluster)
+  "63039": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"],
+  "48496": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"],
+
+  // Dhanasekaran N & Amit Kumar Singh (Dindigul Urban Cluster)
+  "54257": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
+  "62467": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
+
+  // Dineshkumar A & Krishna Kumar S (Dindigul Rural Cluster)
+  "63094": ["0175", "0230", "0232", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"],
+  "59111": ["0175", "0230", "0232", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"]
+};
+
 function renderGuardianCluster() {
   const container = document.getElementById('guardian-cluster-branches');
   if (!container) return;
 
-  const guardianRoll = currentBizStaff ? currentBizStaff.roll : '63039';
-  let taggedBranches = [];
+  const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
+  let taggedSols = GUARDIAN_TAGGED_BRANCHES[guardianRoll];
 
-  Object.keys(BRANCHES).forEach(sol => {
-    const b = BRANCHES[sol];
-    if (b && b.type === 'Branch') {
-      taggedBranches.push({ sol, ...b });
-    }
+  if (!taggedSols || taggedSols.length === 0) {
+    // If not specifically mapped, default to Theni Cluster or first 8 branches
+    taggedSols = ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"];
+  }
+
+  let activeCluster = [];
+  taggedSols.forEach(sol => {
+    const b = BRANCHES[sol] || { sol: sol, name: 'Branch ' + sol, district: 'Dindigul' };
+    activeCluster.push({ sol: String(sol).padStart(4, '0'), ...b });
   });
-
-  // Filter or group cluster branches
-  const activeCluster = taggedBranches.slice(0, 6);
 
   container.innerHTML = activeCluster.map((b, idx) => {
     const officers = getBranchOfficers(b.sol);
@@ -2022,7 +2037,7 @@ function renderGuardianCluster() {
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-top:8px;border-top:1px dashed #e2e8f0">
             <span style="color:var(--muted)">Prefilled SB Base: <strong>₹12,50,000</strong></span>
-            <span><strong>Today SB Accounts Opened:</strong> <input type="number" value="${sbOpened}" style="width:70px;padding:4px 8px;font-size:0.88rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:800;text-align:center" oninput="updateWAReportPreview()"></span>
+            <span><strong>Today SB Accounts Opened:</strong> <input type="number" value="${sbOpened}" class="guardian-branch-sb-input" data-sol="${b.sol}" style="width:70px;padding:4px 8px;font-size:0.88rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:800;text-align:center" oninput="updateWAReportPreview()"></span>
           </div>
         </div>
       </div>
@@ -2048,38 +2063,56 @@ function generateWAReportText() {
   const iobConnect = document.getElementById('biz-iob-connect')?.value || '6';
 
   if (currentBizCadre === 'guardian') {
+    const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
+    let taggedSols = GUARDIAN_TAGGED_BRANCHES[guardianRoll] || ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"];
+
+    let branchSummaries = [];
+    let redCount = 0;
+    let greenCount = 0;
+    let totalCASA = 0;
+
+    taggedSols.forEach((sol, idx) => {
+      const b = BRANCHES[sol] || { name: 'Branch ' + sol };
+      const officers = getBranchOfficers(sol);
+      const inputEl = document.querySelector(`.guardian-branch-sb-input[data-sol="${sol}"]`);
+      const sbOpened = inputEl ? Number(inputEl.value || 0) : getBranchSubmittedSBCount(sol);
+
+      totalCASA += sbOpened;
+      let statusTag = '🟡 ON TRACK';
+      let icon = '🟡';
+
+      if (sbOpened < 5) {
+        statusTag = '🔴 CRITICAL (< 5 SB)';
+        icon = '🔴';
+        redCount++;
+      } else if (sbOpened >= 10) {
+        statusTag = '🟢 TARGET ACHIEVED (≥ 10 SB)';
+        icon = '🟢';
+        greenCount++;
+      }
+
+      branchSummaries.push(
+        `${icon} *${idx + 1}. ${b.name.toUpperCase()} (${sol})* — *${statusTag}*\n` +
+        `• 1st Line Head: ${officers.headName}\n` +
+        `• SB Accounts Opened Today: ${sbOpened} SB Accounts`
+      );
+    });
+
     return `🏛️ *INDIAN OVERSEAS BANK — REGIONAL OFFICE DINDIGUL*
 🛡️ *RO GUARDIAN DAILY CLUSTER REPORT*
 📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
 👤 *RO GUARDIAN:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *TAGGED BRANCHES PERFORMANCE SUMMARY:*
+📊 *TAGGED BRANCHES PERFORMANCE SUMMARY (${taggedSols.length} BRANCHES):*
 
-🔴 *1. THENI ALLINAGARAM (0174)* — *CRITICAL (< 5 SB)*
-• 1st Line Head: Dileep G
-• SB Accounts Opened Today: 2 (MTD: 42) ⚠️ *DEFICIT*
-• SB / CD Growth: ₹1,50,000 / ₹50,000
-• Digital Sourcing: 2 CC, 3 IOB Connect
-
-🟢 *2. CUMBUM (0176)* — *TARGET ACHIEVED (≥ 10 SB)*
-• 1st Line Head: Basil Baby
-• SB Accounts Opened Today: 12 (MTD: 85) 🏆 *EXCELLENT*
-• SB / CD Growth: ₹3,80,000 / ₹1,20,000
-• Digital Sourcing: 6 CC, 10 IOB Connect
-
-🟡 *3. CHINNAMANUR (1560)* — *ON TRACK (5-9 SB)*
-• 1st Line Head: Ajeesh G T
-• SB Accounts Opened Today: 6 (MTD: 54)
-• SB / CD Growth: ₹90,000 / ₹10,000
-• Digital Sourcing: 3 CC, 5 IOB Connect
+${branchSummaries.join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏆 *TOTAL CLUSTER SUMMARY (3 BRANCHES):*
-🔴 Red Deficit Branches (< 5 SB): 1 Branch (SOL 0174)
-🟢 Target Achieved Branches: 1 Branch (SOL 0176)
-✨ Total CASA Accounts Opened Today: 20 Accounts
-💰 Total SB Growth: ₹6,20,000
+🏆 *TOTAL CLUSTER SUMMARY (${taggedSols.length} BRANCHES):*
+🔴 Red Deficit Branches (< 5 SB): ${redCount} Branch(es)
+🟢 Target Achieved Branches (≥ 10 SB): ${greenCount} Branch(es)
+✨ Total CASA Accounts Opened Today: ${totalCASA} Accounts
 
 #ROGuardianReport #DindigulCluster #IOBPerformance`;
   }
