@@ -1975,26 +1975,34 @@ function getBranchOfficers(solId) {
   return { headName, secondName };
 }
 
-const GUARDIAN_TAGGED_BRANCHES = {
-  // Satish Pandian & Sathish Kumar B (Theni Cluster)
-  "63039": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"],
-  "48496": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"],
+const DEFAULT_GUARDIAN_TAGGED_BRANCHES = {
+  // Satish Pandian (Roll 63039): Tagged with SOL 3436, 0232, 2286, 0174, 0176, 1560, 2702
+  "63039": ["3436", "0232", "2286", "0174", "0176", "1560", "2702"],
+  "48496": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287"],
 
   // Dhanasekaran N & Amit Kumar Singh (Dindigul Urban Cluster)
   "54257": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
   "62467": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
 
   // Dineshkumar A & Krishna Kumar S (Dindigul Rural Cluster)
-  "63094": ["0175", "0230", "0232", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"],
-  "59111": ["0175", "0230", "0232", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"]
+  "63094": ["0175", "0230", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"],
+  "59111": ["0175", "0230", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"]
 };
+
+function getGuardianTaggedSols(roll) {
+  const customMap = JSON.parse(localStorage.getItem('iob_guardian_branch_map') || '{}');
+  if (customMap[roll] && customMap[roll].length > 0) {
+    return customMap[roll];
+  }
+  return DEFAULT_GUARDIAN_TAGGED_BRANCHES[roll] || ["3436", "0232", "2286", "0174", "0176", "1560"];
+}
 
 function renderGuardianCluster() {
   const container = document.getElementById('guardian-cluster-branches');
   if (!container) return;
 
   const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
-  let taggedSols = GUARDIAN_TAGGED_BRANCHES[guardianRoll];
+  let taggedSols = getGuardianTaggedSols(guardianRoll);
 
   if (!taggedSols || taggedSols.length === 0) {
     // If not specifically mapped, default to Theni Cluster or first 8 branches
@@ -2064,7 +2072,7 @@ function generateWAReportText() {
 
   if (currentBizCadre === 'guardian') {
     const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
-    let taggedSols = GUARDIAN_TAGGED_BRANCHES[guardianRoll] || ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"];
+    let taggedSols = getGuardianTaggedSols(guardianRoll);
 
     let branchSummaries = [];
     let redCount = 0;

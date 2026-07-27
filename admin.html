@@ -443,6 +443,23 @@
           </tbody>
         </table>
       </div>
+
+      <!-- GUARDIAN BRANCH TAGGING SECTION -->
+      <div style="margin-top:24px;padding-top:20px;border-top:2px dashed var(--border)">
+        <div style="font-size:1.05rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:4px">
+          🛡️ Dynamic RO Guardian Branch Tagging Configuration
+        </div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">
+          Assign specific SOL branch codes to RO Guardian Officer Roll Numbers (e.g., Roll 63039 = SOLs 3436, 0232, 2286, 0174)
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:rgba(26,58,122,0.03);padding:16px;border-radius:10px;border:1px solid rgba(26,58,122,0.12)">
+          <input type="text" id="adminGuardianRoll" placeholder="Guardian Roll (e.g. 63039)" style="width:180px;padding:9px 12px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:700">
+          <input type="text" id="adminGuardianSols" placeholder="Comma-separated SOLs (e.g. 3436, 0232, 2286, 0174, 0176, 1560)" style="flex:1;min-width:280px;padding:9px 12px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:600">
+          <button type="button" class="btn-confirm" style="padding:9px 18px;font-size:0.85rem" onclick="saveGuardianTaggingInAdmin()">💾 Save Branch Tagging</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -754,6 +771,40 @@ async function saveRoleParamMapping() {
   } catch(e) {
     showToast("Saved parameter configuration locally", "warning");
   }
+}
+
+function saveGuardianTaggingInAdmin() {
+  const rollInput = document.getElementById('adminGuardianRoll');
+  const solsInput = document.getElementById('adminGuardianSols');
+  const roll = rollInput ? rollInput.value.trim() : '';
+  const solsRaw = solsInput ? solsInput.value.trim() : '';
+
+  if (!roll || !solsRaw) {
+    showToast("Please enter both Guardian Roll Number and SOL Codes!", "warning");
+    return;
+  }
+
+  const sols = solsRaw.split(',').map(s => s.trim().padStart(4, '0')).filter(Boolean);
+  let customMap = JSON.parse(localStorage.getItem('iob_guardian_branch_map') || '{}');
+  customMap[roll] = sols;
+
+  localStorage.setItem('iob_guardian_branch_map', JSON.stringify(customMap));
+
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveGuardianBranchMap',
+        guardianRoll: roll,
+        assignedSols: sols
+      })
+    });
+  } catch(e) {
+    console.error("Network fail saving guardian map", e);
+  }
+
+  showToast(`✅ Successfully tagged ${sols.length} SOL branches to RO Guardian Roll ${roll}!`, "success");
 }
 
 async function uploadBaseTargetCsv() {
