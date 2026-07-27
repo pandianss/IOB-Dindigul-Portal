@@ -1309,13 +1309,26 @@
             </div>
             <div style="display:flex;gap:8px">
               <button type="button" class="btn-wa-copy" onclick="copyWAReportText()">📋 Copy Text</button>
-              <a id="btn-wa-share-link" href="#" target="_blank" class="btn-wa-share">📲 Share to WhatsApp Group</a>
+              <a id="btn-wa-share-link-top" href="#" target="_blank" class="btn-wa-share">📲 Share to WhatsApp</a>
             </div>
           </div>
 
           <div class="wa-preview-box" id="wa-report-preview">
             Select a SOL / Officer to generate standard WhatsApp report...
           </div>
+        </div>
+
+        <!-- SUBMIT ACTION ZONE -->
+        <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button type="button" id="btn-submit-biz" class="btn-submit" style="width:auto;padding:12px 28px;font-size:0.95rem" onclick="submitBusinessReport()">
+            💾 Save & Submit Report to Database
+          </button>
+          <a id="btn-wa-share-link" href="#" target="_blank" class="btn-wa-share" style="padding:12px 24px;font-size:0.95rem">
+            📲 Share to WhatsApp Group
+          </a>
+          <button type="button" class="btn-wa-copy" style="padding:12px 24px;font-size:0.95rem" onclick="copyWAReportText()">
+            📋 Copy Text
+          </button>
         </div>
 
       </div>
@@ -1946,10 +1959,13 @@ function generateWAReportText() {
 function updateWAReportPreview() {
   const previewBox = document.getElementById('wa-report-preview');
   const shareLink = document.getElementById('btn-wa-share-link');
+  const shareLinkTop = document.getElementById('btn-wa-share-link-top');
   const msg = generateWAReportText();
 
   if (previewBox) previewBox.textContent = msg;
-  if (shareLink) shareLink.href = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
+  const waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
+  if (shareLink) shareLink.href = waUrl;
+  if (shareLinkTop) shareLinkTop.href = waUrl;
 }
 
 function copyWAReportText() {
@@ -1959,6 +1975,55 @@ function copyWAReportText() {
   }).catch(() => {
     showToast('Failed to copy text', 'error');
   });
+}
+
+async function submitBusinessReport() {
+  const sol = currentBizSol || '0174';
+  const b = BRANCHES[sol] || { name: 'Branch ' + sol };
+  const staffName = currentBizStaff ? currentBizStaff.name : 'SATISH PANDIAN';
+  const staffRoll = currentBizStaff ? currentBizStaff.roll : '63039';
+
+  const btn = document.getElementById('btn-submit-biz');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving Report...'; }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const payload = {
+    type: 'biz',
+    biz: {
+      SOL_ID: sol,
+      BRANCH_NAME: b.name,
+      REPORT_DATE: todayStr,
+      STAFF_ROLL: staffRoll,
+      STAFF_NAME: staffName,
+      ROLE: currentBizCadre,
+      SB_GROWTH: document.getElementById('biz-sb-growth')?.value || '0',
+      CD_GROWTH: document.getElementById('biz-cd-growth')?.value || '0',
+      TD_GROWTH: document.getElementById('biz-td-growth')?.value || '0',
+      ACCTS_OPENED: document.getElementById('biz-accts-opened')?.value || '0',
+      CREDIT_CARDS: document.getElementById('biz-credit-cards')?.value || '0',
+      IOB_CONNECT: document.getElementById('biz-iob-connect')?.value || '0',
+      CREATED_DATE: new Date().toLocaleString('en-IN')
+    }
+  };
+
+  if (!TRACKING_DATA.biz) TRACKING_DATA.biz = [];
+  TRACKING_DATA.biz.unshift(payload.biz);
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    showToast('✅ Daily Business Report saved to Database!', 'success');
+  } catch(e) {
+    showToast('Error submitting report: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Save & Submit Report to Database'; }
+  }
 }
 
 let currentType = null;
