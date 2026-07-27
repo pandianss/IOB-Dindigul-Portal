@@ -413,6 +413,13 @@
   <div id="splash-sub">Merchant Services & Leads Portal</div>
   <div id="splash-progress"><div id="splash-bar"></div></div>
 </div>
+<script>
+  // Instant Splash Screen Fail-Safe (guarantees dismiss within 800ms)
+  setTimeout(function() {
+    var s = document.getElementById('splash');
+    if (s) s.classList.add('hide');
+  }, 800);
+</script>
 
 <!-- HEADER -->
 <header>
@@ -2393,44 +2400,6 @@ ${branchSummaries.join('\n\n')}
 #IOBCompliance #OperationsAudit #DindigulRegion`;
   }
 
-  return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
-📊 *DAILY GENERAL BUSINESS REPORT — 1ST LINE*
-📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
-👤 *BRANCH HEAD:* ${staffName} (Roll: ${staffRoll})
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*
-🔹 SB Growth: ₹${sbGrowth}
-🔹 CD Growth: ₹${cdGrowth}
-🔹 Term Deposits: ₹${tdGrowth}
-
-📈 *2. ACCOUNTS OPENED & RD:*
-✨ SB Opened Today: ${sbOpened}
-💼 CD Opened Today: ${cdOpened}
-🏦 TD Opened Today: ${tdOpened}
-🔄 Step-up RD Accounts: ${stepupRd}
-
-💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*
-⭐ SB Premium Accounts: ${sbPremium}
-👑 SB Ultra HNI Accounts: ${sbUltraHni}
-💎 SB Diamond & Platinum: ${sbDiamondPlat}
-
-💳 *4. DIGITAL PRODUCTS & CHANNELS:*
-💳 Credit Cards Issued: ${creditCards}
-📲 IOB Connect Activations: ${iobConnect}
-💻 New Internet Banking (Net): ${netBanking}
-💬 WhatsApp Banking Registrations: ${whatsappBanking}
-
-🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*
-🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})
-🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})
-🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})
-👑 Jewel Loans Fresh: ${jewelFresh}
-🔄 Jewel Loans Renewal: ${jewelRenewal}
-
   let campBlock = '';
   const campInputs = document.querySelectorAll('.dynamic-camp-input');
   if (campInputs.length > 0) {
@@ -2443,7 +2412,7 @@ ${branchSummaries.join('\n\n')}
       }
     });
     if (campLines.length > 0) {
-      campBlock = `\n📢 *ONGOING REGIONAL CAMPAIGNS:* \n` + campLines.join('\n') + `\n`;
+      campBlock = `\n📢 *ONGOING REGIONAL CAMPAIGNS:*\n` + campLines.join('\n') + `\n`;
     }
   }
 
