@@ -2518,12 +2518,19 @@ function formatBranchLoc(solId, branchName, district) {
   return branchName || district || '-';
 }
 
-function trackDownload(sheetName, rowIndex, el) {
+function trackDownload(sheetName, rowIndex, el, itemKey) {
   const badge = el.querySelector('.dl-badge-count');
+  let newCount = 1;
   if (badge) {
     let current = parseInt(badge.textContent || '0');
-    badge.textContent = current + 1;
+    newCount = current + 1;
+    badge.textContent = newCount;
   }
+  if (itemKey) {
+    localStorage.setItem('dl_cnt_' + itemKey, newCount);
+  }
+  localStorage.setItem('dl_cnt_' + sheetName + '_' + rowIndex, newCount);
+
   try {
     fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -2620,9 +2627,11 @@ function renderStatusTable() {
     if (item._type === 'Lead') {
       detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${item.NO_OF_DEVICES || 1}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${item.CONTACT_NAME || ''} (${item.CONTACT_MOBILE || ''})</div>`;
     } else {
-      const dlCount = item.DOWNLOAD_COUNT || 0;
+      const itemKey = item.MERCHANTVPA || item.ACCOUNTNO || item.MERCHANTNAME || (item._sheetName + '_' + item.rowIndex);
+      const localDl = localStorage.getItem('dl_cnt_' + itemKey) || localStorage.getItem('dl_cnt_' + item._sheetName + '_' + item.rowIndex) || 0;
+      const dlCount = Math.max(parseInt(item.DOWNLOAD_COUNT || '0'), parseInt(localDl));
       detailCol = item.QR_PDF_URL 
-        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this)" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>` 
+        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this, '${itemKey}')" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>` 
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
     }
 
