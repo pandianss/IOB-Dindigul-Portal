@@ -418,7 +418,7 @@
 <header>
   <div class="header-left">
     <img src="2026logo_min.svg" alt="IOB Logo" class="header-logo">
-    <span class="header-title">Dindigul Regional Office — Merchant Services</span>
+    <span class="header-title">Dindigul Regional Office — Daily Performance & Reporting Portal</span>
   </div>
   <div class="header-right">
     <div class="iob-header-emblem-wrap" title="IOB Portal Active">
@@ -1237,10 +1237,10 @@
 
         <!-- CADRE SELECTOR -->
         <div class="cadre-selector" id="bizCadreSelector">
-          <button type="button" class="cadre-btn active" onclick="setBizCadre('1st')">👑 1st Line (Branch Head)</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre('2nd')">🛡️ 2nd Line Officer</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre('po')">🌱 PO / LBO Sourcing</button>
-          <button type="button" class="cadre-btn" onclick="setBizCadre('guardian')">🛡️ RO Guardian Cluster</button>
+          <button type="button" class="cadre-btn active" onclick="setBizCadre(this, '1st')">👑 1st Line (Branch Head)</button>
+          <button type="button" class="cadre-btn" onclick="setBizCadre(this, '2nd')">🛡️ 2nd Line Officer</button>
+          <button type="button" class="cadre-btn" onclick="setBizCadre(this, 'po')">🌱 PO / LBO Sourcing</button>
+          <button type="button" class="cadre-btn" onclick="setBizCadre(this, 'guardian')">🛡️ RO Guardian Cluster</button>
         </div>
 
         <div class="col-2" style="margin-bottom:16px">
@@ -1333,7 +1333,6 @@
 
       </div>
     </div>
-  </div>
 
 </main>
 
@@ -1747,10 +1746,10 @@ let currentBizCadre = '1st';
 let currentBizSol = '0174';
 let currentBizStaff = null;
 
-function setBizCadre(cadre) {
+function setBizCadre(btn, cadre) {
   currentBizCadre = cadre;
   document.querySelectorAll('.cadre-btn').forEach(b => b.classList.remove('active'));
-  if (event && event.target) event.target.classList.add('active');
+  if (btn && btn.classList) btn.classList.add('active');
 
   const clusterBox = document.getElementById('guardian-cluster-container');
   const singleBox = document.getElementById('single-branch-biz-fields');
