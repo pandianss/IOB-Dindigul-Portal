@@ -2248,20 +2248,73 @@ function renderGuardianCluster() {
     }
 
     return `
-      <div class="branch-card-item ${borderStyle}" style="margin-bottom:14px">
-        <div class="branch-banner ${bannerClass}">
+      <div class="branch-card-item ${borderStyle}" style="margin-bottom:18px;background:#fff;border-radius:12px;box-shadow:var(--shadow-sm);overflow:hidden">
+        <div class="branch-banner ${bannerClass}" style="padding:10px 16px;font-weight:700">
           <div>🏦 #${idx + 1}. SOL ${b.sol} — ${b.name.toUpperCase()} (${b.district || 'Dindigul'})</div>
           <div>${bannerStatus}</div>
         </div>
-        <div style="padding:14px 16px;font-size:0.83rem;background:#fff">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-bottom:10px">
+        <div style="padding:16px;font-size:0.83rem">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0">
             <div>👑 <strong>1st Line Head:</strong> ${officers.headName}</div>
             <div>🛡️ <strong>2nd Line Officer:</strong> ${officers.secondName}</div>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-top:8px;border-top:1px dashed #e2e8f0">
-            <span style="color:var(--muted)">Prefilled SB Base: <strong>₹12,50,000</strong></span>
-            <span><strong>Today SB Accounts Opened:</strong> <input type="number" value="${sbOpened}" class="guardian-branch-sb-input" data-sol="${b.sol}" style="width:70px;padding:4px 8px;font-size:0.88rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:800;text-align:center" oninput="updateWAReportPreview()"></span>
+
+          <!-- FULL REPORTING PARAMETERS GRID FOR THIS TAGGED BRANCH -->
+          <div style="font-weight:700;color:var(--iob-blue-dark);margin:10px 0 6px;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em">
+            📊 Branch Business Parameters & Sourcing Performance:
           </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px">
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">SB Opened</label>
+              <input type="number" value="${sbOpened}" class="g-input" data-sol="${b.sol}" data-param="sb" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:800;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">CD Opened</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cd" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">TD Opened</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="td" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">SB Growth (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="sbGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">CD Growth (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cdGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">TD Growth (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="tdGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">Credit Cards</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cc" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">IOB Connect</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="connect" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">Retail Loans (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="retail" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">SME Loans (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="sme" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">Agri Loans (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="agri" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.72rem;font-weight:700">NPA Recovery (₹)</label>
+              <input type="number" class="g-input" data-sol="${b.sol}" data-param="npa" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
+            </div>
+          </div>
+
         </div>
       </div>
     `;
@@ -2310,32 +2363,79 @@ function generateWAReportText() {
     let branchSummaries = [];
     let redCount = 0;
     let greenCount = 0;
-    let totalCASA = 0;
+    let totalSB = 0, totalCD = 0, totalTD = 0;
+    let totalSBGrowth = 0, totalCDGrowth = 0, totalTDGrowth = 0;
+    let totalCC = 0, totalConnect = 0;
+    let totalRetail = 0, totalSME = 0, totalAgri = 0;
+    let totalNPA = 0;
 
     taggedSols.forEach((sol, idx) => {
       const b = BRANCHES[sol] || { name: 'Branch ' + sol };
       const officers = getBranchOfficers(sol);
-      const inputEl = document.querySelector(`.guardian-branch-sb-input[data-sol="${sol}"]`);
-      const sbOpenedVal = inputEl ? Number(inputEl.value || 0) : getBranchSubmittedSBCount(sol);
+      
+      const getVal = (param) => {
+        const inputEl = document.querySelector(`.g-input[data-sol="${sol}"][data-param="${param}"]`);
+        return inputEl ? Number(inputEl.value || 0) : 0;
+      };
 
-      totalCASA += sbOpenedVal;
+      const sbVal = getVal('sb') || getBranchSubmittedSBCount(sol);
+      const cdVal = getVal('cd');
+      const tdVal = getVal('td');
+      const sbGrowthVal = getVal('sbGrowth');
+      const cdGrowthVal = getVal('cdGrowth');
+      const tdGrowthVal = getVal('tdGrowth');
+      const ccVal = getVal('cc');
+      const connectVal = getVal('connect');
+      const retailVal = getVal('retail');
+      const smeVal = getVal('sme');
+      const agriVal = getVal('agri');
+      const npaVal = getVal('npa');
+
+      totalSB += sbVal; totalCD += cdVal; totalTD += tdVal;
+      totalSBGrowth += sbGrowthVal; totalCDGrowth += cdGrowthVal; totalTDGrowth += tdGrowthVal;
+      totalCC += ccVal; totalConnect += connectVal;
+      totalRetail += retailVal; totalSME += smeVal; totalAgri += agriVal;
+      totalNPA += npaVal;
+
       let statusTag = '🟡 ON TRACK';
       let icon = '🟡';
 
-      if (sbOpenedVal < 5) {
+      if (sbVal < 5) {
         statusTag = '🔴 CRITICAL (< 5 SB)';
         icon = '🔴';
         redCount++;
-      } else if (sbOpenedVal >= 10) {
+      } else if (sbVal >= 10) {
         statusTag = '🟢 TARGET ACHIEVED (≥ 10 SB)';
         icon = '🟢';
         greenCount++;
       }
 
+      let line1 = `✨ SB: ${sbVal}`;
+      if (cdVal > 0) line1 += ` | 💼 CD: ${cdVal}`;
+      if (tdVal > 0) line1 += ` | 🏦 TD: ${tdVal}`;
+
+      let line2 = [];
+      if (sbGrowthVal) line2.push(`SB ₹${sbGrowthVal.toLocaleString('en-IN')}`);
+      if (cdGrowthVal) line2.push(`CD ₹${cdGrowthVal.toLocaleString('en-IN')}`);
+      if (tdGrowthVal) line2.push(`TD ₹${tdGrowthVal.toLocaleString('en-IN')}`);
+
+      let line3 = [];
+      if (ccVal) line3.push(`CC: ${ccVal}`);
+      if (connectVal) line3.push(`Connect: ${connectVal}`);
+
+      let line4 = [];
+      if (retailVal) line4.push(`Retail: ₹${retailVal.toLocaleString('en-IN')}`);
+      if (smeVal) line4.push(`SME: ₹${smeVal.toLocaleString('en-IN')}`);
+      if (agriVal) line4.push(`Agri: ₹${agriVal.toLocaleString('en-IN')}`);
+      if (npaVal) line4.push(`NPA Rec: ₹${npaVal.toLocaleString('en-IN')}`);
+
       branchSummaries.push(
         `${icon} *${idx + 1}. ${b.name.toUpperCase()} (${sol})* — *${statusTag}*\n` +
-        `• 1st Line Head: ${officers.headName}\n` +
-        `• SB Opened Today: ${sbOpenedVal} SB Accounts`
+        `• Head: ${officers.headName}\n` +
+        `• Accounts: ${line1}` +
+        (line2.length ? `\n• Growth: ${line2.join(' | ')}` : '') +
+        (line3.length ? `\n• Digital: ${line3.join(' | ')}` : '') +
+        (line4.length ? `\n• Credit & Recovery: ${line4.join(' | ')}` : '')
       );
     });
 
@@ -2345,15 +2445,20 @@ function generateWAReportText() {
 👤 *RO GUARDIAN:* ${staffName} (Roll: ${staffRoll})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *TAGGED BRANCHES PERFORMANCE SUMMARY (${taggedSols.length} BRANCHES):*
+📊 *TAGGED BRANCHES DETAILED PERFORMANCE (${taggedSols.length} BRANCHES):*
 
 ${branchSummaries.join('\n\n')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏆 *TOTAL CLUSTER SUMMARY (${taggedSols.length} BRANCHES):*
-🔴 Red Deficit Branches (< 5 SB): ${redCount} Branch(es)
-🟢 Target Achieved Branches (≥ 10 SB): ${greenCount} Branch(es)
-✨ Total CASA Accounts Opened Today: ${totalCASA} Accounts
+🏆 *TOTAL CLUSTER AGGREGATE (${taggedSols.length} BRANCHES):*
+✨ Total SB Opened Today: ${totalSB} Accounts
+💼 Total CD Opened Today: ${totalCD} Accounts
+🏦 Total TD Opened Today: ${totalTD} Accounts
+💰 Total Deposit Growth: SB ₹${totalSBGrowth.toLocaleString('en-IN')} | CD ₹${totalCDGrowth.toLocaleString('en-IN')} | TD ₹${totalTDGrowth.toLocaleString('en-IN')}
+💳 Total Credit Cards: ${totalCC} | IOB Connect: ${totalConnect}
+🏠 Total Core Loans: Retail ₹${totalRetail.toLocaleString('en-IN')} | SME ₹${totalSME.toLocaleString('en-IN')} | Agri ₹${totalAgri.toLocaleString('en-IN')}
+💰 Total NPA Recovery: ₹${totalNPA.toLocaleString('en-IN')}
+🔴 Red Deficit Branches (< 5 SB): ${redCount} | 🟢 Achieved (≥ 10 SB): ${greenCount}
 
 #ROGuardianReport #DindigulCluster #IOBPerformance`;
   }
