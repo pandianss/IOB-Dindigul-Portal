@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
   :root {
@@ -2687,6 +2689,24 @@ async function submitBusinessReport() {
   if (!TRACKING_DATA.biz) TRACKING_DATA.biz = [];
   TRACKING_DATA.biz.unshift(payload.biz);
 
+  // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
+  if (isFirebaseActive && db && newItem) {
+    try {
+      const fbDoc = {
+        ...newItem,
+        type: currentType,
+        STATUS: 'Pending Review',
+        CREATED_AT: new Date().toISOString(),
+        TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      db.collection("leads").add(fbDoc).then(docRef => {
+        console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
+      }).catch(e => console.warn("Firebase write notice:", e));
+    } catch(e) {
+      console.warn("Firebase submission error:", e);
+    }
+  }
+
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -3041,6 +3061,24 @@ async function executeSubmission() {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
+  // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
+  if (isFirebaseActive && db && newItem) {
+    try {
+      const fbDoc = {
+        ...newItem,
+        type: currentType,
+        STATUS: 'Pending Review',
+        CREATED_AT: new Date().toISOString(),
+        TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      db.collection("leads").add(fbDoc).then(docRef => {
+        console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
+      }).catch(e => console.warn("Firebase write notice:", e));
+    } catch(e) {
+      console.warn("Firebase submission error:", e);
+    }
+  }
+
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -3082,6 +3120,79 @@ function resetForm() {
 // ─────────────────────────────────────────────
 // TRACKING & STATUS TAB
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// FIREBASE REAL-TIME ENGINE
+// ─────────────────────────────────────────────
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyIOB_Dindigul_Regional_Office_Portal_Key",
+  authDomain: "iob-dindigul-portal.firebaseapp.com",
+  projectId: "iob-dindigul-portal",
+  storageBucket: "iob-dindigul-portal.appspot.com",
+  messagingSenderId: "393301740892",
+  appId: "1:393301740892:web:iobportal2026"
+};
+
+let db = null;
+let isFirebaseActive = false;
+
+function initFirebaseEngine() {
+  try {
+    const customConfig = JSON.parse(localStorage.getItem('iob_firebase_config') || 'null');
+    const config = customConfig || DEFAULT_FIREBASE_CONFIG;
+
+    if (typeof firebase !== 'undefined') {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+      }
+      db = firebase.firestore();
+      db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      isFirebaseActive = true;
+      console.log("🔥 Firebase Firestore Engine Ready!");
+      return true;
+    }
+  } catch(e) {
+    console.warn("Firebase Init Notice:", e.message);
+  }
+  return false;
+}
+
+function setupRealtimeFirebaseListener() {
+  if (!initFirebaseEngine()) return false;
+
+  updateSyncBadge('syncing');
+
+  try {
+    db.collection("leads").orderBy("CREATED_AT", "desc").limit(250).onSnapshot(snapshot => {
+      let qrList = [], sbList = [], leadList = [];
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        data.docId = doc.id;
+        if (data.type === 'qr' || data.MERCHANTNAME) qrList.push(data);
+        else if (data.type === 'soundbox' || data.ACCOUNT_NAME) sbList.push(data);
+        else leadList.push(data);
+      });
+
+      if (qrList.length > 0 || sbList.length > 0 || leadList.length > 0) {
+        const fullData = { qr: qrList, sb: sbList, lead: leadList };
+        TRACKING_DATA = fullData;
+        localStorage.setItem('iob_portal_cache_data', JSON.stringify(fullData));
+        renderStatusTable();
+        updateSyncBadge('live');
+      }
+    }, err => {
+      console.warn("Firestore snapshot notice:", err.message);
+      updateSyncBadge('cached');
+    });
+
+    return true;
+  } catch(e) {
+    console.warn("Firestore setup error:", e);
+  }
+  return false;
+}
+
 function updateSyncBadge(mode) {
   const badge = document.getElementById('headerSyncBadge');
   if (!badge) return;

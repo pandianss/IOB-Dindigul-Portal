@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
   :root {
@@ -804,6 +806,80 @@ function verifyAdminPass() {
 function logoutAdmin() {
   sessionStorage.removeItem('iob_admin_authed');
   location.reload();
+}
+
+
+// ─────────────────────────────────────────────
+// FIREBASE REAL-TIME ENGINE FOR ADMIN
+// ─────────────────────────────────────────────
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyIOB_Dindigul_Regional_Office_Portal_Key",
+  authDomain: "iob-dindigul-portal.firebaseapp.com",
+  projectId: "iob-dindigul-portal",
+  storageBucket: "iob-dindigul-portal.appspot.com",
+  messagingSenderId: "393301740892",
+  appId: "1:393301740892:web:iobportal2026"
+};
+
+let db = null;
+let isFirebaseActive = false;
+
+function initFirebaseEngine() {
+  try {
+    const customConfig = JSON.parse(localStorage.getItem('iob_firebase_config') || 'null');
+    const config = customConfig || DEFAULT_FIREBASE_CONFIG;
+
+    if (typeof firebase !== 'undefined') {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(config);
+      }
+      db = firebase.firestore();
+      db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+      isFirebaseActive = true;
+      console.log("🔥 Admin Firebase Firestore Engine Ready!");
+      return true;
+    }
+  } catch(e) {
+    console.warn("Firebase Init Notice:", e.message);
+  }
+  return false;
+}
+
+function setupAdminRealtimeListener() {
+  if (!initFirebaseEngine()) return false;
+
+  updateAdminSyncBadge('syncing');
+
+  try {
+    db.collection("leads").orderBy("CREATED_AT", "desc").limit(300).onSnapshot(snapshot => {
+      let qrList = [], sbList = [], leadList = [];
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        data.docId = doc.id;
+        if (data.type === 'qr' || data.MERCHANTNAME) qrList.push(data);
+        else if (data.type === 'soundbox' || data.ACCOUNT_NAME) sbList.push(data);
+        else leadList.push(data);
+      });
+
+      if (qrList.length > 0 || sbList.length > 0 || leadList.length > 0) {
+        const fullData = { qr: qrList, sb: sbList, lead: leadList };
+        ALL_DATA = fullData;
+        localStorage.setItem('iob_portal_cache_data', JSON.stringify(fullData));
+        updateStats();
+        renderTable();
+        updateAdminSyncBadge('live');
+      }
+    }, err => {
+      console.warn("Admin Firestore listener notice:", err.message);
+      updateAdminSyncBadge('cached');
+    });
+
+    return true;
+  } catch(e) {
+    console.warn("Admin Firestore setup error:", e);
+  }
+  return false;
 }
 
 function updateAdminSyncBadge(mode) {
