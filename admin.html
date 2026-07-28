@@ -292,6 +292,17 @@
     .control-bar { flex-direction: column; align-items: stretch; }
     .search-box { max-width: 100%; }
   }
+
+  /* ── LIVE SYNC BADGE ── */
+  .sync-badge {
+    font-size: 0.75rem; font-weight: 700; color: #22c55e;
+    background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.35);
+    padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sync-badge.syncing { color: #3b82f6; background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.35); }
+  .sync-badge.cached { color: #f59e0b; background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.35); }
+  .sync-badge .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
 </style>
 </head>
 <body>
@@ -795,16 +806,56 @@ function logoutAdmin() {
   location.reload();
 }
 
+function updateAdminSyncBadge(mode) {
+  const badge = document.getElementById('adminSyncBadge');
+  if (!badge) return;
+  if (mode === 'live') {
+    badge.className = 'sync-badge live';
+    badge.innerHTML = '<span class="pulse-dot"></span> Live Synced';
+  } else if (mode === 'syncing') {
+    badge.className = 'sync-badge syncing';
+    badge.innerHTML = '<span class="pulse-dot"></span> Syncing...';
+  } else {
+    badge.className = 'sync-badge cached';
+    badge.innerHTML = '<span class="pulse-dot"></span> Cached Data';
+  }
+}
+
 async function fetchData() {
+  // Load local cache immediately for 0ms initial load
+  const cached = localStorage.getItem('iob_portal_cache_data');
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed && (parsed.qr || parsed.sb || parsed.lead)) {
+        ALL_DATA = parsed;
+        updateStats();
+        renderTable();
+      }
+    } catch(e) {}
+  }
+
+  updateAdminSyncBadge('syncing');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
+    const res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    ALL_DATA = data;
-    updateStats();
-    renderTable();
+    if (data && (data.qr || data.sb || data.lead)) {
+      ALL_DATA = data;
+      localStorage.setItem('iob_portal_cache_data', JSON.stringify(data));
+      updateStats();
+      renderTable();
+      updateAdminSyncBadge('live');
+    }
   } catch(e) {
-    console.error("Fetch error:", e);
-    showToast("Error loading data from Google Sheets", "error");
+    clearTimeout(timeoutId);
+    console.warn("Silent background sync fallback to cache:", e.message);
+    updateAdminSyncBadge('cached');
+    // REMOVED ANNOYING ERROR TOAST! Page works seamlessly using cached data.
   }
 }
 

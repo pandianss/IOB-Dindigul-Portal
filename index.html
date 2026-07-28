@@ -394,6 +394,17 @@
     .col-2 { grid-template-columns: 1fr; }
     .header-title { display: none; }
   }
+
+  /* ── LIVE SYNC BADGE ── */
+  .sync-badge {
+    font-size: 0.75rem; font-weight: 700; color: #22c55e;
+    background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.35);
+    padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sync-badge.syncing { color: #3b82f6; background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.35); }
+  .sync-badge.cached { color: #f59e0b; background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.35); }
+  .sync-badge .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
 </style>
 </head>
 <body>
@@ -413,6 +424,7 @@
     <button type="button" id="notifToggleBtn" class="notif-btn" onclick="toggleNotificationPermission()">
       <span>🔔</span> <span id="notifLabel">Notifications: Checking...</span>
     </button>
+        <span id="headerSyncBadge" class="sync-badge syncing" title="Live background data sync status"><span class="pulse-dot"></span> Syncing...</span>
     <a href="admin.html" class="admin-link">⚙️ Admin Dashboard</a>
   </div>
 </header>
@@ -1729,7 +1741,16 @@ checkNotificationState();
 window.addEventListener('DOMContentLoaded', () => {
   checkNotificationState();
   
-  // Render cached status table in 0ms
+  // Render cached status data in 0ms
+  const cachedData = localStorage.getItem('iob_portal_cache_data');
+  if (cachedData) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      if (parsed && (parsed.qr || parsed.sb || parsed.lead)) {
+        TRACKING_DATA = parsed;
+      }
+    } catch(e) {}
+  }
   renderStatusTable();
 
   let p = 0;
@@ -3061,16 +3082,42 @@ function resetForm() {
 // ─────────────────────────────────────────────
 // TRACKING & STATUS TAB
 // ─────────────────────────────────────────────
-async function loadStatusData() {
+function updateSyncBadge(mode) {
+  const badge = document.getElementById('headerSyncBadge');
+  if (!badge) return;
+  if (mode === 'live') {
+    badge.className = 'sync-badge live';
+    badge.innerHTML = '<span class="pulse-dot"></span> Live Synced';
+  } else if (mode === 'syncing') {
+    badge.className = 'sync-badge syncing';
+    badge.innerHTML = '<span class="pulse-dot"></span> Syncing...';
+  } else {
+    badge.className = 'sync-badge cached';
+    badge.innerHTML = '<span class="pulse-dot"></span> Cached Data';
+  }
+}
+
+async function loadStatusData(showToastNotice = false) {
+  updateSyncBadge('syncing');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
+    const res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     if (data && (data.qr || data.sb || data.lead)) {
       TRACKING_DATA = data;
+      localStorage.setItem('iob_portal_cache_data', JSON.stringify(data));
       renderStatusTable();
+      updateSyncBadge('live');
+      if (showToastNotice) showToast("Live data synchronized successfully!", "success");
     }
   } catch(e) {
-    console.error("Status load error:", e);
+    clearTimeout(timeoutId);
+    console.warn("Silent background sync fallback to cache:", e.message);
+    updateSyncBadge('cached');
   }
 }
 
