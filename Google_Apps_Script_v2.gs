@@ -6,25 +6,134 @@
 // CONFIGURATION: Recipient email address for all portal notifications
 var ADMIN_NOTIFICATION_EMAIL = "satishpandian@iob.bank.in";
 
+// Sheets that hold configuration blobs (staff directory, guardian maps, role matrix,
+// campaigns). These are NEVER merged into the merchant/lead feed the dashboard renders.
+var CONFIG_SHEET = "Portal_Config";
+
 function doGet(e) {
+  var params = (e && e.parameter) || {};
+
+  // Config reads are tiny and separate from the heavy lead feed.
+  if (params.config) {
+    return jsonOut({ status: "success", key: params.config, value: readConfigBlob(params.config) });
+  }
+
+  // Only the admin/targets screens need biz + base; the dashboard does not.
+  var wantHeavy = params.include === "all";
+  var cacheKey = wantHeavy ? "portal_feed_all" : "portal_feed_core";
+
+  var cached = cacheGetChunked(cacheKey);
+  if (cached && params.fresh !== "1") {
+    return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
   var qrSheet = ss.getSheetByName("QR_Template");
   var sbSheet = ss.getSheetByName("Soundbox_Template");
   var leadSheet = ss.getSheetByName("Leads_Template");
-  var bizSheet = ss.getSheetByName("Daily_Reporting");
-  var baseSheet = ss.getSheetByName("Base_Targets");
-  
+
   var response = {
     qr: qrSheet ? readSheetDataFast(qrSheet, getQRHeaders()) : [],
     sb: sbSheet ? readSheetDataFast(sbSheet, getSBHeaders()) : [],
     lead: leadSheet ? readSheetDataFast(leadSheet, getLeadHeaders()) : [],
-    biz: bizSheet ? readSheetDataFast(bizSheet, getBizHeaders()) : [],
-    base: baseSheet ? readSheetDataFast(baseSheet, getBaseHeaders()) : []
+    biz: [],
+    base: []
   };
-  
-  return ContentService.createTextOutput(JSON.stringify(response))
+
+  if (wantHeavy) {
+    var bizSheet = ss.getSheetByName("Daily_Reporting");
+    var baseSheet = ss.getSheetByName("Base_Targets");
+    response.biz = bizSheet ? readSheetDataFast(bizSheet, getBizHeaders()) : [];
+    response.base = baseSheet ? readSheetDataFast(baseSheet, getBaseHeaders()) : [];
+  }
+
+  var payload = JSON.stringify(response);
+  cachePutChunked(cacheKey, payload, 45);
+  return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Chunked script cache (CacheService caps a single value at 100KB) ──
+function cachePutChunked(key, value, seconds) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var size = 90000;
+    var parts = Math.ceil(value.length / size);
+    if (parts > 20) return; // too large to cache safely; serve live
+    var map = {};
+    for (var i = 0; i < parts; i++) {
+      map[key + "_" + i] = value.substring(i * size, (i + 1) * size);
+    }
+    map[key + "_count"] = String(parts);
+    cache.putAll(map, seconds);
+  } catch (err) {}
+}
+
+function cacheGetChunked(key) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var countStr = cache.get(key + "_count");
+    if (!countStr) return null;
+    var parts = parseInt(countStr, 10);
+    var keys = [];
+    for (var i = 0; i < parts; i++) keys.push(key + "_" + i);
+    var map = cache.getAll(keys);
+    var out = "";
+    for (var j = 0; j < parts; j++) {
+      var piece = map[key + "_" + j];
+      if (piece === null || piece === undefined) return null; // partial eviction
+      out += piece;
+    }
+    return out;
+  } catch (err) {
+    return null;
+  }
+}
+
+function invalidateFeedCache() {
+  try {
+    var cache = CacheService.getScriptCache();
+    var keys = [];
+    ["portal_feed_core", "portal_feed_all"].forEach(function(k) {
+      keys.push(k + "_count");
+      for (var i = 0; i < 20; i++) keys.push(k + "_" + i);
+    });
+    cache.removeAll(keys);
+  } catch (err) {}
+}
+
+// ── Config blobs (staff directory, guardian maps, role matrix, campaigns) ──
+function writeConfigBlob(ss, key, valueObj) {
+  var sheet = getOrCreateSheet(ss, CONFIG_SHEET, ["CONFIG_KEY", "CONFIG_JSON", "UPDATED_DATE"]);
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
+  var json = JSON.stringify(valueObj || {});
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    var keys = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i][0]) === key) {
+        sheet.getRange(i + 2, 2, 1, 2).setValues([[json, nowStr]]);
+        return;
+      }
+    }
+  }
+  sheet.appendRow([key, json, nowStr]);
+}
+
+function readConfigBlob(key) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).getValues();
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i][0]) === key) {
+      try { return JSON.parse(rows[i][1]); } catch (e) { return null; }
+    }
+  }
+  return null;
 }
 
 function doPost(e) {
@@ -102,6 +211,7 @@ function doPost(e) {
         updatedDate: nowStr
       });
       
+      invalidateFeedCache();
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Status updated successfully" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -128,6 +238,29 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // ACTION: STAFF DIRECTORY & MAPPING CONFIG (Admin)
+    // These are configuration blobs, NOT merchant leads. They go to Portal_Config so
+    // staff rows can never surface in the dashboard's status table.
+    if (data.action === "saveStaffMember" || data.action === "deleteStaffMember") {
+      writeConfigBlob(ss, "staff_directory", data.fullDirectory || {});
+      return jsonOut({ status: "success", message: "Staff directory saved", count: Object.keys(data.fullDirectory || {}).length });
+    }
+
+    if (data.action === "saveGuardianMap" || data.action === "saveGuardianMapMaster" || data.action === "saveGuardianBranchMap") {
+      writeConfigBlob(ss, "guardian_map", data.map || data.guardianMap || data.fullMap || data);
+      return jsonOut({ status: "success", message: "Guardian mapping saved" });
+    }
+
+    if (data.action === "saveRoleParamMapping") {
+      writeConfigBlob(ss, "role_param_matrix", data.mapping || data.roleParamMapping || data.map || data);
+      return jsonOut({ status: "success", message: "Role parameter matrix saved" });
+    }
+
+    if (data.action === "saveCampaigns") {
+      writeConfigBlob(ss, "campaigns", data.campaigns || []);
+      return jsonOut({ status: "success", message: "Campaigns saved" });
+    }
+
     // ACTION: UPLOAD BASE TARGETS & YESTERDAY FIGURES (Admin Batch Upload)
     if (data.action === "uploadBaseTargets") {
       var baseSheet = getOrCreateSheet(ss, "Base_Targets", getBaseHeaders());
@@ -139,8 +272,15 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // Any request carrying an "action" is an admin/config call. If we reach here the
+    // action is unrecognised — reject it explicitly rather than letting it fall through
+    // into the submission branch below and be appended as a lead row.
+    if (data.action) {
+      throw new Error("Unknown action: " + data.action);
+    }
+
     // ACTION: NEW SUBMISSION (QR, Soundbox, Lead, or Business)
-    var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
+    var nowStr =Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
 
     if (data.type === "qr") {
       var qrSheet = getOrCreateSheet(ss, "QR_Template", getQRHeaders());
@@ -167,6 +307,7 @@ function doPost(e) {
       throw new Error("Invalid submission type");
     }
     
+    invalidateFeedCache();
     return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Data submitted successfully" }))
       .setMimeType(ContentService.MimeType.JSON);
       
