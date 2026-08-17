@@ -12,15 +12,11 @@ function doGet(e) {
   var qrSheet = ss.getSheetByName("QR_Template");
   var sbSheet = ss.getSheetByName("Soundbox_Template");
   var leadSheet = ss.getSheetByName("Leads_Template");
-  var bizSheet = ss.getSheetByName("Daily_Reporting");
-  var baseSheet = ss.getSheetByName("Base_Targets");
-  
+
   var response = {
     qr: qrSheet ? readSheetDataFast(qrSheet, getQRHeaders()) : [],
     sb: sbSheet ? readSheetDataFast(sbSheet, getSBHeaders()) : [],
-    lead: leadSheet ? readSheetDataFast(leadSheet, getLeadHeaders()) : [],
-    biz: bizSheet ? readSheetDataFast(bizSheet, getBizHeaders()) : [],
-    base: baseSheet ? readSheetDataFast(baseSheet, getBaseHeaders()) : []
+    lead: leadSheet ? readSheetDataFast(leadSheet, getLeadHeaders()) : []
   };
   
   return ContentService.createTextOutput(JSON.stringify(response))
@@ -128,23 +124,21 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // ACTION: UPLOAD BASE TARGETS & YESTERDAY FIGURES (Admin Batch Upload)
-    if (data.action === "uploadBaseTargets") {
-      var baseSheet = getOrCreateSheet(ss, "Base_Targets", getBaseHeaders());
-      var rows = data.rows || [];
-      for (var b = 0; b < rows.length; b++) {
-        appendDataRow(baseSheet, rows[b], getBaseHeaders());
-      }
-      return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Base targets uploaded successfully", count: rows.length }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    // ACTION: NEW SUBMISSION (QR, Soundbox, Lead, or Business)
+    // ACTION: NEW SUBMISSION (QR, Soundbox, or Lead)
     var nowStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
 
     if (data.type === "qr") {
       var qrSheet = getOrCreateSheet(ss, "QR_Template", getQRHeaders());
       if (!data.qr.CREATED_DATE) data.qr.CREATED_DATE = nowStr;
+      // SIGNED APPLICATION FORM: uploaded in the same request as the QR data, URL written in the same row append
+      if (data.signedFormBase64) {
+        data.qr.SIGNED_FORM_URL = uploadFileToDrive(
+          data.signedFormBase64,
+          data.signedFormName || "Signed_Form.pdf",
+          data.signedFormMimeType || "application/pdf",
+          "IOB_Signed_Application_Forms"
+        );
+      }
       appendDataRow(qrSheet, data.qr, getQRHeaders());
       sendNewSubmissionNotification("Payment QR Code Application", data.qr);
     } else if (data.type === "soundbox") {
@@ -158,11 +152,6 @@ function doPost(e) {
       if (!data.lead.UPDATED_DATE) data.lead.UPDATED_DATE = nowStr;
       appendDataRow(leadSheet, data.lead, getLeadHeaders());
       sendNewSubmissionNotification("Merchant Product Lead (" + (data.lead.PRODUCT || "POS") + ")", data.lead);
-    } else if (data.type === "biz") {
-      var bizSheet = getOrCreateSheet(ss, "Daily_Reporting", getBizHeaders());
-      if (!data.biz.CREATED_DATE) data.biz.CREATED_DATE = nowStr;
-      appendDataRow(bizSheet, data.biz, getBizHeaders());
-      sendNewSubmissionNotification("General Business Daily Report (" + (data.biz.BRANCH_NAME || data.biz.SOL_ID) + ")", data.biz);
     } else {
       throw new Error("Invalid submission type");
     }
@@ -184,7 +173,8 @@ function getQRHeaders() {
     "ACTIVE", "ONBORDINGTYPE", "GSTNO", "EMAILID", "MERCHANTTYPE", "LATITUDE",
     "LONGITUDE", "ADDRESS1", "ADDRESS2", "POSTOFFICENAME", "PINCODE", "STATE",
     "DISTRICT", "SUBDISTRICT", "SOUNDBOX_REQUIRED", "SOL_ID", "SOUNDBOX_LANG",
-    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL", "DOWNLOAD_COUNT"
+    "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "COMPLETED_DATE", "QR_PDF_URL", "DOWNLOAD_COUNT",
+    "SIGNED_FORM_URL"
   ];
 }
 
@@ -201,27 +191,6 @@ function getLeadHeaders() {
     "PRODUCT", "SOL_ID", "BRANCH_NAME", "ACCOUNT_NO", "MERCHANT_NAME",
     "MOBILE_NO", "NO_OF_DEVICES", "CONTACT_NAME", "CONTACT_MOBILE",
     "STAFF_ROLL", "STAFF_NAME", "STATUS", "CREATED_DATE", "UPDATED_DATE", "VENDOR_REMARKS"
-  ];
-}
-
-function getBizHeaders() {
-  return [
-    "SOL_ID", "BRANCH_NAME", "REPORT_DATE", "STAFF_ROLL", "STAFF_NAME", "ROLE",
-    "SB_GROWTH", "CD_GROWTH", "TD_GROWTH", "ACCTS_OPENED", "ACCTS_DIAMOND", "ACCTS_PLATINUM",
-    "ACCTS_ULTRA_HNI", "ACCTS_PREMIUM", "ACCTS_GOVT", "ACCTS_TEMPLE", "ACCTS_CONTRACTORS",
-    "LOW_BAL_FUNDED", "CREDIT_CARDS", "IOB_CONNECT", "NET_BANKING", "CASA_WINBACK",
-    "NPS", "SSY", "PPF", "JL_FRESH", "JL_RENEWAL", "INOPERATIVE_COUNT", "INOPERATIVE_AMT",
-    "INACTIVE_COUNT", "INACTIVE_AMT", "DEAF_COUNT", "DEAF_AMT", "REKYC_COUNT",
-    "NOMINATION_COUNT", "DQI_SCORE", "POWERPLAY_INTENT", "CREATED_DATE"
-  ];
-}
-
-function getBaseHeaders() {
-  return [
-    "SOL_ID", "BRANCH_NAME", "YEST_BAL_SB", "YEST_BAL_CD", "YEST_BAL_TD",
-    "BAL_31MAR_SB", "BAL_31MAR_CD", "BAL_31MAR_TD", "UPTOYEST_ACCTS_SB", "UPTOYEST_ACCTS_CD",
-    "BASE_INOPERATIVE_ACCTS", "BASE_INOPERATIVE_AMT", "BASE_INACTIVE_ACCTS", "BASE_INACTIVE_AMT",
-    "BASE_DEAF_ACCTS", "BASE_DEAF_AMT"
   ];
 }
 
@@ -288,15 +257,18 @@ function appendDataRow(sheet, dataObj, headers) {
 }
 
 function uploadPdfToDrive(base64Data, filename) {
-  var folderName = "IOB_Merchant_PDFs";
+  return uploadFileToDrive(base64Data, filename, "application/pdf", "IOB_Merchant_PDFs");
+}
+
+function uploadFileToDrive(base64Data, filename, mimeType, folderName) {
   var folders = DriveApp.getFoldersByName(folderName);
   var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
-  
+
   var decoded = Utilities.base64Decode(base64Data);
-  var blob = Utilities.newBlob(decoded, "application/pdf", filename);
+  var blob = Utilities.newBlob(decoded, mimeType || "application/pdf", filename);
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  
+
   return file.getUrl();
 }
 

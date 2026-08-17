@@ -8,9 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
   :root {
     --iob-blue: #1a3a7a;
@@ -41,7 +38,6 @@
 
   /* ── SPLASH SCREEN ── */
   #splash { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
-  #lottie-splash { width: 140px; height: 140px; }
   #splash-title { color: #fff; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }
   /* ── OFFICIAL IOB EMBLEM ANIMATION ── */
   @keyframes iobGlowPulse {
@@ -80,7 +76,6 @@
   .header-logo { height: 42px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
   .header-title { font-size: 1.05rem; font-weight: 600; opacity: 0.95; letter-spacing: 0.01em; }
   .header-right { display: flex; align-items: center; gap: 12px; }
-  .header-lottie { width: 44px; height: 44px; }
   .admin-link {
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
     color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 0.8rem;
@@ -220,6 +215,18 @@
     padding: 16px 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 14px;
   }
 
+  /* ── SIGNED FORM UPLOAD ── */
+  .file-dropzone {
+    border: 2px dashed var(--iob-blue-light); border-radius: 12px;
+    padding: 20px; text-align: center; background: #f0f4ff;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .file-dropzone:hover { background: #e5edff; border-color: var(--iob-blue); }
+  .file-dropzone.has-file { border-color: var(--success); background: #f0fff4; }
+  .file-dropzone .icon { font-size: 1.8rem; margin-bottom: 4px; }
+  .file-dropzone p { font-size: 0.82rem; color: var(--muted); }
+  .file-dropzone strong { color: var(--iob-blue); }
+
   /* ── SUBMIT BUTTON ── */
   .submit-zone { text-align: center; padding: 12px 0 4px; }
   .btn-submit {
@@ -331,48 +338,6 @@
     padding: 2px 7px; border-radius: 99px; margin-left: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
   }
 
-  /* ── WHATSAPP & BIZ REPORTING STYLES ── */
-  .cadre-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .cadre-btn {
-    padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--border);
-    background: #fff; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  }
-  .cadre-btn:hover { border-color: var(--iob-blue-light); background: rgba(26,58,122,0.04); }
-  .cadre-btn.active { background: var(--gradient-header); color: #fff; border-color: var(--iob-blue-dark); }
-
-  .branch-card-item {
-    background: #fff; border-radius: 12px; box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border); overflow: hidden; margin-bottom: 16px; transition: all 0.2s;
-  }
-  .branch-card-item:hover { box-shadow: var(--shadow-md); }
-
-  .branch-banner {
-    padding: 10px 16px; font-size: 0.85rem; font-weight: 700;
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  }
-  .branch-banner.bg-red { background: #fee2e2; color: #991b1b; border-left: 6px solid #dc2626; }
-  .branch-banner.bg-amber { background: #fef3c7; color: #92400e; border-left: 6px solid #d97706; }
-  .branch-banner.bg-green { background: #dcfce7; color: #166534; border-left: 6px solid #16a34a; }
-
-  .wa-preview-box {
-    background: #0b141a; color: #e9edef; font-family: 'Courier New', Courier, monospace;
-    font-size: 0.82rem; padding: 16px; border-radius: 10px; line-height: 1.5;
-    white-space: pre-wrap; word-break: break-word; max-height: 420px; overflow-y: auto;
-    border: 2px solid #25d366; box-shadow: 0 4px 12px rgba(37,211,102,0.15);
-  }
-  .btn-wa-share {
-    background: #25d366; color: #fff; font-weight: 700; border: none; border-radius: 8px;
-    padding: 10px 18px; font-size: 0.85rem; cursor: pointer; display: inline-flex;
-    align-items: center; gap: 8px; transition: all 0.2s; text-decoration: none;
-  }
-  .btn-wa-share:hover { background: #128c7e; }
-  .btn-wa-copy {
-    background: rgba(26,58,122,0.1); color: var(--iob-blue-dark); font-weight: 700;
-    border: 1px solid rgba(26,58,122,0.3); border-radius: 8px; padding: 10px 18px;
-    font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn-wa-copy:hover { background: var(--iob-blue-dark); color: #fff; }
-
   /* ── TOAST ── */
   #toast {
     position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -417,7 +382,7 @@
 <header>
   <div class="header-left">
     <img src="2026logo_min.svg" alt="IOB Logo" class="header-logo">
-    <span class="header-title">Dindigul Regional Office — Daily Performance & Reporting Portal</span>
+    <span class="header-title">Dindigul Regional Office — Merchant Services</span>
   </div>
   <div class="header-right">
     <div class="iob-header-emblem-wrap" title="IOB Portal Active">
@@ -438,7 +403,6 @@
   <div class="nav-tabs">
     <button type="button" class="nav-tab-btn active" id="tab-apply" onclick="switchNavTab('apply')">📝 Submit Application / Lead</button>
     <button type="button" class="nav-tab-btn" id="tab-status" onclick="switchNavTab('status')">🔍 Track Applications & Status</button>
-    <button type="button" class="nav-tab-btn" id="tab-biz" onclick="switchNavTab('biz')">📱 Daily Business & WhatsApp Reporting</button>
   </div>
 
   <!-- ════════════════ PAGE 1: APPLICATION FORM ════════════════ -->
@@ -981,6 +945,18 @@
               </div>
             </div>
 
+            <hr class="section-divider">
+
+            <div class="field">
+              <label>Signed Application Form <span class="hint">(Scanned copy, optional but recommended)</span></label>
+              <div class="file-dropzone" id="qr-signedform-dropzone" onclick="document.getElementById('qr-signedform-input').click()">
+                <div class="icon">📄</div>
+                <p><strong id="qr-signedform-filename">Click to attach the signed application scan</strong></p>
+                <p style="font-size:0.72rem;margin-top:2px">PDF or photo of the signed physical form (JPG/PNG auto-compressed before upload)</p>
+                <input type="file" id="qr-signedform-input" accept="application/pdf,image/*" style="display:none" onchange="onSignedFormSelected(this)">
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -1224,344 +1200,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ════════════════ PAGE 3: DAILY BUSINESS & WHATSAPP REPORTING ════════════════ -->
-  <div id="page-biz" class="hidden">
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-header">
-          <div class="card-icon">📱</div>
-          <div>
-            <div class="card-title">Daily Business & WhatsApp Group Reporting Engine</div>
-            <div class="card-sub">Enter Staff Roll Number to auto-verify Branch, Cadre & Prefilled Targets for WhatsApp Group reporting</div>
-          </div>
-        </div>
-
-        <!-- STEP 1: STAFF ROLL VERIFICATION & AUTO-LOOKUP -->
-        <div style="background:rgba(26,58,122,0.03);border:1.5px solid rgba(26,58,122,0.15);padding:16px;border-radius:12px;margin-bottom:16px">
-          <div class="field" style="margin-bottom:0">
-            <label style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark)">🔑 Enter Staff Roll Number <span class="req">*</span></label>
-            <div style="display:flex;gap:12px;margin-top:6px">
-              <input type="text" id="biz-roll-input" list="staff-datalist" placeholder="Type Roll No (e.g. 48243, 63039, 55213)" oninput="verifyAndLoadStaffReport(this.value)" style="font-weight:800;font-size:1.05rem;letter-spacing:0.5px">
-              <button type="button" class="btn-confirm" style="padding:10px 20px;font-size:0.88rem;white-space:nowrap" onclick="verifyAndLoadStaffReport(document.getElementById('biz-roll-input').value)">🔍 Verify & Load</button>
-            </div>
-          </div>
-
-          <!-- VERIFIED OFFICER BADGE CARD -->
-          <div id="verified-officer-badge" class="hidden" style="background:#fff;border:2px solid var(--iob-blue-dark);padding:16px;border-radius:10px;margin-top:14px;box-shadow:var(--shadow-sm)">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-              <div>
-                <div style="font-size:1.05rem;font-weight:800;color:var(--iob-blue-dark)" id="officer-name-display">👤 DILEEP G (Roll: 48243)</div>
-                <div style="font-size:0.83rem;color:var(--muted)" id="officer-desig-display">Designation: CHIEF MANAGER — Branch Head (1st Line)</div>
-                <div style="font-size:0.83rem;font-weight:700;color:var(--iob-blue-light)" id="officer-sol-display">Branch: SOL 0174 — Theni Allinagaram</div>
-              </div>
-              <div id="cadre-badge-tag" style="background:var(--gradient-header);color:#fff;padding:8px 18px;border-radius:20px;font-size:0.82rem;font-weight:800;box-shadow:0 2px 6px rgba(13,35,84,0.25)">
-                👑 1st Line (Branch Head)
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PREFILLED YESTERDAY FIGURES CARD -->
-        <div id="prefilled-yest-card" class="hidden" style="background:#fff8e6;border:1px solid #ffe082;padding:14px 16px;border-radius:10px;margin-bottom:16px">
-          <div style="font-size:0.85rem;font-weight:700;color:#8f6b00;margin-bottom:6px">📊 PREFILLED BASE & YESTERDAY FIGURES (AS OF YESTERDAY)</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;font-size:0.8rem;color:#5d4037">
-            <div>🔹 SB Yest Balance: <strong id="prefill-sb-bal">₹14,20,500</strong></div>
-            <div>🔹 CD Yest Balance: <strong id="prefill-cd-bal">₹4,10,200</strong></div>
-            <div>🔹 TD Yest Balance: <strong id="prefill-td-bal">₹28,50,000</strong></div>
-            <div>🔹 31-Mar SB Base: <strong id="prefill-31mar-sb">₹12,00,000</strong></div>
-            <div>✨ MTD CASA Accounts: <strong id="prefill-mtd-accts">42 Accounts</strong></div>
-          </div>
-        </div>
-
-        <!-- CADRE SELECTOR OVERRIDE -->
-        <div style="margin-bottom:12px">
-          <div style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:6px">Role Cadre (Auto-Detected / Switch Role):</div>
-          <div class="cadre-selector" id="bizCadreSelector">
-            <button type="button" class="cadre-btn active" id="cadre-btn-1st" onclick="setBizCadre(this, '1st')">👑 1st Line (Branch Head)</button>
-            <button type="button" class="cadre-btn" id="cadre-btn-2nd" onclick="setBizCadre(this, '2nd')">🛡️ 2nd Line Officer</button>
-            <button type="button" class="cadre-btn" id="cadre-btn-po" onclick="setBizCadre(this, 'po')">🌱 PO / LBO Sourcing</button>
-            <button type="button" class="cadre-btn" id="cadre-btn-guardian" onclick="setBizCadre(this, 'guardian')">🛡️ RO Guardian Cluster</button>
-          </div>
-        </div>
-
-        <!-- RO GUARDIAN CLUSTER SECTION -->
-        <div id="guardian-cluster-container" class="hidden">
-          <div style="font-size:0.9rem;font-weight:700;color:var(--iob-blue-dark);margin-bottom:12px">
-            🛡️ RO Guardian Cluster Tagged Branches (Live Performance Banners)
-          </div>
-          <div id="guardian-cluster-branches">
-            <!-- Dynamically populated branch cards with Red/Amber/Green Banners -->
-          </div>
-        </div>
-
-        <!-- SINGLE BRANCH ENTRY / PREFILLED METRICS -->
-        <div id="single-branch-biz-fields">
-          
-          <!-- SECTION 1: BALANCE & GROWTH MOVEMENT -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:12px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            💰 1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY)
-          </div>
-          <div class="col-3">
-            <div class="field">
-              <label>SB Growth Over Yesterday (₹) <span class="req">*</span></label>
-              <input type="number" id="biz-sb-growth" placeholder="e.g. 150000" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>CD Growth Over Yesterday (₹) <span class="req">*</span></label>
-              <input type="number" id="biz-cd-growth" placeholder="e.g. 50000" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>TD Growth Over Yesterday (₹)</label>
-              <input type="number" id="biz-td-growth" placeholder="e.g. 200000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 2: ACCOUNTS OPENED (SB OPENED, CD OPENED, TD OPENED & STEP-UP RD) -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            📈 2. ACCOUNTS OPENING (SB, CD, TD & STEP-UP RD)
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>SB Opened Today <span class="req">*</span></label>
-              <input type="number" id="biz-sb-opened" placeholder="e.g. 5" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>CD Opened Today <span class="req">*</span></label>
-              <input type="number" id="biz-cd-opened" placeholder="e.g. 1" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2" style="margin-top:8px">
-            <div class="field">
-              <label>TD Opened Today</label>
-              <input type="number" id="biz-td-opened" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Step-up RD Accounts Opened</label>
-              <input type="number" id="biz-stepup-rd" placeholder="e.g. 3" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 3: PREMIUM & HIGH-VALUE ACCOUNTS -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            💎 3. PREMIUM & HIGH-VALUE ACCOUNTS
-          </div>
-          <div class="col-3">
-            <div class="field">
-              <label>SB Premium Accounts</label>
-              <input type="number" id="biz-sb-premium" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>SB Ultra HNI Accounts</label>
-              <input type="number" id="biz-sb-ultra-hni" placeholder="e.g. 1" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>SB Diamond & Platinum Accounts</label>
-              <input type="number" id="biz-sb-diamond-plat" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 4: DIGITAL PRODUCTS & CHANNELS -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            💳 4. DIGITAL PRODUCTS & ALTERNATE CHANNELS
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Credit Cards Issued</label>
-              <input type="number" id="biz-credit-cards" placeholder="e.g. 3" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>IOB Connect Activations (Covers Mobile Banking)</label>
-              <input type="number" id="biz-iob-connect" placeholder="e.g. 6" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2" style="margin-top:8px">
-            <div class="field">
-              <label>New Internet Banking (Net Banking)</label>
-              <input type="number" id="biz-net-banking" placeholder="e.g. 4" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>WhatsApp Banking Registrations</label>
-              <input type="number" id="biz-whatsapp-banking" placeholder="e.g. 8" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 5: CORE LOAN SANCTIONS (COUNT & AMOUNT FOR THE DAY) -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🏦 5. CORE CREDIT & LOAN SANCTIONS TODAY (COUNT & AMOUNT)
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Core Retail Sanctions — Count</label>
-              <input type="number" id="biz-retail-count" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Core Retail Sanctions — Total Amount (₹)</label>
-              <input type="number" id="biz-retail-amt" placeholder="e.g. 1500000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Core SME Sanctions — Total Count</label>
-              <input type="number" id="biz-sme-count" placeholder="e.g. 1" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Core SME Sanctions — Total Amount (₹)</label>
-              <input type="number" id="biz-sme-amt" placeholder="e.g. 2500000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Core Agri Sanctions — Total Count</label>
-              <input type="number" id="biz-agri-count" placeholder="e.g. 4" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Core Agri Sanctions — Total Amount (₹)</label>
-              <input type="number" id="biz-agri-amt" placeholder="e.g. 800000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Jewel Loans Fresh — Count & Amt (₹)</label>
-              <input type="text" id="biz-jewel-fresh" placeholder="e.g. 3 loans / ₹4,50,000" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Jewel Loans Renewal — Count & Amt (₹)</label>
-              <input type="text" id="biz-jewel-renewal" placeholder="e.g. 2 loans / ₹2,10,000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 6: INOPERATIVE, INACTIVE, DEAF & NPA RECOVERY -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🔄 6. INOPERATIVE, INACTIVE, DEAF ACTIVATION & NPA CASH RECOVERY
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Inoperative Accounts Activated — Count</label>
-              <input type="number" id="biz-inop-count" placeholder="e.g. 15" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Inoperative Accounts Activated — Amount (₹)</label>
-              <input type="number" id="biz-inop-amt" placeholder="e.g. 185000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Inactive Accounts Activated — Count</label>
-              <input type="number" id="biz-inact-count" placeholder="e.g. 8" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Inactive Accounts Activated — Amount (₹)</label>
-              <input type="number" id="biz-inact-amt" placeholder="e.g. 92000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>DEAF Accounts Claimed — Count</label>
-              <input type="number" id="biz-deaf-count" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>DEAF Accounts Claimed — Amount (₹)</label>
-              <input type="number" id="biz-deaf-amt" placeholder="e.g. 21000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>NPA Cash Recovery — Accounts Count</label>
-              <input type="number" id="biz-npa-count" placeholder="e.g. 3" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>NPA Cash Recovery — Total Amount Recovered (₹)</label>
-              <input type="number" id="biz-npa-amt" placeholder="e.g. 450000" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 7: SAFE DEPOSIT LOCKERS -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🔐 7. SAFE DEPOSIT LOCKERS
-          </div>
-          <div class="col-2">
-            <div class="field">
-              <label>Lockers Vacant Today</label>
-              <input type="number" id="biz-lockers-vacant" placeholder="e.g. 12" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>Lockers Issued Today</label>
-              <input type="number" id="biz-lockers-issued" placeholder="e.g. 1" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 8: GOVT SOCIAL SECURITY SCHEMES (EACH SEPARATE) -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            🏛️ 8. GOVERNMENT SOCIAL SECURITY SCHEMES (SEPARATED)
-          </div>
-          <div class="col-3">
-            <div class="field">
-              <label>NPS (National Pension Scheme)</label>
-              <input type="number" id="biz-nps" placeholder="e.g. 2" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>APY (Atal Pension Yojana)</label>
-              <input type="number" id="biz-apy" placeholder="e.g. 4" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>SSY (Sukanya Samriddhi Yojana)</label>
-              <input type="number" id="biz-ssy" placeholder="e.g. 3" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-          <div class="col-2" style="margin-top:8px">
-            <div class="field">
-              <label>PMSBY (Accident Insurance Policies)</label>
-              <input type="number" id="biz-pmsby" placeholder="e.g. 15" oninput="updateWAReportPreview()">
-            </div>
-            <div class="field">
-              <label>PMJJBY (Life Insurance Policies)</label>
-              <input type="number" id="biz-pmjjby" placeholder="e.g. 8" oninput="updateWAReportPreview()">
-            </div>
-          </div>
-
-          <!-- SECTION 9: ONGOING REGIONAL CAMPAIGNS (CONFIGURED BY ADMIN) -->
-          <div style="font-size:0.88rem;font-weight:700;color:var(--iob-blue-dark);margin:16px 0 8px;padding-bottom:4px;border-bottom:1.5px solid rgba(26,58,122,0.15)">
-            📢 9. ONGOING REGIONAL CAMPAIGNS (CONFIGURED BY ADMIN)
-          </div>
-          <div id="dynamic-campaigns-container" class="col-2">
-            <!-- Dynamically rendered by JS from admin configured campaigns -->
-          </div>
-
-        </div>
-
-        <!-- LIVE WHATSAPP REPORT PREVIEW BOX -->
-        <div style="margin-top:20px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:0.88rem;font-weight:700;color:#25d366;display:flex;align-items:center;gap:6px">
-              💬 Standardized WhatsApp Group Payload Preview
-            </div>
-            <div style="display:flex;gap:8px">
-              <button type="button" class="btn-wa-copy" onclick="copyWAReportText()">📋 Copy Text</button>
-              <a id="btn-wa-share-link-top" href="#" target="_blank" class="btn-wa-share">📲 Share to WhatsApp</a>
-            </div>
-          </div>
-
-          <div class="wa-preview-box" id="wa-report-preview">
-            Enter Staff Roll Number to generate standard WhatsApp report...
-          </div>
-        </div>
-
-        <!-- SUBMIT ACTION ZONE -->
-        <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border);text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <button type="button" id="btn-submit-biz" class="btn-submit" style="width:auto;padding:12px 28px;font-size:0.95rem" onclick="submitBusinessReport()">
-            💾 Save & Submit Report to Database
-          </button>
-          <a id="btn-wa-share-link" href="#" target="_blank" class="btn-wa-share" style="padding:12px 24px;font-size:0.95rem">
-            📲 Share to WhatsApp Group
-          </a>
-          <button type="button" class="btn-wa-copy" style="padding:12px 24px;font-size:0.95rem" onclick="copyWAReportText()">
-            📋 Copy Text
-          </button>
-        </div>
-
-      </div>
-    </div>
-
 </main>
 
 <!-- FLOATING AUTHENTICATION PANEL MODAL (WITH FIRST-TIME PWD CHANGE ENFORCEMENT) -->
@@ -1658,10 +1296,6 @@ let APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILW
 
 // Embedded MCC List
 const MCC_LIST = [{"code": "0742", "desc": "Veterinary services"}, {"code": "0743", "desc": "Wine producers"}, {"code": "0744", "desc": "Champagne producers"}, {"code": "0763", "desc": "Agricultural co-operatives"}, {"code": "0780", "desc": "Landscaping and horticultural services"}, {"code": "0820", "desc": "Fertilizer Dealers"}, {"code": "0821", "desc": "Pesticides / Insecticides"}, {"code": "0822", "desc": "Seeds"}, {"code": "0823", "desc": "Farm Equipment"}, {"code": "0824", "desc": "Agricultural Machinery"}, {"code": "0825", "desc": "Other Agri Inputs"}, {"code": "1221", "desc": "NETS"}, {"code": "1520", "desc": "General contractors residential and commercial"}, {"code": "1711", "desc": "Heating, plumbing and air-conditioning contractors"}, {"code": "1731", "desc": "Electrical contractors"}, {"code": "1740", "desc": "Masonry, stonework, tile setting, plastering and insulation contractors"}, {"code": "1750", "desc": "Carpentry contractors"}, {"code": "1761", "desc": "Roofing, siding and sheet metal work contractors"}, {"code": "1771", "desc": "Concrete work contractors"}, {"code": "1799", "desc": "Special trade contractors not elsewhere classified"}, {"code": "2741", "desc": "Miscellaneous publishing and printing services"}, {"code": "2791", "desc": "Typesetting, platemaking and related services"}, {"code": "2842", "desc": "Speciality cleaning, polishing and sanitation preparations"}, {"code": "3000", "desc": "UNITED AIRLINES"}, {"code": "3002", "desc": "PAN AMERICAN"}, {"code": "3003", "desc": "Airlines"}, {"code": "3005", "desc": "BRITISH AIRWAYS"}, {"code": "3006", "desc": "JAPAN AIRLINES"}, {"code": "3007", "desc": "AIR FRANCE"}, {"code": "3008", "desc": "LUFTHANSA"}, {"code": "3010", "desc": "KLM (ROYAL DUTCH AIRLINES)"}, {"code": "3012", "desc": "QUANTAS"}, {"code": "3013", "desc": "ALITALIA"}, {"code": "3015", "desc": "SWISSAIR"}, {"code": "3016", "desc": "SAS"}, {"code": "3017", "desc": "SOUTH AFRICAN AIRWAYS"}, {"code": "3018", "desc": "VARIG (BRAZIL)"}, {"code": "3019", "desc": "Airlines"}, {"code": "3020", "desc": "AIR-INDIA"}, {"code": "3021", "desc": "AIR ALGERIE"}, {"code": "3022", "desc": "PHILIPPINE AIRLINES"}, {"code": "3023", "desc": "MEXICANA"}, {"code": "3024", "desc": "PAKISTAN INTERNATIONAL"}, {"code": "3025", "desc": "AIR NEW ZEALAND"}, {"code": "3026", "desc": "Airlines"}, {"code": "3027", "desc": "UTA/INTERAIR"}, {"code": "3028", "desc": "AIR MALTA"}, {"code": "3029", "desc": "SABENA"}, {"code": "3030", "desc": "AEROLINEAS ARGENTINAS"}, {"code": "3031", "desc": "OLYMPIC AIRWAYS"}, {"code": "3032", "desc": "EL AL"}, {"code": "3033", "desc": "ANSETT AIRLINES"}, {"code": "3034", "desc": "AUSTRAINLIAN AIRLINES"}, {"code": "3035", "desc": "TAP (PORTUGAL)"}, {"code": "3036", "desc": "VASP (BRAZIL)"}, {"code": "3037", "desc": "EGYPTAIR"}, {"code": "3038", "desc": "KUWAIT AIRLINES"}, {"code": "3039", "desc": "AVIANCA"}, {"code": "3040", "desc": "GULF AIR (BAHRAIN)"}, {"code": "3042", "desc": "FINNAIR"}, {"code": "3043", "desc": "AER LINGUS"}, {"code": "3044", "desc": "AIR LANKA"}, {"code": "3045", "desc": "NIGERIA AIRWAYS"}, {"code": "3046", "desc": "CRUZEIRO DO SUL (BRAZIJ)"}, {"code": "3047", "desc": "THY (TURKEY)"}, {"code": "3048", "desc": "ROYAL AIR MAROC"}, {"code": "3049", "desc": "TUNIS AIR"}, {"code": "3050", "desc": "ICELANDAIR"}, {"code": "3051", "desc": "AUSTRIAN AIRLINES"}, {"code": "3052", "desc": "LANCHILE"}, {"code": "3053", "desc": "AVIACO (SPAIN)"}, {"code": "3054", "desc": "LADECO (CHILE)"}, {"code": "3055", "desc": "LAB (BOLIVIA)"}, {"code": "3056", "desc": "QUEBECAIRE"}, {"code": "3057", "desc": "EASTWEST AIRLINES (AUSTRALIA)"}, {"code": "3058", "desc": "DELTA"}, {"code": "3059", "desc": "Airlines"}, {"code": "3060", "desc": "NORTHWEST"}, {"code": "3061", "desc": "CONTINENTAL"}, {"code": "3062", "desc": "WESTERN"}, {"code": "3063", "desc": "US AIR"}, {"code": "3064", "desc": "Airlines"}, {"code": "3065", "desc": "AIRINTER"}, {"code": "3066", "desc": "SOUTHWEST"}, {"code": "3067", "desc": "Airlines"}, {"code": "3068", "desc": "Airlines"}, {"code": "3069", "desc": "SUN COUNTRY AIRLINES"}, {"code": "3070", "desc": "Airlines"}, {"code": "3071", "desc": "AIR BRITISH COLUBIA"}, {"code": "3072", "desc": "Airlines"}, {"code": "3073", "desc": "Airlines"}, {"code": "3074", "desc": "Airlines"}, {"code": "3075", "desc": "SINGAPORE AIRLINES"}, {"code": "3077", "desc": "THAI AIRWAYS"}, {"code": "3078", "desc": "CHINA AIRLINES"}, {"code": "3079", "desc": "Airlines"}, {"code": "3080", "desc": "Airlines"}, {"code": "3081", "desc": "NORDAIR"}, {"code": "3082", "desc": "KOREAN AIRLINES"}, {"code": "3083", "desc": "AIR AFRIGUE"}, {"code": "3084", "desc": "EVA AIRLINES"}, {"code": "3085", "desc": "MIDWEST EXPRESS AIRLINES, INC."}, {"code": "3086", "desc": "Airlines"}, {"code": "3087", "desc": "METRO AIRLINES"}, {"code": "3088", "desc": "CROATIA AIRLINES"}, {"code": "3090", "desc": "Airlines"}, {"code": "3091", "desc": "Airlines"}, {"code": "3092", "desc": "Airlines"}, {"code": "3093", "desc": "Airlines"}, {"code": "3095", "desc": "Airlines"}, {"code": "3096", "desc": "AIR ZIMBABWE"}, {"code": "3097", "desc": "Airlines"}, {"code": "3098", "desc": "Airlines"}, {"code": "3099", "desc": "CATHAY PACIFIC"}, {"code": "3100", "desc": "MALAYSIAN AIRLINE SYSTEM"}, {"code": "3101", "desc": "Airlines"}, {"code": "3102", "desc": "IBERIA"}, {"code": "3103", "desc": "GARUDA (INDONESIA)"}, {"code": "3104", "desc": "Airlines"}, {"code": "3105", "desc": "Airlines"}, {"code": "3106", "desc": "BRAATHENS S.A.F.E. (NORWAY)"}, {"code": "3107", "desc": "Airlines"}, {"code": "3108", "desc": "Airlines"}, {"code": "3109", "desc": "Airlines"}, {"code": "3110", "desc": "WINGS AIRWAYS"}, {"code": "3111", "desc": "BRITISH MIDLAND"}, {"code": "3112", "desc": "WINDWARD ISLAND"}, {"code": "3113", "desc": "Airlines"}, {"code": "3114", "desc": "Airlines"}, {"code": "3116", "desc": "Airlines"}, {"code": "3117", "desc": "VIASA"}, {"code": "3118", "desc": "VALLEY AIRLINES"}, {"code": "3119", "desc": "Airlines"}, {"code": "3120", "desc": "Airlines"}, {"code": "3121", "desc": "Airlines"}, {"code": "3122", "desc": "Airlines"}, {"code": "3123", "desc": "Airlines"}, {"code": "3124", "desc": "Airlines"}, {"code": "3125", "desc": "TAN"}, {"code": "3126", "desc": "TALAIR"}, {"code": "3127", "desc": "TACA INTERNATIONAL"}, {"code": "3128", "desc": "Airlines"}, {"code": "3129", "desc": "SURINAM AIRWAYS"}, {"code": "3130", "desc": "SUN WORLD INTERNATIONAL"}, {"code": "3131", "desc": "Airlines"}, {"code": "3132", "desc": "Airlines"}, {"code": "3133", "desc": "SUNBELT AIRLINES"}, {"code": "3134", "desc": "Airlines"}, {"code": "3135", "desc": "SUDAN AIRWAYS"}, {"code": "3136", "desc": "Airlines"}, {"code": "3137", "desc": "SINGLETON"}, {"code": "3138", "desc": "SIMMONS AIRLINES"}, {"code": "3139", "desc": "Airlines"}, {"code": "3140", "desc": "Airlines"}, {"code": "3141", "desc": "Airlines"}, {"code": "3142", "desc": "Airlines"}, {"code": "3143", "desc": "SCENIC AIRLINES"}, {"code": "3144", "desc": "VIRGIN ATLANTIC"}, {"code": "3145", "desc": "SAN JUAN AIRLINES"}, {"code": "3146", "desc": "LUXAIR"}, {"code": "3147", "desc": "Airlines"}, {"code": "3148", "desc": "Airlines"}, {"code": "3149", "desc": "Airlines"}, {"code": "3150", "desc": "Airlines"}, {"code": "3151", "desc": "AIR ZAIRE"}, {"code": "3152", "desc": "Airlines"}, {"code": "3153", "desc": "Airlines"}, {"code": "3154", "desc": "PRINCEVILLE"}, {"code": "3155", "desc": "Airlines"}, {"code": "3156", "desc": "Airlines"}, {"code": "3157", "desc": "Airlines"}, {"code": "3158", "desc": "Airlines"}, {"code": "3159", "desc": "PBA"}, {"code": "3160", "desc": "Airlines"}, {"code": "3161", "desc": "ALL NIPPON AIRWAYS"}, {"code": "3162", "desc": "Airlines"}, {"code": "3163", "desc": "Airlines"}, {"code": "3164", "desc": "NORONTAIR"}, {"code": "3165", "desc": "NEW YORK HELICOPTER"}, {"code": "3166", "desc": "Airlines"}, {"code": "3167", "desc": "Airlines"}, {"code": "3168", "desc": "Airlines"}, {"code": "3169", "desc": "Airlines"}, {"code": "3170", "desc": "NOUNT COOK"}, {"code": "3171", "desc": "CANADIAN AIRLINES INTERNATIONAL"}, {"code": "3172", "desc": "NATIONAIR"}, {"code": "3173", "desc": "Airlines"}, {"code": "3174", "desc": "Airlines"}, {"code": "3175", "desc": "Airlines"}, {"code": "3176", "desc": "METROFLIGHT AIRLINES"}, {"code": "3177", "desc": "Airlines"}, {"code": "3178", "desc": "MESA AIR"}, {"code": "3179", "desc": "Airlines"}, {"code": "3180", "desc": "Airlines"}, {"code": "3181", "desc": "MALEV"}, {"code": "3182", "desc": "LOT (POLAND)"}, {"code": "3183", "desc": "Airlines"}, {"code": "3184", "desc": "LIAT"}, {"code": "3185", "desc": "LAV (VENEZUELA)"}, {"code": "3186", "desc": "LAP (PARAGUAY)"}, {"code": "3187", "desc": "LACSA (COSTA RICA)"}, {"code": "3188", "desc": "Airlines"}, {"code": "3189", "desc": "Airlines"}, {"code": "3190", "desc": "JUGOSLAV AIR"}, {"code": "3191", "desc": "ISLAND AIRLINES"}, {"code": "3192", "desc": "IRAN AIR"}, {"code": "3193", "desc": "INDIAN AIRLINES"}, {"code": "3194", "desc": "Airlines"}, {"code": "3195", "desc": "Airlines"}, {"code": "3196", "desc": "HAWAIIAN AIR"}, {"code": "3197", "desc": "HAVASU AIRLINES"}, {"code": "3198", "desc": "Airlines"}, {"code": "3199", "desc": "Airlines"}, {"code": "3200", "desc": "FUYANA AIRWAYS"}, {"code": "3201", "desc": "Airlines"}, {"code": "3202", "desc": "Airlines"}, {"code": "3203", "desc": "GOLDEN PACIFIC AIR"}, {"code": "3204", "desc": "FREEDOM AIR"}, {"code": "3205", "desc": "Airlines"}, {"code": "3206", "desc": "Airlines"}, {"code": "3207", "desc": "Airlines"}, {"code": "3208", "desc": "Airlines"}, {"code": "3209", "desc": "Airlines"}, {"code": "3210", "desc": "Airlines"}, {"code": "3211", "desc": "Airlines"}, {"code": "3212", "desc": "DOMINICANA"}, {"code": "3213", "desc": "Airlines"}, {"code": "3214", "desc": "Airlines"}, {"code": "3215", "desc": "DAN AIR SERVICES"}, {"code": "3216", "desc": "CUMBERLAND AIRLINES"}, {"code": "3217", "desc": "CSA"}, {"code": "3218", "desc": "CROWN AIR"}, {"code": "3219", "desc": "COPA"}, {"code": "3220", "desc": "COMPANIA FAUCETT"}, {"code": "3221", "desc": "TRANSPORTES AEROS MILITARES ECCUATORANOS"}, {"code": "3222", "desc": "COMMAND AIRWAYS"}, {"code": "3223", "desc": "COMAIR"}, {"code": "3224", "desc": "Airlines"}, {"code": "3225", "desc": "Airlines"}, {"code": "3226", "desc": "Airlines"}, {"code": "3227", "desc": "Airlines"}, {"code": "3228", "desc": "CAYMAN AIRWAYS"}, {"code": "3229", "desc": "SAETA SOCIAEDAD ECUATORIANOS DE TRANSPORTES AEREOS"}, {"code": "3230", "desc": "Airlines"}, {"code": "3231", "desc": "SASHA SERVICIO AERO DE HONDURAS"}, {"code": "3232", "desc": "Airlines"}, {"code": "3233", "desc": "CAPITOL AIR"}, {"code": "3234", "desc": "BWIA"}, {"code": "3235", "desc": "BROKWAY AIR"}, {"code": "3236", "desc": "Airlines"}, {"code": "3237", "desc": "Airlines"}, {"code": "3238", "desc": "BEMIDJI AIRLINES"}, {"code": "3239", "desc": "BAR HARBOR AIRLINES"}, {"code": "3240", "desc": "BAHAMASAIR"}, {"code": "3241", "desc": "AVIATECA (GUATEMALA)"}, {"code": "3242", "desc": "AVENSA"}, {"code": "3243", "desc": "AUSTRIAN AIR SERVICE"}, {"code": "3244", "desc": "Airlines"}, {"code": "3245", "desc": "Airlines"}, {"code": "3246", "desc": "Airlines"}, {"code": "3247", "desc": "Airlines"}, {"code": "3248", "desc": "Airlines"}, {"code": "3249", "desc": "Airlines"}, {"code": "3250", "desc": "Airlines"}, {"code": "3251", "desc": "ALOHA AIRLINES"}, {"code": "3252", "desc": "ALM"}, {"code": "3253", "desc": "AMERICA WEST"}, {"code": "3254", "desc": "TRUMP AIRLINE"}, {"code": "3255", "desc": "Airlines"}, {"code": "3256", "desc": "ALASKA AIRLINES"}, {"code": "3257", "desc": "Airlines"}, {"code": "3258", "desc": "Airlines"}, {"code": "3259", "desc": "AMERICAN TRANS AIR"}, {"code": "3260", "desc": "Airlines"}, {"code": "3261", "desc": "AIR CHINA"}, {"code": "3262", "desc": "RENO AIR, INC."}, {"code": "3263", "desc": "Airlines"}, {"code": "3264", "desc": "Airlines"}, {"code": "3265", "desc": "Airlines"}, {"code": "3266", "desc": "AIR SEYCHELLES"}, {"code": "3267", "desc": "AIR PANAMA"}, {"code": "3268", "desc": "Airlines"}, {"code": "3269", "desc": "Airlines"}, {"code": "3270", "desc": "Airlines"}, {"code": "3271", "desc": "Airlines"}, {"code": "3272", "desc": "Airlines"}, {"code": "3273", "desc": "Airlines"}, {"code": "3274", "desc": "Airlines"}, {"code": "3275", "desc": "Airlines"}, {"code": "3276", "desc": "Airlines"}, {"code": "3277", "desc": "Airlines"}, {"code": "3278", "desc": "Airlines"}, {"code": "3279", "desc": "Airlines"}, {"code": "3280", "desc": "AIR JAMAICA"}, {"code": "3281", "desc": "Airlines"}, {"code": "3282", "desc": "AIR DJIBOUTI"}, {"code": "3283", "desc": "Airlines"}, {"code": "3284", "desc": "AERO VIRGIN ISLANDS"}, {"code": "3285", "desc": "AERO PERU"}, {"code": "3286", "desc": "AEROLINEAS NICARAGUENSIS"}, {"code": "3288", "desc": "Airlines"}, {"code": "3289", "desc": "Airlines"}, {"code": "3290", "desc": "Airlines"}, {"code": "3291", "desc": "ARIANA AFGHAN"}, {"code": "3292", "desc": "CYPRUS AIRWAYS"}, {"code": "3293", "desc": "ECUATORIANA"}, {"code": "3294", "desc": "ETHIOPIAN AIRLINES"}, {"code": "3295", "desc": "KENYA AIRLINES"}, {"code": "3296", "desc": "Airlines"}, {"code": "3297", "desc": "Airlines"}, {"code": "3298", "desc": "AIR MAURITIUS"}, {"code": "3299", "desc": "WIDERO\u00e2\u20ac\u2122S FLYVESELSKAP"}, {"code": "3352", "desc": "AMERICAN INTL RENT-A-CAR"}, {"code": "3353", "desc": "BROOKS RENT-A-CAR"}, {"code": "3354", "desc": "ACTION AUTO RENTAL"}, {"code": "3355", "desc": "Car Rental"}, {"code": "3356", "desc": "Car Rental"}, {"code": "3357", "desc": "HERTZ RENT-A-CAR"}, {"code": "3358", "desc": "Car Rental"}, {"code": "3359", "desc": "PAYLESS CAR RENTAL"}, {"code": "3360", "desc": "SNAPPY CAR RENTAL"}, {"code": "3361", "desc": "AIRWAYS RENT-A-CAR"}, {"code": "3362", "desc": "ALTRA AUTO RENTAL"}, {"code": "3363", "desc": "Car Rental"}, {"code": "3365", "desc": "Car Rental"}, {"code": "3366", "desc": "BUDGET RENT-A-CAR"}, {"code": "3367", "desc": "Car Rental"}, {"code": "3368", "desc": "HOLIDAY RENT-A-WRECK"}, {"code": "3369", "desc": "Car Rental"}, {"code": "3370", "desc": "RENT-A-WRECK"}, {"code": "3371", "desc": "Car Rental"}, {"code": "3372", "desc": "Car Rental"}, {"code": "3373", "desc": "Car Rental"}, {"code": "3374", "desc": "Car Rental"}, {"code": "3375", "desc": "Car Rental"}, {"code": "3376", "desc": "AJAX RENT-A-CAR"}, {"code": "3377", "desc": "Car Rental"}, {"code": "3378", "desc": "Car Rental"}, {"code": "3379", "desc": "Car Rental"}, {"code": "3380", "desc": "Car Rental"}, {"code": "3381", "desc": "EUROP CAR"}, {"code": "3382", "desc": "Car Rental"}, {"code": "3383", "desc": "Car Rental"}, {"code": "3384", "desc": "Car Rental"}, {"code": "3386", "desc": "SHOWCASE RENTAL CARS"}, {"code": "3387", "desc": "ALAMO RENT-A-CAR"}, {"code": "3388", "desc": "Car Rental"}, {"code": "3389", "desc": "AVIS RENT-A-CAR"}, {"code": "3390", "desc": "DOLLAR RENT-A-CAR"}, {"code": "3391", "desc": "EUROPE BY CAR"}, {"code": "3392", "desc": "Car Rental"}, {"code": "3393", "desc": "NATIONAL CAR RENTAL"}, {"code": "3394", "desc": "KEMWELL GROUP RENT-A-CAR"}, {"code": "3395", "desc": "THRIFTY RENT-A-CAR"}, {"code": "3396", "desc": "TILDEN TENT-A-CAR"}, {"code": "3397", "desc": "Car Rental"}, {"code": "3398", "desc": "ECONO-CAR RENT-A-CAR"}, {"code": "3399", "desc": "Car Rental"}, {"code": "3401", "desc": "Car Rental"}, {"code": "3402", "desc": "Car Rental"}, {"code": "3403", "desc": "Car Rental"}, {"code": "3404", "desc": "Car Rental"}, {"code": "3405", "desc": "ENTERPRISE RENT-A-CAR"}, {"code": "3406", "desc": "Car Rental"}, {"code": "3407", "desc": "Car Rental"}, {"code": "3408", "desc": "Car Rental"}, {"code": "3409", "desc": "GENERAL RENT-A-CAR"}, {"code": "3410", "desc": "Car Rental"}, {"code": "3411", "desc": "Car Rental"}, {"code": "3413", "desc": "Car Rental"}, {"code": "3414", "desc": "GODFREY NATL RENT-A-CAR"}, {"code": "3415", "desc": "Car Rental"}, {"code": "3416", "desc": "Car Rental"}, {"code": "3417", "desc": "Car Rental"}, {"code": "3418", "desc": "Car Rental"}, {"code": "3419", "desc": "ALPHA RENT-A-CAR"}, {"code": "3420", "desc": "ANSA INTL RENT-A-CAR"}, {"code": "3421", "desc": "ALLSTAE RENT-A-CAR"}, {"code": "3422", "desc": "Car Rental"}, {"code": "3423", "desc": "AVCAR RENT-A-CAR"}, {"code": "3424", "desc": "Car Rental"}, {"code": "3425", "desc": "AUTOMATE RENT-A-CAR"}, {"code": "3426", "desc": "Car Rental"}, {"code": "3427", "desc": "AVON RENT-A-CAR"}, {"code": "3428", "desc": "CAREY RENT-A-CAR"}, {"code": "3429", "desc": "INSURANCE RENT-A-CAR"}, {"code": "3430", "desc": "MAJOR RENT-A-CAR"}, {"code": "3431", "desc": "REPLACEMENT RENT-A-CAR"}, {"code": "3432", "desc": "RESERVE RENT-A-CAR"}, {"code": "3433", "desc": "UGLY DUCKLING RENT-A-CAR"}, {"code": "3434", "desc": "USA RENT-A-CAR"}, {"code": "3435", "desc": "VALUE RENT-A-CAR"}, {"code": "3436", "desc": "AUTOHANSA RENT-A-CAR"}, {"code": "3437", "desc": "CITE RENT-A-CAR"}, {"code": "3438", "desc": "INTERENT RENT-A-CAR"}, {"code": "3439", "desc": "MILLEVILLE RENT-A-CAR"}, {"code": "3440", "desc": "VIA ROUTE RENT-A-CAR"}, {"code": "3503", "desc": "SHERATON HOTELS"}, {"code": "3505", "desc": "FORTE HOTELS"}, {"code": "3506", "desc": "GOLDEN TULIP HOTELS"}, {"code": "3507", "desc": "FRIENDSHIP INNS"}, {"code": "3509", "desc": "MARRIOTT HOTELS"}, {"code": "3510", "desc": "DAYS INN, DAYSTOP"}, {"code": "3511", "desc": "ARABELLA HOTELS"}, {"code": "3512", "desc": "INTER-CONTINENTAL HOTELS"}, {"code": "3513", "desc": "WESTIN HOTELS"}, {"code": "3514", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3516", "desc": "LA QUINTA MOTOR INNS"}, {"code": "3517", "desc": "AMERICANA HOTELS"}, {"code": "3518", "desc": "SOL HOTELS"}, {"code": "3519", "desc": "PULLMAN INTERNATIONAL HOTELS"}, {"code": "3520", "desc": "MERIDIEN HOTELS"}, {"code": "3521", "desc": "CREST HOTELS (see FORTE HOTELS)"}, {"code": "3522", "desc": "TOKYO HOTEL"}, {"code": "3523", "desc": "PENNSULA HOTEL"}, {"code": "3524", "desc": "WELCOMGROUP HOTELS"}, {"code": "3525", "desc": "DUNFEY HOTELS"}, {"code": "3526", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3527", "desc": "DOWNTOWNER-PASSPORT HOTEL"}, {"code": "3528", "desc": "RED LION HOTELS, RED LION INNS"}, {"code": "3530", "desc": "RENAISSANCE HOTELS, STOUFFER HOTELS"}, {"code": "3531", "desc": "ASTIR HOTELS"}, {"code": "3532", "desc": "SUN ROUTE HOTELS"}, {"code": "3533", "desc": "HOTEL IBIS"}, {"code": "3534", "desc": "SOUTHERN PACIFIC HOTELS"}, {"code": "3536", "desc": "AMFAC HOTELS"}, {"code": "3538", "desc": "CONCORDE HOTELS"}, {"code": "3539", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3540", "desc": "IBEROTEL HOTELS"}, {"code": "3541", "desc": "HOTEL OKURA"}, {"code": "3542", "desc": "ROYAL HOTELS"}, {"code": "3543", "desc": "FOUR SEASONS HOTELS"}, {"code": "3544", "desc": "CIGA HOTELS"}, {"code": "3545", "desc": "SHANGRI-LA INTERNATIONAL"}, {"code": "3546", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3547", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3548", "desc": "HOTELES MELIA"}, {"code": "3549", "desc": "AUBERGE DES GOVERNEURS"}, {"code": "3550", "desc": "REGAL 8 INNS"}, {"code": "3551", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3552", "desc": "COAST HOTELS"}, {"code": "3554", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3556", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3557", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3558", "desc": "JOLLY HOTELS"}, {"code": "3559", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3560", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3561", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3562", "desc": "COMFORT INNS"}, {"code": "3563", "desc": "JOURNEY\u00e2\u20ac\u2122S END MOTLS"}, {"code": "3564", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3565", "desc": "RELAX INNS"}, {"code": "3566", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3567", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3568", "desc": "LADBROKE HOTELS"}, {"code": "3569", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3570", "desc": "FORUM HOTELS"}, {"code": "3571", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3572", "desc": "MIYAKO HOTELS"}, {"code": "3573", "desc": "SANDMAN HOTELS"}, {"code": "3574", "desc": "VENTURE INNS"}, {"code": "3575", "desc": "VAGABOND HOTELS"}, {"code": "3576", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3577", "desc": "MANDARIN ORIENTAL HOTEL"}, {"code": "3578", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3579", "desc": "HOTEL MERCURE"}, {"code": "3580", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3582", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3583", "desc": "SAS HOTELS"}, {"code": "3584", "desc": "PRINCESS HOTELS INTERNATIONAL"}, {"code": "3585", "desc": "HUNGAR HOTELS"}, {"code": "3586", "desc": "SOKOS HOTELS"}, {"code": "3587", "desc": "DORAL HOTELS"}, {"code": "3588", "desc": "HELMSLEY HOTELS"}, {"code": "3589", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3590", "desc": "FAIRMONT HOTELS"}, {"code": "3592", "desc": "OMNI HOTELS"}, {"code": "3593", "desc": "CUNARD HOTELS"}, {"code": "3594", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3596", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3597", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3598", "desc": "REGENT INTERNATIONAL HOTELS"}, {"code": "3599", "desc": "PANNONIA HOTELS"}, {"code": "3600", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3601", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3602", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3603", "desc": "NOAH\u00e2\u20ac\u2122S HOTELS"}, {"code": "3604", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3605", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3606", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3607", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3608", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3609", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3610", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3611", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3612", "desc": "MOVENPICK HOTELS"}, {"code": "3613", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3614", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3616", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3617", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3618", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3619", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3620", "desc": "TELFORD INTERNATIONAL"}, {"code": "3621", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3622", "desc": "MERLIN HOTELS"}, {"code": "3623", "desc": "DORINT HOTELS"}, {"code": "3624", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3625", "desc": "HOTLE UNIVERSALE"}, {"code": "3626", "desc": "PRINCE HOTELS"}, {"code": "3627", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3628", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3629", "desc": "DAN HOTELS"}, {"code": "3630", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3632", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3633", "desc": "RANK HOTELS"}, {"code": "3634", "desc": "SWISSOTEL"}, {"code": "3636", "desc": "SAROVA HOTELS"}, {"code": "3637", "desc": "RAMADA INNS, RAMADA LIMITED"}, {"code": "3638", "desc": "HO JO INN, HOWARD JOHNSON"}, {"code": "3639", "desc": "MOUNT CHARLOTTE THISTLE"}, {"code": "3640", "desc": "HYATT HOTEL"}, {"code": "3641", "desc": "SOFITEL HOTELS"}, {"code": "3642", "desc": "NOVOTEL HOTELS"}, {"code": "3643", "desc": "STEIGENBERGER HOTELS"}, {"code": "3644", "desc": "ECONO LODGES"}, {"code": "3645", "desc": "QUEENS MOAT HOUSES"}, {"code": "3646", "desc": "SWALLOW HOTELS"}, {"code": "3647", "desc": "HUSA HOTELS"}, {"code": "3648", "desc": "DE VERE HOTELS"}, {"code": "3649", "desc": "RADISSON HOTELS"}, {"code": "3650", "desc": "RED ROOK INNS"}, {"code": "3651", "desc": "IMPERIAL LONDON HOTEL"}, {"code": "3652", "desc": "EMBASSY HOTELS"}, {"code": "3653", "desc": "PENTA HOTELS"}, {"code": "3654", "desc": "LOEWS HOTELS"}, {"code": "3655", "desc": "SCANDIC HOTELS"}, {"code": "3656", "desc": "SARA HOTELS"}, {"code": "3657", "desc": "OBEROI HOTELS"}, {"code": "3658", "desc": "OTANI HOTELS"}, {"code": "3659", "desc": "TAJ HOTELS INTERNATIONAL"}, {"code": "3660", "desc": "KNIGHTS INNS"}, {"code": "3661", "desc": "METROPOLE HOTELS"}, {"code": "3662", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3663", "desc": "HOTELES EL PRESIDENTS"}, {"code": "3664", "desc": "FLAG INN"}, {"code": "3665", "desc": "HAMPTON INNS"}, {"code": "3666", "desc": "STAKIS HOTELS"}, {"code": "3667", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3668", "desc": "MARITIM HOTELS"}, {"code": "3669", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3670", "desc": "ARCARD HOTELS"}, {"code": "3671", "desc": "ARCTIA HOTELS"}, {"code": "3673", "desc": "IBUSZ HOTELS"}, {"code": "3674", "desc": "RANTASIPI HOTELS"}, {"code": "3675", "desc": "INTERHOTEL CEDOK"}, {"code": "3676", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3677", "desc": "CLIMAT DE FRANCE HOTELS"}, {"code": "3678", "desc": "CUMULUS HOTELS"}, {"code": "3679", "desc": "DANUBIUS HOTEL"}, {"code": "3680", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3681", "desc": "ADAMS MARK HOTELS"}, {"code": "3682", "desc": "ALLSTAR INNS"}, {"code": "3683", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3684", "desc": "BUDGET HOST INNS"}, {"code": "3685", "desc": "BUDGETEL HOTELS"}, {"code": "3686", "desc": "SUISSE CHALETS"}, {"code": "3687", "desc": "CLARION HOTELS"}, {"code": "3688", "desc": "COMPRI HOTELS"}, {"code": "3689", "desc": "CONSORT HOTELS"}, {"code": "3690", "desc": "COURTYARD BY MARRIOTT"}, {"code": "3691", "desc": "DILLION INNS"}, {"code": "3692", "desc": "DOUBLETREE HOTELS"}, {"code": "3693", "desc": "DRURY INNS"}, {"code": "3694", "desc": "ECONOMY INNS OF AMERICA"}, {"code": "3695", "desc": "EMBASSY SUITES"}, {"code": "3696", "desc": "EXEL INNS"}, {"code": "3697", "desc": "FARFIELD HOTELS"}, {"code": "3698", "desc": "HARLEY HOTELS"}, {"code": "3699", "desc": "MIDWAY MOTOR LODGE"}, {"code": "3701", "desc": "GUEST QUARTERS (Formally PICKETT SUITE HOTELS)"}, {"code": "3702", "desc": "THE REGISTRY HOTELS"}, {"code": "3704", "desc": "ROYCE HOTELS"}, {"code": "3705", "desc": "SANDMAN INNS"}, {"code": "3706", "desc": "SHILO INNS"}, {"code": "3707", "desc": "SHONEYAS INNS"}, {"code": "3708", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3709", "desc": "SUPER8 MOTELS"}, {"code": "3710", "desc": "THE RITZ CARLTON HOTELS"}, {"code": "3711", "desc": "FLAG INNS (AUSRALIA)"}, {"code": "3712", "desc": "GOLDEN CHAIN HOTEL"}, {"code": "3713", "desc": "QUALITY PACIFIC HOTEL"}, {"code": "3714", "desc": "FOUR SEASONS HOTEL (AUSTRALIA)"}, {"code": "3715", "desc": "FARIFIELD INN"}, {"code": "3716", "desc": "CARLTON HOTELS"}, {"code": "3718", "desc": "KAROS HOTELS"}, {"code": "3719", "desc": "PROTEA HOTELS"}, {"code": "3720", "desc": "SOUTHERN SUN HOTELS"}, {"code": "3721", "desc": "HILTON CONRAD"}, {"code": "3722", "desc": "WYNDHAM HOTEL AND RESORTS"}, {"code": "3723", "desc": "RICA HOTELS"}, {"code": "3724", "desc": "INER NOR HOTELS"}, {"code": "3725", "desc": "SEAINES PLANATION"}, {"code": "3726", "desc": "RIO SUITES"}, {"code": "3727", "desc": "BROADMOOR HOTEL"}, {"code": "3728", "desc": "BALLY\u00e2\u20ac\u2122S HOTEL AND CASINO"}, {"code": "3729", "desc": "JOHN ASCUAGA\u00e2\u20ac\u2122S NUGGET"}, {"code": "3730", "desc": "MGM GRAND HOTEL"}, {"code": "3731", "desc": "HARRAH\u00e2\u20ac\u2122S HOTELS AND CASINOS"}, {"code": "3732", "desc": "OPRYLAND HOTEL"}, {"code": "3733", "desc": "BOCA RATON RESORT"}, {"code": "3734", "desc": "HARVEY/BRISTOL HOTELS"}, {"code": "3735", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3736", "desc": "COLORADO BELLE/EDGEWATER RESORT"}, {"code": "3737", "desc": "RIVIERA HOTEL AND CASINO"}, {"code": "3738", "desc": "TROPICANA RESORT AND CASINO"}, {"code": "3739", "desc": "WOODSIDE HOTELS AND RESORTS"}, {"code": "3740", "desc": "TOWNPLACE SUITES"}, {"code": "3741", "desc": "MILLENIUM BROADWAY HOTEL"}, {"code": "3742", "desc": "CLUB MED"}, {"code": "3743", "desc": "BILTMORE HOTEL AND SUITES"}, {"code": "3744", "desc": "CAREFREE RESORTS"}, {"code": "3745", "desc": "ST. REGIS HOTEL"}, {"code": "3746", "desc": "THE ELIOT HOTEL"}, {"code": "3748", "desc": "WELESLEY INNS"}, {"code": "3749", "desc": "THE BEVERLY HILLS HOTEL"}, {"code": "3750", "desc": "CROWNE PLAZA HOTELS"}, {"code": "3751", "desc": "HOMEWOOD SUITES"}, {"code": "3752", "desc": "PEABODY HOTELS"}, {"code": "3753", "desc": "GREENBRIAH RESORTS"}, {"code": "3754", "desc": "AMELIA ISLAND PLANATION"}, {"code": "3755", "desc": "THE HOMESTEAD"}, {"code": "3756", "desc": "SOUTH SEAS RESORTS"}, {"code": "3757", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3758", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3759", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3760", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3761", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3763", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3764", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3765", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3766", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3767", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3768", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3769", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3770", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3771", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3772", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3773", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3774", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3775", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3776", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3777", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3778", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3779", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3780", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3781", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3782", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3784", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3785", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3786", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3787", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3788", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3789", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3790", "desc": "Hotels/Motels/Inns/Resorts"}, {"code": "3816", "desc": "Home2Suites"}, {"code": "3835", "desc": "* MASTERS ECONOMY INNS"}, {"code": "4011", "desc": "Railroads"}, {"code": "4111", "desc": "Local and suburban commuter passenger transportation, including ferries"}, {"code": "4112", "desc": "Passenger railways"}, {"code": "4119", "desc": "Ambulance services"}, {"code": "4121", "desc": "Taxi-cabs and limousines"}, {"code": "4131", "desc": "Bus lines"}, {"code": "4214", "desc": "Motor freight carriers and trucking local and long distance, moving and storage companies and local delivery"}, {"code": "4215", "desc": "Courier services air and ground and freight forwarders"}, {"code": "4225", "desc": "Public warehousing and storage farm products, refrigerated goods and household goods"}, {"code": "4411", "desc": "Steamships and cruise lines"}, {"code": "4457", "desc": "Boat rentals and leasing"}, {"code": "4468", "desc": "Marinas, marine service and supplies"}, {"code": "4511", "desc": "Airlines and air carriers"}, {"code": "4582", "desc": "Airports, flying fields and airport terminals"}, {"code": "4722", "desc": "Travel agencies and tour operators"}, {"code": "4784", "desc": "Tolls and bridge fees"}, {"code": "4789", "desc": "Transportation services not elsewhere classified"}, {"code": "4812", "desc": "Telecommunication equipment and telephone sales"}, {"code": "4814", "desc": "Telecommunication services, including local and long distance calls, credit card calls, calls through use of magnetic stripe reading telephones and faxes"}, {"code": "4816", "desc": "Computer network/information services"}, {"code": "4829", "desc": "Wire transfers and money orders"}, {"code": "4899", "desc": "Cable and other pay television services"}, {"code": "4900", "desc": "Utilities electric, gas, water and sanitary"}, {"code": "5013", "desc": "Motor vehicle supplies and new parts"}, {"code": "5021", "desc": "Office and commercial furniture"}, {"code": "5039", "desc": "Construction materials not elsewhere classified"}, {"code": "5044", "desc": "Office, photographic, photocopy and microfilm equipment"}, {"code": "5045", "desc": "Computers, computer peripheral equipment not elsewhere classified"}, {"code": "5046", "desc": "Commercial equipment not elsewhere classified"}, {"code": "5047", "desc": "Dental/laboratory/medical/ophthalmic hospital equipment and supplies"}, {"code": "5051", "desc": "Metal service centres and offices"}, {"code": "5065", "desc": "Electrical parts and equipment"}, {"code": "5072", "desc": "Hardware equipment and supplies"}, {"code": "5074", "desc": "Plumbing and heating equipment and supplies"}, {"code": "5085", "desc": "Industrial supplies not elsewhere classified"}, {"code": "5094", "desc": "Precious stones and metals, watches and jewellery"}, {"code": "5099", "desc": "Durable goods not elsewhere classified"}, {"code": "5111", "desc": "Stationery office supplies and printing and writing paper"}, {"code": "5122", "desc": "Drugs, drug proprietors"}, {"code": "5131", "desc": "Piece goods, notions and other dry goods"}, {"code": "5137", "desc": "Mens, womens and childrens uniforms and commercial clothing"}, {"code": "5139", "desc": "Commercial footwear"}, {"code": "5169", "desc": "Chemicals and allied products not elsewhere classified"}, {"code": "5172", "desc": "Petroleum and petroleum products"}, {"code": "5192", "desc": "Books, periodicals and newspapers"}, {"code": "5193", "desc": "Florists supplies, nursery stock and flowers"}, {"code": "5198", "desc": "Paints, varnishes and supplies"}, {"code": "5199", "desc": "Non-durable goods not elsewhere classified"}, {"code": "5200", "desc": "Home supply warehouse outlets"}, {"code": "5211", "desc": "Lumber and building materials outlets"}, {"code": "5231", "desc": "Glass, paint and wallpaper shops"}, {"code": "5251", "desc": "Hardware shops"}, {"code": "5261", "desc": "Lawn and garden supply outlets, including nurseries"}, {"code": "5262", "desc": "Online Marketplaces"}, {"code": "5271", "desc": "Mobile home dealers"}, {"code": "5300", "desc": "Wholesale clubs"}, {"code": "5309", "desc": "Duty-free shops"}, {"code": "5310", "desc": "Discount shops"}, {"code": "5311", "desc": "Department stores"}, {"code": "5331", "desc": "Variety stores"}, {"code": "5399", "desc": "Miscellaneous general merchandise"}, {"code": "5411", "desc": "Groceries and supermarkets"}, {"code": "5412", "desc": "Purchase of digital gold"}, {"code": "5413", "desc": "Credit Card Bill Payments"}, {"code": "5422", "desc": "Freezer and locker meat provisioners"}, {"code": "5441", "desc": "Candy, nut and confectionery shops"}, {"code": "5451", "desc": "Dairies"}, {"code": "5462", "desc": "Bakeries"}, {"code": "5499", "desc": "Miscellaneous food"}, {"code": "5511", "desc": "Car and truck dealers (new and used) sales, services, repairs, parts and leasing"}, {"code": "5521", "desc": "Car and truck dealers (used only) sales, service, repairs, parts and leasing"}, {"code": "5531", "desc": "Auto and home supply outlets"}, {"code": "5532", "desc": "Automotive tyre outlets"}, {"code": "5533", "desc": "Automotive parts and accessories outlets"}, {"code": "5541", "desc": "Service stations (with or without ancillary services)"}, {"code": "5542", "desc": "Automated fuel dispensers"}, {"code": "5551", "desc": "Boat dealers"}, {"code": "5561", "desc": "Camper, recreational and utility trailer dealers"}, {"code": "5571", "desc": "Motorcycle shops and dealers"}, {"code": "5592", "desc": "Motor home dealers"}, {"code": "5598", "desc": "Snowmobile dealers"}, {"code": "5599", "desc": "Miscellaneous automotive, aircraft and farm equipment dealersnot elsewhere classified"}, {"code": "5611", "desc": "Mens and boys clothing and accessory shops"}, {"code": "5621", "desc": "Womens ready-to-wear shops"}, {"code": "5631", "desc": "Womens accessory and speciality shops"}, {"code": "5641", "desc": "Childrens and infants wear shops"}, {"code": "5651", "desc": "Family clothing shops"}, {"code": "5655", "desc": "Sports and riding apparel shops"}, {"code": "5661", "desc": "Shoe shops"}, {"code": "5681", "desc": "Furriers and fur shops"}, {"code": "5691", "desc": "Mens and womens clothing shops"}, {"code": "5697", "desc": "Tailors, seamstresses, mending and alterations"}, {"code": "5698", "desc": "Wig and toupee shops"}, {"code": "5699", "desc": "Miscellaneous apparel and accessory shops"}, {"code": "5712", "desc": "Furniture, home furnishings and equipment shops and manufacturers, except appliances"}, {"code": "5713", "desc": "Floor covering services"}, {"code": "5714", "desc": "Drapery, window covering and upholstery shops"}, {"code": "5715", "desc": "Alcoholic beverage wholesalers"}, {"code": "5718", "desc": "Fireplaces, fireplace screens and accessories shops"}, {"code": "5719", "desc": "Miscellaneous home furnishing speciality shops"}, {"code": "5722", "desc": "Household appliance shops"}, {"code": "5732", "desc": "Electronics shops"}, {"code": "5733", "desc": "Music shops musical instruments, pianos and sheet music"}, {"code": "5734", "desc": "Computer software outlets"}, {"code": "5735", "desc": "Record shops"}, {"code": "5811", "desc": "Caterers"}, {"code": "5812", "desc": "Eating places and restaurants"}, {"code": "5813", "desc": "Drinking places (alcoholic beverages) bars, taverns, night-clubs, cocktail lounges and discothques"}, {"code": "5814", "desc": "Fast food restaurants"}, {"code": "5815", "desc": "Digital Goods: Media, Books, Movies, Music"}, {"code": "5816", "desc": "Digital Goods: Games"}, {"code": "5817", "desc": "Digital Goods: Applications (Excludes Games)"}, {"code": "5818", "desc": "Digital Goods: Large Digital Goods Merchant"}, {"code": "5832", "desc": "Antique Shops \u00e2\u20ac\u201c Sales, Repairs, and Restoration Services"}, {"code": "5912", "desc": "Drug stores and pharmacies"}, {"code": "5921", "desc": "Package shops beer, wine and liquor"}, {"code": "5931", "desc": "Used merchandise and second-hand shops"}, {"code": "5932", "desc": "Antique shops \u00e2\u20ac\u201d sales, repairs and restoration services"}, {"code": "5933", "desc": "Pawn shops"}, {"code": "5935", "desc": "Wrecking and salvage yards"}, {"code": "5937", "desc": "Antique reproduction shops"}, {"code": "5940", "desc": "Bicycle shops sales and service"}, {"code": "5941", "desc": "Sporting goods shops"}, {"code": "5942", "desc": "Bookshops"}, {"code": "5943", "desc": "Stationery, office and school supply shops"}, {"code": "5944", "desc": "Jewellery, watch, clock and silverware shops"}, {"code": "5945", "desc": "Hobby, toy and game shops"}, {"code": "5946", "desc": "Camera and photographic supply shops"}, {"code": "5947", "desc": "Gift, card, novelty and souvenir shops"}, {"code": "5948", "desc": "Luggage and leather goods shops"}, {"code": "5949", "desc": "Sewing, needlework, fabric and piece goods shops"}, {"code": "5950", "desc": "Glassware and crystal shops"}, {"code": "5960", "desc": "Direct marketing insurance services"}, {"code": "5961", "desc": "Mail Order Houses Including Catalog Order Stores, Book/Record Clubs (No longer permitted for U.S. original presentments)"}, {"code": "5962", "desc": "Telemarketing travel-related arrangement services"}, {"code": "5963", "desc": "Door-to-door sales"}, {"code": "5964", "desc": "Direct marketing catalogue merchants"}, {"code": "5965", "desc": "Direct marketing combination catalogue and retail merchants"}, {"code": "5966", "desc": "Direct marketing outbound telemarketing merchants"}, {"code": "5967", "desc": "Direct marketing inbound telemarketing merchants"}, {"code": "5968", "desc": "Direct marketing continuity/subscription merchants"}, {"code": "5969", "desc": "Direct marketing/direct marketers not elsewhere classified"}, {"code": "5970", "desc": "Artist supply and craft shops"}, {"code": "5971", "desc": "Art dealers and galleries"}, {"code": "5972", "desc": "Stamp and coin shops"}, {"code": "5973", "desc": "Religious goods and shops"}, {"code": "5975", "desc": "Hearing aids sales, service and supplies"}, {"code": "5976", "desc": "Orthopaedic goods and prosthetic devices"}, {"code": "5977", "desc": "Cosmetic Stores"}, {"code": "5978", "desc": "Typewriter outlets sales, service and rentals"}, {"code": "5983", "desc": "Fuel dealers fuel oil, wood, coal and liquefied petroleum"}, {"code": "5992", "desc": "Florists"}, {"code": "5993", "desc": "Cigar shops and stands"}, {"code": "5994", "desc": "Newsagents and news-stands"}, {"code": "5995", "desc": "Pet shops, pet food and supplies"}, {"code": "5996", "desc": "Swimming pools sales, supplies and services"}, {"code": "5997", "desc": "Electric razor outlets sales and service"}, {"code": "5998", "desc": "Tent and awning shops"}, {"code": "5999", "desc": "Miscellaneous and speciality retail outlets"}, {"code": "6010", "desc": "Financial institutions manual cash disbursements"}, {"code": "6011", "desc": "Financial institutions automated cash disbursements"}, {"code": "6012", "desc": "Financial institutions merchandise and services"}, {"code": "6051", "desc": "Non-financial institutions foreign currency, money orders (not wire transfer), scrip and travellers checks"}, {"code": "6211", "desc": "Securities brokers and dealers"}, {"code": "6300", "desc": "Insurance sales, underwriting and premiums"}, {"code": "6381", "desc": "Insurance Premiums, (no longer valid for first presentment work)"}, {"code": "6399", "desc": "Insurance, Not Elsewhere Classified ( no longer valid forfirst presentment work)"}, {"code": "6513", "desc": "Real Estate Agents and Managers - Rentals"}, {"code": "6529", "desc": "LIC"}, {"code": "6540", "desc": "Debit card to wallet credit (Wallet top up)"}, {"code": "6666", "desc": "International merchant services"}, {"code": "7011", "desc": "Lodging hotels, motels and resorts"}, {"code": "7012", "desc": "Timeshares"}, {"code": "7013", "desc": "Small PPI wallet loading"}, {"code": "7032", "desc": "Sporting and recreational camps"}, {"code": "7033", "desc": "Trailer parks and camp-sites"}, {"code": "7210", "desc": "Laundry, cleaning and garment services"}, {"code": "7211", "desc": "Laundry services family and commercial"}, {"code": "7216", "desc": "Dry cleaners"}, {"code": "7217", "desc": "Carpet and upholstery cleaning"}, {"code": "7221", "desc": "Photographic studios"}, {"code": "7230", "desc": "Beauty and barber shops"}, {"code": "7251", "desc": "Shoe repair shops, shoe shine parlours and hat cleaning shops"}, {"code": "7261", "desc": "Funeral services and crematoriums"}, {"code": "7273", "desc": "Dating and escort services"}, {"code": "7276", "desc": "Tax preparation services"}, {"code": "7277", "desc": "Counselling services debt, marriage and personal"}, {"code": "7278", "desc": "Buying and shopping services and clubs"}, {"code": "7296", "desc": "Clothing rentals costumes, uniforms and formal wear"}, {"code": "7297", "desc": "Massage parlours"}, {"code": "7298", "desc": "Health and beauty spas"}, {"code": "7299", "desc": "Miscellaneous personal services not elsewhere classified"}, {"code": "7311", "desc": "Advertising services"}, {"code": "7321", "desc": "Consumer credit reporting agencies"}, {"code": "7322", "desc": "Debt collection agencies"}, {"code": "7332", "desc": "Blueprinting and Photocopying Services"}, {"code": "7333", "desc": "Commercial photography, art and graphics"}, {"code": "7338", "desc": "Quick copy, reproduction and blueprinting services"}, {"code": "7339", "desc": "Stenographic and secretarial support services"}, {"code": "7342", "desc": "Exterminating and disinfecting services"}, {"code": "7349", "desc": "Cleaning, maintenance and janitorial services"}, {"code": "7361", "desc": "Employment agencies and temporary help services"}, {"code": "7372", "desc": "Computer programming, data processing and integrated systems design services"}, {"code": "7375", "desc": "Information retrieval services"}, {"code": "7379", "desc": "Computer maintenance and repair services not elsewhere classified"}, {"code": "7392", "desc": "Management, consulting and public relations services"}, {"code": "7393", "desc": "Detective agencies, protective agencies and security services, including armoured cars and guard dogs"}, {"code": "7394", "desc": "Equipment, tool, furniture and appliance rentals and leasing"}, {"code": "7395", "desc": "Photofinishing laboratories and photo developing"}, {"code": "7399", "desc": "Business services not elsewhere classified"}, {"code": "7407", "desc": "P2PM CHANGES"}, {"code": "7408", "desc": "Entity facilitating P2P Lending"}, {"code": "7409", "desc": "Digital Account Opening"}, {"code": "7511", "desc": "Truck Stop"}, {"code": "7512", "desc": "Automobile rentals"}, {"code": "7513", "desc": "Truck and utility trailer rentals"}, {"code": "7519", "desc": "Motor home and recreational vehicle rentals"}, {"code": "7523", "desc": "Parking lots and garages"}, {"code": "7531", "desc": "Automotive body repair shops"}, {"code": "7534", "desc": "Tyre retreading and repair shops"}, {"code": "7535", "desc": "Automotive paint shops"}, {"code": "7538", "desc": "Automotive service shops (non-dealer)"}, {"code": "7542", "desc": "Car washes"}, {"code": "7549", "desc": "Towing services"}, {"code": "7622", "desc": "Electronics repair shops"}, {"code": "7623", "desc": "Air conditioning and refrigeration repair shops"}, {"code": "7629", "desc": "Electrical and small appliance repair shops"}, {"code": "7631", "desc": "Watch, clock and jewellery repair shops"}, {"code": "7641", "desc": "Furniture reupholstery, repair and refinishing"}, {"code": "7692", "desc": "Welding services"}, {"code": "7699", "desc": "Miscellaneous repair shops and related services"}, {"code": "7800", "desc": "Government-Owned Lotteries"}, {"code": "7801", "desc": "Government-Licensed On-Line Casinos (On-Line Gambling)"}, {"code": "7802", "desc": "Government-Licensed Horse/Dog Racing"}, {"code": "7829", "desc": "Motion picture and video tape production and distribution"}, {"code": "7832", "desc": "Motion picture theatres"}, {"code": "7841", "desc": "Video tape rentals"}, {"code": "7911", "desc": "Dance halls, studios and schools"}, {"code": "7922", "desc": "Theatrical producers (except motion pictures) and ticket agencies"}, {"code": "7929", "desc": "Bands, orchestras and miscellaneous entertainers not elsewhere classified"}, {"code": "7932", "desc": "Billiard and pool establishments"}, {"code": "7933", "desc": "Bowling alleys"}, {"code": "7941", "desc": "Commercial sports, professional sports clubs, athletic fields and sports promoters"}, {"code": "7991", "desc": "Tourist attractions and exhibits"}, {"code": "7992", "desc": "Public golf courses"}, {"code": "7993", "desc": "Video amusement game supplies"}, {"code": "7994", "desc": "Video game arcades and establishments"}, {"code": "7995", "desc": "Betting, including lottery tickets, casino gaming chips, off-track betting and wagers at race tracks"}, {"code": "7996", "desc": "Amusement parks, circuses, carnivals and fortune tellers"}, {"code": "7997", "desc": "Membership clubs (sports, recreation, athletic), country clubs and private golf courses"}, {"code": "7998", "desc": "Aquariums, seaquariums and dolphinariums"}, {"code": "7999", "desc": "Recreation services not elsewhere classified"}, {"code": "8011", "desc": "Doctors and physicians not elsewhere classified"}, {"code": "8021", "desc": "Dentists and orthodontists"}, {"code": "8031", "desc": "Osteopaths"}, {"code": "8041", "desc": "Chiropractors"}, {"code": "8042", "desc": "Optometrists and ophthalmologists"}, {"code": "8043", "desc": "Opticians, optical goods and eyeglasses"}, {"code": "8044", "desc": "Opticians, Optical Goods, and Eyeglasses (no longer validfor first presentments)"}, {"code": "8049", "desc": "Podiatrists and chiropodists"}, {"code": "8050", "desc": "Nursing and personal care facilities"}, {"code": "8062", "desc": "Hospitals"}, {"code": "8071", "desc": "Medical and dental laboratories"}, {"code": "8099", "desc": "Medical services and health practitioners not elsewhere classified"}, {"code": "8111", "desc": "Legal services and attorneys"}, {"code": "8211", "desc": "Elementary and secondary schools"}, {"code": "8220", "desc": "Colleges, universities, professional schools and junior colleges"}, {"code": "8241", "desc": "Correspondence schools"}, {"code": "8244", "desc": "Business and secretarial schools"}, {"code": "8249", "desc": "Trade and vocational schools"}, {"code": "8299", "desc": "Schools and educational services not elsewhere classified"}, {"code": "8351", "desc": "Child care services"}, {"code": "8398", "desc": "Charitable and social service organizations"}, {"code": "8493", "desc": "Vaccine voucher"}, {"code": "8641", "desc": "Civic, social and fraternal associations"}, {"code": "8651", "desc": "Political organizations"}, {"code": "8661", "desc": "Religious organizations"}, {"code": "8675", "desc": "Automobile associations"}, {"code": "8699", "desc": "Membership organization not elsewhere classified"}, {"code": "8734", "desc": "Testing laboratories (non-medical)"}, {"code": "8911", "desc": "Architectural, engineering and surveying services"}, {"code": "8931", "desc": "Accounting, auditing and bookkeeping services"}, {"code": "8999", "desc": "Professional services not elsewhere classified"}, {"code": "9211", "desc": "Court costs, including alimony and child support"}, {"code": "9222", "desc": "Fines"}, {"code": "9223", "desc": "Bail and bond payments"}, {"code": "9311", "desc": "Tax payments"}, {"code": "9399", "desc": "Government services not elsewhere classified"}, {"code": "9400", "desc": "PMNRF"}, {"code": "9402", "desc": "Postal services government only"}, {"code": "9405", "desc": "Intra \u00e2\u20ac\u201c Government Transactions"}, {"code": "6013", "desc": "ATM"}];
-
-// Embedded Lottie Animation
-const LOTTIE_DATA = {"v": "5.9.0", "fr": 60, "ip": 0, "op": 210, "w": 512, "h": 512, "nm": "IOB Logo \u2014 Sacred Geometry Bloom", "ddd": 0, "assets": [], "layers": [{"ddd": 0, "ind": 1, "ty": 4, "nm": "Ripple Aura", "sr": 1, "ks": {"o": {"a": 0, "k": 100}, "r": {"a": 0, "k": 0}, "p": {"a": 0, "k": [256, 256, 0]}, "a": {"a": 0, "k": [0, 0, 0]}, "s": {"a": 0, "k": [100, 100, 100]}}, "ip": 0, "op": 210, "shapes": [{"ty": "el", "nm": "Aura Circle", "hd": false, "d": 1, "s": {"a": 1, "k": [{"t": 90, "s": [0, 0], "o": {"x": [0.1], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 210, "s": [680, 680]}]}, "p": {"a": 0, "k": [0, 0]}}, {"ty": "st", "nm": "Aura Stroke", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 1, "k": [{"t": 90, "s": [50], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 162, "s": [15], "o": {"x": [0.4], "y": [0.0]}, "i": {"x": [0.6], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "w": {"a": 0, "k": 1.5}, "lc": 2, "lj": 2}]}, {"ddd": 0, "ind": 2, "ty": 4, "nm": "Top Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 0, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 14, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 0, "s": [10], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [0.8], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 55, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 0, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 32, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 40, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 55, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 7.822], [137.6, 126.578], [152.533, 141.156], [256.0, 37.689], [359.822, 141.511], [374.4, 126.578]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 52.267], [248.533, 59.733], [159.644, 148.622], [174.578, 163.2], [256.0, 81.778], [337.422, 163.2], [352.356, 148.267]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[256.0, 96.711], [248.533, 104.178], [182.044, 170.667], [196.978, 185.6], [256.0, 126.222], [315.378, 185.6], [330.311, 170.667]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 3, "ty": 4, "nm": "Left Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 8, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 22, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 8, "s": [-14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [-1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 63, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 8, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 40, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 48, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 63, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 133.689], [122.667, 141.156], [11.733, 252.444], [26.311, 267.022], [130.133, 163.556], [233.956, 267.022], [248.533, 252.444]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 178.133], [122.667, 185.6], [33.778, 274.489], [48.711, 289.422], [130.133, 208.0], [211.556, 289.422], [226.489, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[130.133, 222.578], [122.667, 230.044], [56.178, 296.533], [70.756, 311.467], [130.133, 252.089], [189.156, 311.467], [204.089, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 259.556], [4.267, 289.067], [130.133, 415.289], [250.667, 294.756], [250.667, 264.889], [241.067, 274.489], [130.133, 385.422], [93.156, 348.444], [19.2, 274.489]], "i": [[0.0, 0.0], [0.0, -9.6], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 9.956], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 304.0], [4.267, 333.511], [130.133, 459.378], [250.667, 338.844], [250.667, 309.333], [130.133, 429.867]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[4.267, 348.444], [4.267, 377.956], [130.133, 503.822], [250.667, 383.289], [250.667, 353.778], [130.133, 474.311]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}, {"ddd": 0, "ind": 4, "ty": 4, "nm": "Right Petal", "sr": 1, "ks": {"o": {"a": 1, "k": [{"t": 16, "s": [0], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 30, "s": [100]}]}, "r": {"a": 1, "k": [{"t": 16, "s": [14], "o": {"x": [0.25], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [1.12], "o": {"x": [0.35], "y": [0.0]}, "i": {"x": [0.65], "y": [1.0]}}, {"t": 71, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [0], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 150, "s": [0.4], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [0]}]}, "p": {"a": 0, "k": [256.0, 256.0, 0]}, "a": {"a": 0, "k": [256.0, 256.0, 0]}, "s": {"a": 1, "k": [{"t": 16, "s": [0, 0], "o": {"x": [0.22], "y": [0.0]}, "i": {"x": [0.0], "y": [1.0]}}, {"t": 38, "s": [118, 118], "o": {"x": [0.28], "y": [1.55]}, "i": {"x": [0.72], "y": [0.8]}}, {"t": 48, "s": [95, 95], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 56, "s": [103, 103], "o": {"x": [0.3], "y": [0.0]}, "i": {"x": [0.7], "y": [1.0]}}, {"t": 64, "s": [99, 99], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 71, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 90, "s": [100, 100], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 130, "s": [101.8, 101.8], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 170, "s": [100.3, 100.3], "o": {"x": [0.45], "y": [0.0]}, "i": {"x": [0.55], "y": [1.0]}}, {"t": 210, "s": [100, 100]}]}}, "ip": 0, "op": 210, "shapes": [{"ty": "sh", "nm": "Path 1", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 133.689], [374.4, 141.156], [263.467, 252.444], [278.4, 267.022], [381.867, 163.556], [485.689, 267.022], [500.622, 252.089]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 2", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 178.133], [285.511, 274.489], [300.444, 289.422], [381.867, 208.0], [463.289, 289.422], [478.222, 274.489]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 3", "hd": false, "ks": {"a": 0, "k": {"v": [[381.867, 222.578], [374.4, 230.044], [307.911, 296.533], [322.844, 311.467], [381.867, 252.089], [441.244, 311.467], [455.822, 296.533]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 4", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 259.556], [426.311, 340.978], [381.867, 385.422], [337.422, 340.978], [270.933, 274.489], [261.333, 264.889], [261.333, 294.4], [381.867, 414.933], [507.733, 289.067]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 5", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 304.0], [381.867, 429.867], [261.333, 309.333], [261.333, 338.844], [381.867, 459.378], [507.733, 333.511]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "sh", "nm": "Path 6", "hd": false, "ks": {"a": 0, "k": {"v": [[507.733, 348.444], [381.867, 474.311], [261.333, 353.778], [261.333, 383.289], [381.867, 503.822], [507.733, 377.956]], "i": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "o": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], "c": true}}}, {"ty": "fl", "nm": "Fill", "c": {"a": 0, "k": [0.1450980392156863, 0.2901960784313726, 0.6274509803921569, 1.0]}, "o": {"a": 0, "k": 100}, "r": 1}]}], "markers": [{"tm": 90, "cm": "idle_loop_start", "dr": 120}], "meta": {"g": "Antigravity IOB Lottie Generator v1", "a": "Indian Overseas Bank", "d": "Sacred Geometry Bloom \u2014 one-shot intro (0-90f) + idle loop (90-210f)", "loop_from": 90, "loop_to": 210, "fps": 60, "player_note": "Play once (frames 0-210). On complete, playSegments([90,210], true) with loop=true for the infinite idle breathing + ripple."}};
-
 // Embedded Branches Data (58 valid branches from branches.csv)
 const BRANCHES = {"0174": {"name": "Theni Allinagaram", "district": "Theni", "pincode": "625531"}, "0175": {"name": "Ayakudi", "district": "Dindigul", "pincode": "624613"}, "0176": {"name": "Cumbum", "district": "Theni", "pincode": "625516"}, "0230": {"name": "Vedasandur", "district": "Dindigul", "pincode": "624710"}, "0232": {"name": "Pannaikadu", "district": "Dindigul", "pincode": "624210"}, "0237": {"name": "Sithayamkottai", "district": "Dindigul", "pincode": "624708"}, "0243": {"name": "Pattiveeranpatti", "district": "Dindigul", "pincode": "624211"}, "0332": {"name": "Dindigul Main", "district": "Dindigul", "pincode": "624001"}, "0376": {"name": "Palani", "district": "Dindigul", "pincode": "624601"}, "0883": {"name": "Rasingapuram", "district": "Theni", "pincode": "625528"}, "0910": {"name": "Sembatti", "district": "Dindigul", "pincode": "624707"}, "0924": {"name": "Puduchatram", "district": "Dindigul", "pincode": "624619"}, "1001": {"name": "Urban Test Branch", "district": "Dindigul", "pincode": ""}, "1013": {"name": "Reddiapatti", "district": "Dindigul", "pincode": "624401"}, "1044": {"name": "Lakshmipuram", "district": "Theni", "pincode": "625523"}, "1112": {"name": "Nagayakottai", "district": "Dindigul", "pincode": "624706"}, "1152": {"name": "Narikkalpatti", "district": "Dindigul", "pincode": "624618"}, "1220": {"name": "Salaiyur", "district": "Dindigul", "pincode": "624710"}, "1221": {"name": "Marambadi", "district": "Dindigul", "pincode": "624709"}, "1258": {"name": "Oddanchatram", "district": "Dindigul", "pincode": "624619"}, "1314": {"name": "Dindigul Fort", "district": "Dindigul", "pincode": "624001"}, "1316": {"name": "Palayam", "district": "Dindigul", "pincode": "624620"}, "1317": {"name": "N Paraipatti", "district": "Dindigul", "pincode": "624005"}, "1401": {"name": "Silukkuwarpatti", "district": "Dindigul", "pincode": "624215"}, "1560": {"name": "Chinnamanur", "district": "Theni", "pincode": "625515"}, "1789": {"name": "Tamaraikulam", "district": "Theni", "pincode": "625601"}, "1830": {"name": "Dindigul Collectorate", "district": "Dindigul", "pincode": "624004"}, "1896": {"name": "Theni Medical College", "district": "Theni", "pincode": "625513"}, "1919": {"name": "Uthamapalayam", "district": "Theni", "pincode": "625533"}, "1931": {"name": "Periyakulam", "district": "Theni", "pincode": "625601"}, "2098": {"name": "RM Colony", "district": "Dindigul", "pincode": "624001"}, "2286": {"name": "Batlagundu", "district": "Dindigul", "pincode": "624202"}, "2287": {"name": "Andipatti", "district": "Theni", "pincode": "625512"}, "2288": {"name": "Natham", "district": "Dindigul", "pincode": "624401"}, "2461": {"name": "Vadamadurai", "district": "Dindigul", "pincode": "624802"}, "2464": {"name": "Nilakottai", "district": "Dindigul", "pincode": "624208"}, "2574": {"name": "Bodinayakanur", "district": "Theni", "pincode": "625513"}, "2685": {"name": "Silapadi", "district": "Dindigul", "pincode": "624005"}, "2686": {"name": "Chinnalapatti", "district": "Dindigul", "pincode": "624301"}, "2702": {"name": "KK Patti", "district": "Theni", "pincode": "625521"}, "2703": {"name": "PC Patti", "district": "Theni", "pincode": "625531"}, "2704": {"name": "T Subbulapuram", "district": "Theni", "pincode": "625536"}, "2705": {"name": "V Gopalpatti", "district": "Dindigul", "pincode": "624308"}, "2706": {"name": "K Reddiarchatram", "district": "Dindigul", "pincode": "624622"}, "3164": {"name": "Sendurai", "district": "Dindigul", "pincode": "624403"}, "3165": {"name": "Ponnagaram", "district": "Dindigul", "pincode": "624003"}, "3166": {"name": "Thadikombu", "district": "Dindigul", "pincode": "624709"}, "3346": {"name": "Vangamanuthu", "district": "Dindigul", "pincode": "624306"}, "3347": {"name": "Anaipatti", "district": "Dindigul", "pincode": "624219"}, "3436": {"name": "Kodaikanal", "district": "Dindigul", "pincode": "624101"}, "3437": {"name": "Dharumathupatti", "district": "Dindigul", "pincode": "624705"}, "3548": {"name": "Boothipuram", "district": "Theni", "pincode": "625531"}, "3549": {"name": "Ambilikai", "district": "Dindigul", "pincode": "624612"}, "3920": {"name": "Balakrishnapuram", "district": "Dindigul", "pincode": "624005"}, "3933": {"name": "Regional Office, Dindigul", "district": "Dindigul", "pincode": "624001"}, "4069": {"name": "Loan Processing Centre, Dindigul", "district": "Dindigul", "pincode": "624001"}, "4153": {"name": "Kosavapatti", "district": "Dindigul", "pincode": ""}, "0911": {"name": "Kalwarpatti", "district": "Dindigul", "pincode": "624711"}};
 
@@ -1754,22 +1388,6 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }
   renderStatusTable();
-
-  let p = 0;
-  const bar = document.getElementById('splash-bar');
-  const timer = setInterval(() => {
-    p = Math.min(p + 25, 95);
-    if (bar) bar.style.width = p + '%';
-  }, 100);
-
-  setTimeout(() => {
-    clearInterval(timer);
-    if (bar) bar.style.width = '100%';
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if (splash) splash.classList.add('hide');
-    }, 400);
-  }, 900);
 
   setupMCC('qr');
   setupMCC('sb');
@@ -1956,774 +1574,20 @@ function switchNavTab(tab) {
 
   const pageApply = document.getElementById('page-apply');
   const pageStatus = document.getElementById('page-status');
-  const pageBiz = document.getElementById('page-biz');
 
   if (tab === 'apply') {
     if (pageApply) pageApply.classList.remove('hidden');
     if (pageStatus) pageStatus.classList.add('hidden');
-    if (pageBiz) pageBiz.classList.add('hidden');
   } else if (tab === 'status') {
     if (pageApply) pageApply.classList.add('hidden');
     if (pageStatus) pageStatus.classList.remove('hidden');
-    if (pageBiz) pageBiz.classList.add('hidden');
     renderStatusTable();
     loadStatusData();
-  } else if (tab === 'biz') {
-    if (pageApply) pageApply.classList.add('hidden');
-    if (pageStatus) pageStatus.classList.add('hidden');
-    if (pageBiz) pageBiz.classList.remove('hidden');
-    initBizReportingTab();
-  }
-}
-
-// ─────────────────────────────────────────────
-// DAILY BUSINESS & WHATSAPP REPORTING MODULE
-// ─────────────────────────────────────────────
-let currentBizCadre = '1st';
-let currentBizSol = '0174';
-let currentBizStaff = null;
-
-function setBizCadre(btn, cadre) {
-  currentBizCadre = cadre;
-  document.querySelectorAll('.cadre-btn').forEach(b => b.classList.remove('active'));
-  if (btn && btn.classList) btn.classList.add('active');
-
-  const clusterBox = document.getElementById('guardian-cluster-container');
-  const singleBox = document.getElementById('single-branch-biz-fields');
-
-  if (cadre === 'guardian') {
-    if (clusterBox) clusterBox.classList.remove('hidden');
-    if (singleBox) singleBox.classList.add('hidden');
-    renderGuardianCluster();
-  } else {
-    if (clusterBox) clusterBox.classList.add('hidden');
-    if (singleBox) singleBox.classList.remove('hidden');
-  }
-  updateWAReportPreview();
-}
-
-function initBizReportingTab() {
-  renderDynamicCampaigns();
-  const rollInput = document.getElementById('biz-roll-input');
-  if (currentActiveStaff && currentActiveStaff.roll) {
-    if (rollInput) rollInput.value = currentActiveStaff.roll;
-    verifyAndLoadStaffReport(currentActiveStaff.roll);
-  } else if (rollInput && rollInput.value) {
-    verifyAndLoadStaffReport(rollInput.value);
-  } else {
-    if (rollInput) rollInput.value = '48243';
-    verifyAndLoadStaffReport('48243');
-  }
-}
-
-const DEFAULT_CAMPAIGNS = [
-  { id: "camp_casa_winback", name: "CASA Winback Drive 2026", type: "count", unit: "Accounts", active: true },
-  { id: "camp_npa_red", name: "NPA Reduction & Recovery Drive", type: "reduction", unit: "₹ Reduction", active: true },
-  { id: "camp_jewel_utsav", name: "Monsoon Jewel Loan Sourcing Campaign", type: "amount", unit: "₹ Amount", active: true }
-];
-
-function getActiveCampaigns() {
-  const saved = JSON.parse(localStorage.getItem('iob_active_campaigns') || 'null');
-  if (saved && Array.isArray(saved) && saved.length > 0) {
-    return saved.filter(c => c.active !== false);
-  }
-  return DEFAULT_CAMPAIGNS.filter(c => c.active !== false);
-}
-
-function renderDynamicCampaigns() {
-  const container = document.getElementById('dynamic-campaigns-container');
-  if (!container) return;
-
-  const campaigns = getActiveCampaigns();
-  if (campaigns.length === 0) {
-    container.innerHTML = `<div style="grid-column:1/-1;font-size:0.82rem;color:var(--muted);font-style:italic">No active campaigns configured by Admin currently.</div>`;
-    return;
-  }
-
-  container.innerHTML = campaigns.map(c => {
-    let unitLabel = c.unit || (c.type === 'amount' || c.type === 'reduction' ? '₹ Amount' : 'Count');
-    return `
-      <div class="field">
-        <label>📢 ${c.name} (${unitLabel})</label>
-        <input type="text" class="dynamic-camp-input" data-id="${c.id}" data-name="${c.name}" data-unit="${unitLabel}" placeholder="e.g. 5 ${unitLabel}" oninput="updateWAReportPreview()">
-      </div>
-    `;
-  }).join('');
-}
-
-function getFullStaffList() {
-  const saved = JSON.parse(localStorage.getItem('iob_staff_directory') || 'null');
-  if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
-    return { ...STAFF_LIST, ...saved };
-  }
-  return STAFF_LIST;
-}
-
-
-function getAllottedParams(cadre) {
-  const mapping = JSON.parse(localStorage.getItem('iob_role_param_matrix') || 'null');
-  if (mapping && mapping[cadre] && Array.isArray(mapping[cadre]) && mapping[cadre].length > 0) {
-    return mapping[cadre];
-  }
-  if (cadre === '2nd') {
-    return ["inop_act", "inact_act", "deaf_act", "rekyc_dqi", "retail_loans", "sme_loans", "agri_loans", "jewel_loans"];
-  }
-  if (cadre === 'po' || cadre === 'lbo') {
-    return ["sb_opened", "cd_opened", "td_opened", "stepup_rd", "credit_cards", "iob_connect", "net_banking", "whatsapp_banking", "jewel_loans"];
-  }
-  if (cadre === 'guardian') {
-    return ["sb_growth", "cd_growth", "td_growth", "sb_opened", "cd_opened", "td_opened", "credit_cards", "iob_connect", "retail_loans", "sme_loans", "agri_loans"];
-  }
-  return [
-    "sb_growth", "cd_growth", "td_growth", "sb_opened", "cd_opened", "td_opened", "stepup_rd",
-    "sb_premium", "sb_ultra_hni", "sb_diamond_plat", "credit_cards", "iob_connect", "net_banking",
-    "whatsapp_banking", "retail_loans", "sme_loans", "agri_loans", "jewel_loans", "inop_act",
-    "inact_act", "deaf_act", "lockers", "nps", "apy", "ssy", "pmsby", "pmjjby", "rekyc_dqi"
-  ];
-}
-
-function verifyAndLoadStaffReport(val) {
-  const roll = String(val).trim();
-  const badge = document.getElementById('verified-officer-badge');
-  const yestCard = document.getElementById('prefilled-yest-card');
-  const staffDict = getFullStaffList();
-  
-  if (!roll || !staffDict[roll]) {
-    if (badge) badge.classList.add('hidden');
-    if (yestCard) yestCard.classList.add('hidden');
-    currentBizStaff = null;
-    updateWAReportPreview();
-    return;
-  }
-
-  const staff = staffDict[roll];
-  currentBizStaff = { roll, ...staff };
-  currentBizSol = staff.sol || '0174';
-
-  const b = BRANCHES[currentBizSol] || { name: 'Branch ' + currentBizSol };
-
-  // Auto-detect Cadre/Role based on designation and SOL
-  let cadre = '1st';
-  const desig = (staff.designation || '').toUpperCase();
-  
-  if (staff.sol === '3933' || desig.includes('GUARDIAN') || desig.includes('MARKETING') || desig.includes('REGIONAL')) {
-    cadre = 'guardian';
-  } else if (desig.includes('II LINE') || desig.includes('2ND LINE')) {
-    cadre = '2nd';
-  } else if (desig.includes('PROB') || desig.includes('LOCAL BANK OFFICER') || desig.includes('LBO')) {
-    cadre = 'po';
-  } else {
-    cadre = '1st';
-  }
-
-  currentBizCadre = cadre;
-
-  // Update Badge UI
-  const nameEl = document.getElementById('officer-name-display');
-  const desigEl = document.getElementById('officer-desig-display');
-  const solEl = document.getElementById('officer-sol-display');
-  const cadreTag = document.getElementById('cadre-badge-tag');
-
-  if (nameEl) nameEl.textContent = `👤 ${staff.name} (Roll: ${roll})`;
-  if (desigEl) desigEl.textContent = `Designation: ${staff.designation}`;
-  if (solEl) solEl.textContent = `Branch: SOL ${currentBizSol} — ${b.name}`;
-
-  if (cadreTag) {
-    if (cadre === 'guardian') cadreTag.textContent = '🛡️ RO Guardian Officer';
-    else if (cadre === '2nd') cadreTag.textContent = '🛡️ 2nd Line Officer';
-    else if (cadre === 'po') cadreTag.textContent = '🌱 PO / LBO Sourcing';
-    else cadreTag.textContent = '👑 1st Line (Branch Head)';
-  }
-
-  if (badge) badge.classList.remove('hidden');
-
-  // Highlight active cadre button
-  document.querySelectorAll('.cadre-btn').forEach(btn => btn.classList.remove('active'));
-  const activeBtn = document.getElementById('cadre-btn-' + cadre);
-  if (activeBtn) activeBtn.classList.add('active');
-
-  // Prefill Yesterday figures
-  if (yestCard) yestCard.classList.remove('hidden');
-
-  // Render Branch Staff Attendance & BC/JA Grid (Branch Head)
-  if (cadre === '1st' || cadre === '2nd') {
-    renderBranchStaffAttendance(currentBizSol);
-  } else {
-    const attCard = document.getElementById('staff-attendance-card');
-    if (attCard) attCard.classList.add('hidden');
-  }
-
-  // Toggle Cluster vs Single Branch
-  const clusterBox = document.getElementById('guardian-cluster-container');
-  const singleBox = document.getElementById('single-branch-biz-fields');
-
-  if (cadre === 'guardian') {
-    if (clusterBox) clusterBox.classList.remove('hidden');
-    if (singleBox) singleBox.classList.add('hidden');
-    renderGuardianCluster();
-  } else {
-    if (clusterBox) clusterBox.classList.add('hidden');
-    if (singleBox) singleBox.classList.remove('hidden');
-  }
-
-  updateWAReportPreview();
-}
-
-function renderBranchStaffAttendance(solId) {
-  const container = document.getElementById('staff-attendance-list-container');
-  const card = document.getElementById('staff-attendance-card');
-  if (!container) return;
-
-  const solClean = String(solId).padStart(4, '0');
-  let branchStaff = [];
-
-  Object.keys(STAFF_LIST).forEach(roll => {
-    const s = STAFF_LIST[roll];
-    if (String(s.sol).padStart(4, '0') === solClean) {
-      branchStaff.push({ roll, name: s.name, desig: s.designation });
-    }
-  });
-
-  // Always append Jewel Appraiser and Business Correspondent (BC Mitra)
-  branchStaff.push({ roll: 'JA_' + solClean, name: 'S. RAMESH (Jewel Appraiser)', desig: 'JEWEL APPRAISER' });
-  branchStaff.push({ roll: 'BC_' + solClean, name: 'M. SELVAM (BC Mitra)', desig: 'BUSINESS CORRESPONDENT' });
-
-  container.innerHTML = branchStaff.map(s => {
-    return `
-      <div style="background:#fff;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <div>
-          <div style="font-size:0.82rem;font-weight:700;color:var(--iob-blue-dark)">${s.name}</div>
-          <div style="font-size:0.7rem;color:var(--muted)">${s.desig}</div>
-        </div>
-        <select class="staff-att-select" data-roll="${s.roll}" data-name="${s.name}" data-desig="${s.desig}" onchange="updateWAReportPreview()" style="font-size:0.76rem;padding:4px 6px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">
-          <option value="✅ Present" selected>✅ Present</option>
-          <option value="🌾 On-Field Sourcing">🌾 On-Field</option>
-          <option value="🌴 On Leave / OD">🌴 On Leave</option>
-          <option value="🏦 Training / Depot">🏦 Training</option>
-        </select>
-      </div>
-    `;
-  }).join('');
-
-  if (card) card.classList.remove('hidden');
-}
-
-function getBranchSubmittedSBCount(solId) {
-  let count = 0;
-  (TRACKING_DATA.biz || []).forEach(item => {
-    if (String(item.SOL_ID).padStart(4, '0') === String(solId).padStart(4, '0')) {
-      count += Number(item.ACCTS_OPENED || 0);
-    }
-  });
-  return count || Math.floor(Math.random() * 12);
-}
-
-function getBranchOfficers(solId) {
-  let headName = '-';
-  let secondName = '-';
-  const solClean = String(solId).padStart(4, '0');
-  Object.keys(STAFF_LIST).forEach(roll => {
-    const s = STAFF_LIST[roll];
-    if (String(s.sol).padStart(4, '0') === solClean) {
-      const desig = (s.designation || '').toUpperCase();
-      if (desig.includes('I LINE') || desig.includes('CHIEF MANAGER') || desig.includes('SENIOR MANAGER')) {
-        if (headName === '-') headName = `${s.name} (${roll})`;
-      } else if (desig.includes('II LINE') || desig.includes('2ND LINE')) {
-        if (secondName === '-') secondName = `${s.name} (${roll})`;
-      }
-    }
-  });
-  return { headName, secondName };
-}
-
-const DEFAULT_GUARDIAN_TAGGED_BRANCHES = {
-  // Satish Pandian (Roll 63039): Tagged with SOL 3436, 0232, 2286, 0174, 0176, 1560, 2702
-  "63039": ["3436", "0232", "2286", "0174", "0176", "1560", "2702"],
-  "48496": ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287"],
-
-  // Dhanasekaran N & Amit Kumar Singh (Dindigul Urban Cluster)
-  "54257": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
-  "62467": ["0332", "0376", "0910", "0924", "1013", "1220", "1314", "1316", "1317", "1401", "1830"],
-
-  // Dineshkumar A & Krishna Kumar S (Dindigul Rural Cluster)
-  "63094": ["0175", "0230", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"],
-  "59111": ["0175", "0230", "0237", "0243", "1112", "1152", "1221", "1258", "1919", "1931", "2098"]
-};
-
-function getGuardianTaggedSols(roll) {
-  const customMap = JSON.parse(localStorage.getItem('iob_guardian_branch_map') || '{}');
-  if (customMap[roll] && customMap[roll].length > 0) {
-    return customMap[roll];
-  }
-  return DEFAULT_GUARDIAN_TAGGED_BRANCHES[roll] || ["3436", "0232", "2286", "0174", "0176", "1560"];
-}
-
-function renderGuardianCluster() {
-  const container = document.getElementById('guardian-cluster-branches');
-  if (!container) return;
-
-  const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
-  let taggedSols = getGuardianTaggedSols(guardianRoll);
-
-  if (!taggedSols || taggedSols.length === 0) {
-    // If not specifically mapped, default to Theni Cluster or first 8 branches
-    taggedSols = ["0174", "0176", "0883", "1044", "1560", "1789", "1896", "2287", "2464", "2702"];
-  }
-
-  let activeCluster = [];
-  taggedSols.forEach(sol => {
-    const b = BRANCHES[sol] || { sol: sol, name: 'Branch ' + sol, district: 'Dindigul' };
-    activeCluster.push({ sol: String(sol).padStart(4, '0'), ...b });
-  });
-
-  const allowedG = getAllottedParams('guardian');
-  const showG = (pId) => allowedG.includes(pId);
-
-  container.innerHTML = activeCluster.map((b, idx) => {
-    const officers = getBranchOfficers(b.sol);
-    const sbOpened = getBranchSubmittedSBCount(b.sol);
-    let bannerClass = 'bg-amber';
-    let bannerStatus = `🟡 ON TRACK (${sbOpened} SB Accounts Opened)`;
-    let borderStyle = 'border-amber';
-
-    if (sbOpened < 5) {
-      bannerClass = 'bg-red';
-      bannerStatus = `🔴 DEFICIT: ${sbOpened} / 5 SB Accounts (Need ${5 - sbOpened} More!)`;
-      borderStyle = 'border-red';
-    } else if (sbOpened >= 10) {
-      bannerClass = 'bg-green';
-      bannerStatus = `🟢 TARGET ACHIEVED: ${sbOpened} SB Accounts Opened 🏆`;
-      borderStyle = 'border-green';
-    }
-
-    return `
-      <div class="branch-card-item ${borderStyle}" style="margin-bottom:18px;background:#fff;border-radius:12px;box-shadow:var(--shadow-sm);overflow:hidden">
-        <div class="branch-banner ${bannerClass}" style="padding:10px 16px;font-weight:700">
-          <div>🏦 #${idx + 1}. SOL ${b.sol} — ${b.name.toUpperCase()} (${b.district || 'Dindigul'})</div>
-          <div>${bannerStatus}</div>
-        </div>
-        <div style="padding:16px;font-size:0.83rem">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0">
-            <div>👑 <strong>1st Line Head:</strong> ${officers.headName}</div>
-            <div>🛡️ <strong>2nd Line Officer:</strong> ${officers.secondName}</div>
-          </div>
-
-          <!-- FULL REPORTING PARAMETERS GRID FOR THIS TAGGED BRANCH -->
-          <div style="font-weight:700;color:var(--iob-blue-dark);margin:10px 0 6px;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em">
-            📊 Branch Business Parameters & Sourcing Performance:
-          </div>
-
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px">
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">SB Opened</label>
-              <input type="number" value="${sbOpened}" class="g-input" data-sol="${b.sol}" data-param="sb" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1.5px solid var(--iob-blue-dark);font-weight:800;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">CD Opened</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cd" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">TD Opened</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="td" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">SB Growth (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="sbGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">CD Growth (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cdGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">TD Growth (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="tdGrowth" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">Credit Cards</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="cc" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">IOB Connect</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="connect" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">Retail Loans (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="retail" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">SME Loans (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="sme" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">Agri Loans (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="agri" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-            <div class="field" style="margin:0">
-              <label style="font-size:0.72rem;font-weight:700">NPA Recovery (₹)</label>
-              <input type="number" class="g-input" data-sol="${b.sol}" data-param="npa" placeholder="0" oninput="updateWAReportPreview()" style="width:100%;padding:6px;font-size:0.85rem;border-radius:6px;border:1px solid #cbd5e1;text-align:center">
-            </div>
-          </div>
-
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function generateWAReportText() {
-  const sol = currentBizSol || '0174';
-  const b = BRANCHES[sol] || { name: 'Branch ' + sol };
-  const staffName = currentBizStaff ? currentBizStaff.name : 'SATISH PANDIAN';
-  const staffRoll = currentBizStaff ? currentBizStaff.roll : '63039';
-
-  const todayStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1);
-  const yestStr = yestDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-  const sbGrowth = document.getElementById('biz-sb-growth')?.value || '0';
-  const cdGrowth = document.getElementById('biz-cd-growth')?.value || '0';
-  const tdGrowth = document.getElementById('biz-td-growth')?.value || '0';
-
-  const sbOpened = document.getElementById('biz-sb-opened')?.value || '0';
-  const cdOpened = document.getElementById('biz-cd-opened')?.value || '0';
-  const stepupRd = document.getElementById('biz-stepup-rd')?.value || '0';
-
-  const sbPremium = document.getElementById('biz-sb-premium')?.value || '0';
-  const sbUltraHni = document.getElementById('biz-sb-ultra-hni')?.value || '0';
-  const sbDiamondPlat = document.getElementById('biz-sb-diamond-plat')?.value || '0';
-
-  const creditCards = document.getElementById('biz-credit-cards')?.value || '0';
-  const iobConnect = document.getElementById('biz-iob-connect')?.value || '0';
-  const netBanking = document.getElementById('biz-net-banking')?.value || '0';
-  const tdOpened = document.getElementById('biz-td-opened')?.value || '0';
-  const inopCount = document.getElementById('biz-inop-count')?.value || '0';
-  const inopAmt = document.getElementById('biz-inop-amt')?.value || '0';
-  const inactCount = document.getElementById('biz-inact-count')?.value || '0';
-  const inactAmt = document.getElementById('biz-inact-amt')?.value || '0';
-  const deafCount = document.getElementById('biz-deaf-count')?.value || '0';
-  const deafAmt = document.getElementById('biz-deaf-amt')?.value || '0';
-  const npaCount = document.getElementById('biz-npa-count')?.value || '0';
-  const npaAmt = document.getElementById('biz-npa-amt')?.value || '0';
-
-  if (currentBizCadre === 'guardian') {
-    const guardianRoll = currentBizStaff ? String(currentBizStaff.roll) : '63039';
-    let taggedSols = getGuardianTaggedSols(guardianRoll);
-
-    let branchSummaries = [];
-    let redCount = 0;
-    let greenCount = 0;
-    let totalSB = 0, totalCD = 0, totalTD = 0;
-    let totalSBGrowth = 0, totalCDGrowth = 0, totalTDGrowth = 0;
-    let totalCC = 0, totalConnect = 0;
-    let totalRetail = 0, totalSME = 0, totalAgri = 0;
-    let totalNPA = 0;
-
-    taggedSols.forEach((sol, idx) => {
-      const b = BRANCHES[sol] || { name: 'Branch ' + sol };
-      const officers = getBranchOfficers(sol);
-      
-      const getVal = (param) => {
-        const inputEl = document.querySelector(`.g-input[data-sol="${sol}"][data-param="${param}"]`);
-        return inputEl ? Number(inputEl.value || 0) : 0;
-      };
-
-      const sbVal = getVal('sb') || getBranchSubmittedSBCount(sol);
-      const cdVal = getVal('cd');
-      const tdVal = getVal('td');
-      const sbGrowthVal = getVal('sbGrowth');
-      const cdGrowthVal = getVal('cdGrowth');
-      const tdGrowthVal = getVal('tdGrowth');
-      const ccVal = getVal('cc');
-      const connectVal = getVal('connect');
-      const retailVal = getVal('retail');
-      const smeVal = getVal('sme');
-      const agriVal = getVal('agri');
-      const npaVal = getVal('npa');
-
-      totalSB += sbVal; totalCD += cdVal; totalTD += tdVal;
-      totalSBGrowth += sbGrowthVal; totalCDGrowth += cdGrowthVal; totalTDGrowth += tdGrowthVal;
-      totalCC += ccVal; totalConnect += connectVal;
-      totalRetail += retailVal; totalSME += smeVal; totalAgri += agriVal;
-      totalNPA += npaVal;
-
-      let statusTag = '🟡 ON TRACK';
-      let icon = '🟡';
-
-      if (sbVal < 5) {
-        statusTag = '🔴 CRITICAL (< 5 SB)';
-        icon = '🔴';
-        redCount++;
-      } else if (sbVal >= 10) {
-        statusTag = '🟢 TARGET ACHIEVED (≥ 10 SB)';
-        icon = '🟢';
-        greenCount++;
-      }
-
-      let line1 = `✨ SB: ${sbVal}`;
-      if (cdVal > 0) line1 += ` | 💼 CD: ${cdVal}`;
-      if (tdVal > 0) line1 += ` | 🏦 TD: ${tdVal}`;
-
-      let line2 = [];
-      if (sbGrowthVal) line2.push(`SB ₹${sbGrowthVal.toLocaleString('en-IN')}`);
-      if (cdGrowthVal) line2.push(`CD ₹${cdGrowthVal.toLocaleString('en-IN')}`);
-      if (tdGrowthVal) line2.push(`TD ₹${tdGrowthVal.toLocaleString('en-IN')}`);
-
-      let line3 = [];
-      if (ccVal) line3.push(`CC: ${ccVal}`);
-      if (connectVal) line3.push(`Connect: ${connectVal}`);
-
-      let line4 = [];
-      if (retailVal) line4.push(`Retail: ₹${retailVal.toLocaleString('en-IN')}`);
-      if (smeVal) line4.push(`SME: ₹${smeVal.toLocaleString('en-IN')}`);
-      if (agriVal) line4.push(`Agri: ₹${agriVal.toLocaleString('en-IN')}`);
-      if (npaVal) line4.push(`NPA Rec: ₹${npaVal.toLocaleString('en-IN')}`);
-
-      branchSummaries.push(
-        `${icon} *${idx + 1}. ${b.name.toUpperCase()} (${sol})* — *${statusTag}*\n` +
-        `• Head: ${officers.headName}\n` +
-        `• Accounts: ${line1}` +
-        (line2.length ? `\n• Growth: ${line2.join(' | ')}` : '') +
-        (line3.length ? `\n• Digital: ${line3.join(' | ')}` : '') +
-        (line4.length ? `\n• Credit & Recovery: ${line4.join(' | ')}` : '')
-      );
-    });
-
-    return `🏛️ *INDIAN OVERSEAS BANK — REGIONAL OFFICE DINDIGUL*
-🛡️ *RO GUARDIAN DAILY CLUSTER REPORT*
-📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
-👤 *RO GUARDIAN:* ${staffName} (Roll: ${staffRoll})
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📊 *TAGGED BRANCHES DETAILED PERFORMANCE (${taggedSols.length} BRANCHES):*
-
-${branchSummaries.join('\n\n')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏆 *TOTAL CLUSTER AGGREGATE (${taggedSols.length} BRANCHES):*
-✨ Total SB Opened Today: ${totalSB} Accounts
-💼 Total CD Opened Today: ${totalCD} Accounts
-🏦 Total TD Opened Today: ${totalTD} Accounts
-💰 Total Deposit Growth: SB ₹${totalSBGrowth.toLocaleString('en-IN')} | CD ₹${totalCDGrowth.toLocaleString('en-IN')} | TD ₹${totalTDGrowth.toLocaleString('en-IN')}
-💳 Total Credit Cards: ${totalCC} | IOB Connect: ${totalConnect}
-🏠 Total Core Loans: Retail ₹${totalRetail.toLocaleString('en-IN')} | SME ₹${totalSME.toLocaleString('en-IN')} | Agri ₹${totalAgri.toLocaleString('en-IN')}
-💰 Total NPA Recovery: ₹${totalNPA.toLocaleString('en-IN')}
-🔴 Red Deficit Branches (< 5 SB): ${redCount} | 🟢 Achieved (≥ 10 SB): ${greenCount}
-
-#ROGuardianReport #DindigulCluster #IOBPerformance`;
-  }
-
-
-
-  let campBlock = '';
-  const campInputs = document.querySelectorAll('.dynamic-camp-input');
-  if (campInputs.length > 0) {
-    let campLines = [];
-    campInputs.forEach(inp => {
-      const cName = inp.getAttribute('data-name');
-      const val = inp.value.trim();
-      if (val) {
-        campLines.push(`• ${cName}: ${val}`);
-      }
-    });
-    if (campLines.length > 0) {
-      campBlock = `\n📢 *ONGOING REGIONAL CAMPAIGNS:*\n` + campLines.join('\n') + `\n`;
-    }
-  }
-
-  let cadreTitle = "📊 DAILY GENERAL BUSINESS REPORT — 1ST LINE";
-  let officerRoleLabel = "BRANCH HEAD";
-  if (currentBizCadre === '2nd') {
-    cadreTitle = "🛡️ DAILY OPERATIONS & BUSINESS REPORT — 2ND LINE";
-    officerRoleLabel = "2ND LINE OFFICER";
-  } else if (currentBizCadre === 'po') {
-    cadreTitle = "🌱 DAILY SOURCING & BUSINESS REPORT — PO / LBO";
-    officerRoleLabel = "PO / LBO OFFICER";
-  }
-
-  const allowed = getAllottedParams(currentBizCadre);
-  const isOk = (paramId) => allowed.includes(paramId);
-
-  let reportSections = [];
-
-  // Section 1: Deposit Growth
-  if (isOk('sb_growth') || isOk('cd_growth') || isOk('td_growth')) {
-    let linesSec = [];
-    if (isOk('sb_growth')) linesSec.push(`🔹 SB Growth: ₹${sbGrowth}`);
-    if (isOk('cd_growth')) linesSec.push(`🔹 CD Growth: ₹${cdGrowth}`);
-    if (isOk('td_growth')) linesSec.push(`🔹 Term Deposits: ₹${tdGrowth}`);
-    reportSections.push(`💰 *1. DEPOSIT & BALANCE MOVEMENT (GROWTH OVER YESTERDAY):*\n` + linesSec.join('\n'));
-  }
-
-  // Section 2: Accounts Opened & RD
-  if (isOk('sb_opened') || isOk('cd_opened') || isOk('td_opened') || isOk('stepup_rd')) {
-    let linesSec = [];
-    if (isOk('sb_opened')) linesSec.push(`✨ SB Opened Today: ${sbOpened}`);
-    if (isOk('cd_opened')) linesSec.push(`💼 CD Opened Today: ${cdOpened}`);
-    if (isOk('td_opened')) linesSec.push(`🏦 TD Opened Today: ${tdOpened}`);
-    if (isOk('stepup_rd')) linesSec.push(`🔄 Step-up RD Accounts: ${stepupRd}`);
-    reportSections.push(`📈 *2. ACCOUNTS OPENED & RD:*\n` + linesSec.join('\n'));
-  }
-
-  // Section 3: High Value & Premium
-  if (isOk('sb_premium') || isOk('sb_ultra_hni') || isOk('sb_diamond_plat')) {
-    let linesSec = [];
-    if (isOk('sb_premium')) linesSec.push(`⭐ SB Premium Accounts: ${sbPremium}`);
-    if (isOk('sb_ultra_hni')) linesSec.push(`👑 SB Ultra HNI Accounts: ${sbUltraHni}`);
-    if (isOk('sb_diamond_plat')) linesSec.push(`💎 SB Diamond & Platinum: ${sbDiamondPlat}`);
-    reportSections.push(`💎 *3. HIGH-VALUE & PREMIUM ACCOUNTS:*\n` + linesSec.join('\n'));
-  }
-
-  // Section 4: Digital Products & Channels
-  if (isOk('credit_cards') || isOk('iob_connect') || isOk('net_banking') || isOk('whatsapp_banking')) {
-    let linesSec = [];
-    if (isOk('credit_cards')) linesSec.push(`💳 Credit Cards Issued: ${creditCards}`);
-    if (isOk('iob_connect')) linesSec.push(`📲 IOB Connect Activations: ${iobConnect}`);
-    if (isOk('net_banking')) linesSec.push(`💻 New Internet Banking (Net): ${netBanking}`);
-    if (isOk('whatsapp_banking')) linesSec.push(`💬 WhatsApp Banking Registrations: ${whatsappBanking}`);
-    reportSections.push(`💳 *4. DIGITAL PRODUCTS & CHANNELS:*\n` + linesSec.join('\n'));
-  }
-
-  // Section 5: Core Loans & Credit Sanctions
-  if (isOk('retail_loans') || isOk('sme_loans') || isOk('agri_loans') || isOk('jewel_loans')) {
-    let linesSec = [];
-    if (isOk('retail_loans')) linesSec.push(`🏠 Core Retail Loans: ${retailCount} Sanctions (Amt: ₹${retailAmt})`);
-    if (isOk('sme_loans')) linesSec.push(`🏢 Core SME Loans: ${smeCount} Sanctions (Amt: ₹${smeAmt})`);
-    if (isOk('agri_loans')) linesSec.push(`🌾 Core Agri Loans: ${agriCount} Sanctions (Amt: ₹${agriAmt})`);
-    if (isOk('jewel_loans')) linesSec.push(`👑 Jewel Loans Fresh: ${jewelFresh}\n🔄 Jewel Loans Renewal: ${jewelRenewal}`);
-    reportSections.push(`🏦 *5. CORE LOANS & CREDIT SANCTIONS TODAY:*\n` + linesSec.join('\n'));
-  }
-
-  // Section 6: Activations & Recovery
-  if (isOk('inop_act') || isOk('inact_act') || isOk('deaf_act')) {
-    let linesSec = [];
-    if (isOk('inop_act')) linesSec.push(`⚡ Inoperative Activated: ${inopCount} Accts (Amt: ₹${inopAmt})`);
-    if (isOk('inact_act')) linesSec.push(`💤 Inactive Activated: ${inactCount} Accts (Amt: ₹${inactAmt})`);
-    if (isOk('deaf_act')) linesSec.push(`🏛️ DEAF Claimed: ${deafCount} Accts (Amt: ₹${deafAmt})`);
-    linesSec.push(`💰 NPA Cash Recovery: ${npaCount} Accts (Amt: ₹${npaAmt})`);
-    reportSections.push(`🔄 *6. ACCOUNT ACTIVATIONS & NPA CASH RECOVERY:*\n` + linesSec.join('\n') + campBlock);
-  } else if (campBlock) {
-    reportSections.push(campBlock);
-  }
-
-  // Section 7: Lockers
-  if (isOk('lockers')) {
-    reportSections.push(`🔐 *7. SAFE DEPOSIT LOCKERS:*\n🔓 Lockers Vacant: ${lockersVacant}\n🔒 Lockers Issued Today: ${lockersIssued}`);
-  }
-
-  // Section 8: Govt Schemes
-  if (isOk('nps') || isOk('apy') || isOk('ssy') || isOk('pmsby') || isOk('pmjjby')) {
-    let linesSec = [];
-    if (isOk('nps')) linesSec.push(`🎗️ NPS: ${nps}`);
-    if (isOk('apy')) linesSec.push(`🏛️ APY: ${apy}`);
-    if (isOk('ssy')) linesSec.push(`👧 SSY: ${ssy}`);
-    if (isOk('pmsby')) linesSec.push(`🛡️ PMSBY: ${pmsby}`);
-    if (isOk('pmjjby')) linesSec.push(`❤️ PMJJBY: ${pmjjby}`);
-    reportSections.push(`🏛️ *8. GOVERNMENT SOCIAL SECURITY SCHEMES:*\n` + linesSec.join(' | '));
-  }
-
-  return `🏛️ *INDIAN OVERSEAS BANK — DINDIGUL REGIONAL OFFICE*
-${cadreTitle}
-📅 *Date:* ${todayStr} | *Prefilled As Of:* ${yestStr}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 *BRANCH:* ${b.name.toUpperCase()} (${sol})
-👤 *${officerRoleLabel}:* ${staffName} (Roll: ${staffRoll})
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${reportSections.join('\n\n')}
-
-#IOBDindigul #DailyBusinessReport #IOBGrowth`;
-}
-
-function updateWAReportPreview() {
-  const previewBox = document.getElementById('wa-report-preview');
-  const shareLink = document.getElementById('btn-wa-share-link');
-  const shareLinkTop = document.getElementById('btn-wa-share-link-top');
-  const msg = generateWAReportText();
-
-  if (previewBox) previewBox.textContent = msg;
-  const waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
-  if (shareLink) shareLink.href = waUrl;
-  if (shareLinkTop) shareLinkTop.href = waUrl;
-}
-
-function copyWAReportText() {
-  const msg = generateWAReportText();
-  navigator.clipboard.writeText(msg).then(() => {
-    showToast('📋 WhatsApp Report copied to clipboard!', 'success');
-  }).catch(() => {
-    showToast('Failed to copy text', 'error');
-  });
-}
-
-async function submitBusinessReport() {
-  const sol = currentBizSol || '0174';
-  const b = BRANCHES[sol] || { name: 'Branch ' + sol };
-  const staffName = currentBizStaff ? currentBizStaff.name : 'SATISH PANDIAN';
-  const staffRoll = currentBizStaff ? currentBizStaff.roll : '63039';
-
-  const btn = document.getElementById('btn-submit-biz');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving Report...'; }
-
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  const payload = {
-    type: 'biz',
-    biz: {
-      SOL_ID: sol,
-      BRANCH_NAME: b.name,
-      REPORT_DATE: todayStr,
-      STAFF_ROLL: staffRoll,
-      STAFF_NAME: staffName,
-      ROLE: currentBizCadre,
-      SB_GROWTH: document.getElementById('biz-sb-growth')?.value || '0',
-      CD_GROWTH: document.getElementById('biz-cd-growth')?.value || '0',
-      TD_GROWTH: document.getElementById('biz-td-growth')?.value || '0',
-      ACCTS_OPENED: document.getElementById('biz-accts-opened')?.value || '0',
-      CREDIT_CARDS: document.getElementById('biz-credit-cards')?.value || '0',
-      IOB_CONNECT: document.getElementById('biz-iob-connect')?.value || '0',
-      CREATED_DATE: new Date().toLocaleString('en-IN')
-    }
-  };
-
-  if (!TRACKING_DATA.biz) TRACKING_DATA.biz = [];
-  TRACKING_DATA.biz.unshift(payload.biz);
-
-  // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
-  if (isFirebaseActive && db && newItem) {
-    try {
-      const fbDoc = {
-        ...newItem,
-        type: currentType,
-        STATUS: 'Pending Review',
-        CREATED_AT: new Date().toISOString(),
-        TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      db.collection("leads").add(fbDoc).then(docRef => {
-        console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
-      }).catch(e => console.warn("Firebase write notice:", e));
-    } catch(e) {
-      console.warn("Firebase submission error:", e);
-    }
-  }
-
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-
-    showToast('✅ Daily Business Report saved to Database!', 'success');
-  } catch(e) {
-    showToast('Error submitting report: ' + e.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Save & Submit Report to Database'; }
   }
 }
 
 let currentType = null;
+let selectedSignedFormFile = null;
 function setType(t) {
   currentType = t;
   document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
@@ -3061,21 +1925,17 @@ async function executeSubmission() {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
-  if (isFirebaseActive && db && newItem) {
+  // SIGNED APPLICATION FORM: sent in the SAME request as the QR data, not a second round trip
+  if (currentType === 'qr' && selectedSignedFormFile) {
     try {
-      const fbDoc = {
-        ...newItem,
-        type: currentType,
-        STATUS: 'Pending Review',
-        CREATED_AT: new Date().toISOString(),
-        TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      db.collection("leads").add(fbDoc).then(docRef => {
-        console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
-      }).catch(e => console.warn("Firebase write notice:", e));
-    } catch(e) {
-      console.warn("Firebase submission error:", e);
+      btn.textContent = 'Preparing scan...';
+      const signedForm = await fileToCompressedBase64(selectedSignedFormFile);
+      payload.signedFormBase64 = signedForm.base64;
+      payload.signedFormMimeType = signedForm.mimeType;
+      payload.signedFormName = selectedSignedFormFile.name;
+      btn.textContent = 'Submitting...';
+    } catch (e) {
+      console.warn('Signed form processing error:', e);
     }
   }
 
@@ -3113,86 +1973,75 @@ function resetForm() {
   document.getElementById('sb-region').value = 'Dindigul';
   onLeadProductChange('3 in 1 POS (QR Code + POS + Soundbox)');
   currentType = null;
+  resetSignedFormInput();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetSignedFormInput() {
+  selectedSignedFormFile = null;
+  const input = document.getElementById('qr-signedform-input');
+  const label = document.getElementById('qr-signedform-filename');
+  const zone = document.getElementById('qr-signedform-dropzone');
+  if (input) input.value = '';
+  if (label) label.textContent = 'Click to attach the signed application scan';
+  if (zone) zone.classList.remove('has-file');
+}
+
+function onSignedFormSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  if (!/^application\/pdf$|^image\//.test(file.type)) {
+    showToast('Please select a PDF or image file', 'error');
+    input.value = '';
+    return;
+  }
+
+  selectedSignedFormFile = file;
+  document.getElementById('qr-signedform-filename').textContent = '✓ ' + file.name;
+  document.getElementById('qr-signedform-dropzone').classList.add('has-file');
+}
+
+// Downscales images client-side before upload so a 4-5MB phone photo doesn't blow up the submit request; PDFs pass through untouched.
+function fileToCompressedBase64(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ base64: reader.result.split(',')[1], mimeType: file.type || 'application/pdf' });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      img.onload = () => {
+        const maxDim = 1600;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve({ base64: canvas.toDataURL('image/jpeg', 0.72).split(',')[1], mimeType: 'image/jpeg' });
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ─────────────────────────────────────────────
 // TRACKING & STATUS TAB
 // ─────────────────────────────────────────────
-
-// ─────────────────────────────────────────────
-// FIREBASE REAL-TIME ENGINE
-// ─────────────────────────────────────────────
-const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyIOB_Dindigul_Regional_Office_Portal_Key",
-  authDomain: "iob-dindigul-portal.firebaseapp.com",
-  projectId: "iob-dindigul-portal",
-  storageBucket: "iob-dindigul-portal.appspot.com",
-  messagingSenderId: "393301740892",
-  appId: "1:393301740892:web:iobportal2026"
-};
-
-let db = null;
-let isFirebaseActive = false;
-
-function initFirebaseEngine() {
-  try {
-    const customConfig = JSON.parse(localStorage.getItem('iob_firebase_config') || 'null');
-    const config = customConfig || DEFAULT_FIREBASE_CONFIG;
-
-    if (typeof firebase !== 'undefined') {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(config);
-      }
-      db = firebase.firestore();
-      db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-      isFirebaseActive = true;
-      console.log("🔥 Firebase Firestore Engine Ready!");
-      return true;
-    }
-  } catch(e) {
-    console.warn("Firebase Init Notice:", e.message);
-  }
-  return false;
-}
-
-function setupRealtimeFirebaseListener() {
-  if (!initFirebaseEngine()) return false;
-
-  updateSyncBadge('syncing');
-
-  try {
-    db.collection("leads").orderBy("CREATED_AT", "desc").limit(250).onSnapshot(snapshot => {
-      let qrList = [], sbList = [], leadList = [];
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        data.docId = doc.id;
-        if (data.type === 'qr' || data.MERCHANTNAME) qrList.push(data);
-        else if (data.type === 'soundbox' || data.ACCOUNT_NAME) sbList.push(data);
-        else leadList.push(data);
-      });
-
-      if (qrList.length > 0 || sbList.length > 0 || leadList.length > 0) {
-        const fullData = { qr: qrList, sb: sbList, lead: leadList };
-        TRACKING_DATA = fullData;
-        localStorage.setItem('iob_portal_cache_data', JSON.stringify(fullData));
-        renderStatusTable();
-        updateSyncBadge('live');
-      }
-    }, err => {
-      console.warn("Firestore snapshot notice:", err.message);
-      updateSyncBadge('cached');
-    });
-
-    return true;
-  } catch(e) {
-    console.warn("Firestore setup error:", e);
-  }
-  return false;
-}
-
 function updateSyncBadge(mode) {
   const badge = document.getElementById('headerSyncBadge');
   if (!badge) return;
@@ -3359,9 +2208,12 @@ function renderStatusTable() {
       const itemKey = item.MERCHANTVPA || item.ACCOUNTNO || item.MERCHANTNAME || (item._sheetName + '_' + item.rowIndex);
       const localDl = localStorage.getItem('dl_cnt_' + itemKey) || localStorage.getItem('dl_cnt_' + item._sheetName + '_' + item.rowIndex) || 0;
       const dlCount = Math.max(parseInt(item.DOWNLOAD_COUNT || '0'), parseInt(localDl));
-      detailCol = item.QR_PDF_URL 
-        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this, '${itemKey}')" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>` 
+      detailCol = item.QR_PDF_URL
+        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item._sheetName}', ${item.rowIndex}, this, '${itemKey}')" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>`
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
+      if (item.SIGNED_FORM_URL) {
+        detailCol += `<div style="margin-top:4px"><a href="${item.SIGNED_FORM_URL}" target="_blank" class="btn-pdf" style="background:#eef2ff;color:var(--iob-blue);border-color:var(--border)">📝 Signed Form</a></div>`;
+      }
     }
 
     return `
