@@ -1826,9 +1826,9 @@ async function executeSubmission() {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
-  if (isFirebaseActive && db && newItem) {
-    try {
+  try {
+    // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
+    if (isFirebaseActive && db && newItem) {
       const fbDoc = {
         ...newItem,
         type: currentType,
@@ -1839,6 +1839,8 @@ async function executeSubmission() {
       db.collection("leads").add(fbDoc).then(docRef => {
         console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
       }).catch(e => console.warn("Firebase write notice:", e));
+    }
+
     showToast('✅ Lead / Application submitted successfully!', 'success');
     btn.disabled = false;
     btn.textContent = 'Submit Application / Lead';
