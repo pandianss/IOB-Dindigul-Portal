@@ -10,7 +10,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
   :root {
     --iob-blue: #1a3a7a;
@@ -1273,6 +1272,14 @@
           </div>
         </div>
 
+        <!-- BRANCH STAFF ATTENDANCE & ON-FIELD SOURCING CARD -->
+        <div id="staff-attendance-card" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;padding:14px 16px;border-radius:10px;margin-bottom:16px">
+          <div style="font-size:0.85rem;font-weight:700;color:#166534;margin-bottom:8px">👥 BRANCH STAFF ATTENDANCE & ON-FIELD SOURCING STATUS</div>
+          <div id="staff-attendance-list-container" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:10px">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
         <!-- CADRE SELECTOR OVERRIDE -->
         <div style="margin-bottom:12px">
           <div style="font-size:0.8rem;font-weight:600;color:var(--muted);margin-bottom:6px">Role Cadre (Auto-Detected / Switch Role):</div>
@@ -1754,23 +1761,6 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }
   renderStatusTable();
-
-  let p = 0;
-  const bar = document.getElementById('splash-bar');
-  const timer = setInterval(() => {
-    p = Math.min(p + 25, 95);
-    if (bar) bar.style.width = p + '%';
-  }, 100);
-
-  setTimeout(() => {
-    clearInterval(timer);
-    if (bar) bar.style.width = '100%';
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if (splash) splash.classList.add('hide');
-    }, 400);
-  }, 900);
-
   setupMCC('qr');
   setupMCC('sb');
 
@@ -2667,6 +2657,12 @@ async function submitBusinessReport() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const sbOpened = parseInt(document.getElementById('biz-sb-opened')?.value || '0', 10) || 0;
+  const cdOpened = parseInt(document.getElementById('biz-cd-opened')?.value || '0', 10) || 0;
+  const tdOpened = parseInt(document.getElementById('biz-td-opened')?.value || '0', 10) || 0;
+  const rdOpened = parseInt(document.getElementById('biz-stepup-rd')?.value || '0', 10) || 0;
+  const totalAccts = sbOpened + cdOpened + tdOpened + rdOpened;
+
   const payload = {
     type: 'biz',
     biz: {
@@ -2679,9 +2675,20 @@ async function submitBusinessReport() {
       SB_GROWTH: document.getElementById('biz-sb-growth')?.value || '0',
       CD_GROWTH: document.getElementById('biz-cd-growth')?.value || '0',
       TD_GROWTH: document.getElementById('biz-td-growth')?.value || '0',
-      ACCTS_OPENED: document.getElementById('biz-accts-opened')?.value || '0',
+      SB_OPENED: String(sbOpened),
+      CD_OPENED: String(cdOpened),
+      TD_OPENED: String(tdOpened),
+      STEPUP_RD: String(rdOpened),
+      ACCTS_OPENED: String(totalAccts),
+      SB_PREMIUM: document.getElementById('biz-sb-premium')?.value || '0',
+      SB_ULTRA_HNI: document.getElementById('biz-sb-ultra-hni')?.value || '0',
+      SB_DIAMOND_PLAT: document.getElementById('biz-sb-diamond-plat')?.value || '0',
       CREDIT_CARDS: document.getElementById('biz-credit-cards')?.value || '0',
       IOB_CONNECT: document.getElementById('biz-iob-connect')?.value || '0',
+      NET_BANKING: document.getElementById('biz-net-banking')?.value || '0',
+      WHATSAPP_BANKING: document.getElementById('biz-whatsapp-banking')?.value || '0',
+      RETAIL_COUNT: document.getElementById('biz-retail-count')?.value || '0',
+      RETAIL_AMT: document.getElementById('biz-retail-amt')?.value || '0',
       CREATED_DATE: new Date().toLocaleString('en-IN')
     }
   };
@@ -2690,37 +2697,33 @@ async function submitBusinessReport() {
   TRACKING_DATA.biz.unshift(payload.biz);
 
   // SUB-50MS INSTANT FIREBASE FIRESTORE WRITE
-  if (isFirebaseActive && db && newItem) {
+  if (isFirebaseActive && db) {
     try {
       const fbDoc = {
-        ...newItem,
-        type: currentType,
-        STATUS: 'Pending Review',
+        ...payload.biz,
+        type: 'biz',
+        STATUS: 'Submitted',
         CREATED_AT: new Date().toISOString(),
         TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
       };
       db.collection("leads").add(fbDoc).then(docRef => {
-        console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
+        console.log("🔥 Daily Business Report written to Firestore in <50ms! Doc ID:", docRef.id);
       }).catch(e => console.warn("Firebase write notice:", e));
     } catch(e) {
       console.warn("Firebase submission error:", e);
     }
   }
 
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
+  showToast('✅ Daily Business Report saved successfully!', 'success');
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Save & Submit Report to Database'; }
 
-    showToast('✅ Daily Business Report saved to Database!', 'success');
-  } catch(e) {
-    showToast('Error submitting report: ' + e.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Save & Submit Report to Database'; }
-  }
+  // Non-blocking background sync to Google Sheets
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).catch(e => console.warn("Background sheet sync note:", e.message));
 }
 
 let currentType = null;
@@ -3074,28 +3077,20 @@ async function executeSubmission() {
       db.collection("leads").add(fbDoc).then(docRef => {
         console.log("🔥 Lead written to Firebase Firestore in <50ms! Doc ID:", docRef.id);
       }).catch(e => console.warn("Firebase write notice:", e));
-    } catch(e) {
-      console.warn("Firebase submission error:", e);
-    }
-  }
+    showToast('✅ Lead / Application submitted successfully!', 'success');
+    btn.disabled = false;
+    btn.textContent = 'Submit Application / Lead';
+    resetForm();
 
-  try {
-    await fetch(APPS_SCRIPT_URL, {
+    // Background sync to Google Sheets (non-blocking)
+    fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    });
-
-    showToast('✅ Lead / Application submitted successfully!', 'success');
-    setTimeout(() => {
-      resetForm();
-      loadStatusData();
-    }, 1200);
-
+    }).catch(e => console.warn("Background sheet sync notice:", e.message));
   } catch(e) {
     showToast('Submission error: ' + e.message, 'error');
-  } finally {
     btn.disabled = false;
     btn.textContent = 'Submit Application / Lead';
   }
@@ -3125,12 +3120,13 @@ function resetForm() {
 // FIREBASE REAL-TIME ENGINE
 // ─────────────────────────────────────────────
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyIOB_Dindigul_Regional_Office_Portal_Key",
-  authDomain: "iob-dindigul-portal.firebaseapp.com",
-  projectId: "iob-dindigul-portal",
-  storageBucket: "iob-dindigul-portal.appspot.com",
-  messagingSenderId: "393301740892",
-  appId: "1:393301740892:web:iobportal2026"
+  apiKey: "AIzaSyCcWvwBEKPZtowPA-np8qr5GpQVCt6OMLM",
+  authDomain: "digitaldindigul-f78f9.firebaseapp.com",
+  projectId: "digitaldindigul-f78f9",
+  storageBucket: "digitaldindigul-f78f9.firebasestorage.app",
+  messagingSenderId: "451914130954",
+  appId: "1:451914130954:web:c582c386f29c0affb0a1f3",
+  measurementId: "G-9T6482R4T2"
 };
 
 let db = null;

@@ -331,6 +331,8 @@
     <div class="iob-header-emblem-wrap" title="IOB Admin Portal Active">
       <img src="iob_icon.png" class="iob-header-emblem" alt="IOB Emblem">
     </div>
+    <span id="adminSyncBadge" class="sync-badge syncing" title="Live background data sync status"><span class="pulse-dot"></span> Syncing...</span>
+    <button type="button" class="nav-btn" style="background:#10b981;border-color:#059669;color:#fff" onclick="exportDataToCSV()">📊 Export CSV</button>
     <button type="button" id="notifToggleBtn" class="notif-btn" onclick="toggleNotificationPermission()">
       <span>🔔</span> <span id="notifLabel">Notifications: Checking...</span>
     </button>
@@ -691,6 +693,57 @@
   </div>
 </div>
 
+<!-- STAFF EDIT / ADD MODAL -->
+<div class="modal-overlay" id="staffEditModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="staffModalTitle">Edit Staff Member</h3>
+      <button class="modal-close" onclick="closeStaffModal()">&times;</button>
+    </div>
+    <form id="staffMemberForm" onsubmit="event.preventDefault(); saveStaffFromModal();">
+      <div class="modal-body">
+        <div class="field-modal">
+          <label>Staff Roll Number <span style="color:var(--error)">*</span></label>
+          <input type="text" id="modalStaffRoll" placeholder="e.g. 48243" required>
+        </div>
+        <div class="field-modal">
+          <label>Full Name <span style="color:var(--error)">*</span></label>
+          <input type="text" id="modalStaffName" placeholder="e.g. DILEEP G" required>
+        </div>
+        <div class="field-modal">
+          <label>Designation <span style="color:var(--error)">*</span></label>
+          <input type="text" id="modalStaffDesignation" placeholder="e.g. CHIEF MANAGER - I line" required>
+        </div>
+        <div class="field-modal">
+          <label>Branch SOL Code (4 digits) <span style="color:var(--error)">*</span></label>
+          <input type="text" id="modalStaffSol" placeholder="e.g. 0174" maxlength="4" required>
+        </div>
+        <div class="field-modal">
+          <label>Role Cadre</label>
+          <select id="modalStaffCadre">
+            <option value="1st">1st Line (Branch Head)</option>
+            <option value="2nd">2nd Line Officer</option>
+            <option value="po">PO / LBO Sourcing Officer</option>
+            <option value="guardian">RO Guardian Officer</option>
+          </select>
+        </div>
+        <div class="field-modal">
+          <label>Mobile Number (Optional)</label>
+          <input type="tel" id="modalStaffMobile" placeholder="10-digit mobile" maxlength="10">
+        </div>
+        <div class="field-modal">
+          <label>Email ID (Optional)</label>
+          <input type="email" id="modalStaffEmail" placeholder="staff@iob.in">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="closeStaffModal()">Cancel</button>
+        <button type="submit" class="btn-confirm">Save Staff Details</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -814,12 +867,13 @@ function logoutAdmin() {
 // FIREBASE REAL-TIME ENGINE FOR ADMIN
 // ─────────────────────────────────────────────
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyIOB_Dindigul_Regional_Office_Portal_Key",
-  authDomain: "iob-dindigul-portal.firebaseapp.com",
-  projectId: "iob-dindigul-portal",
-  storageBucket: "iob-dindigul-portal.appspot.com",
-  messagingSenderId: "393301740892",
-  appId: "1:393301740892:web:iobportal2026"
+  apiKey: "AIzaSyCcWvwBEKPZtowPA-np8qr5GpQVCt6OMLM",
+  authDomain: "digitaldindigul-f78f9.firebaseapp.com",
+  projectId: "digitaldindigul-f78f9",
+  storageBucket: "digitaldindigul-f78f9.firebasestorage.app",
+  messagingSenderId: "451914130954",
+  appId: "1:451914130954:web:c582c386f29c0affb0a1f3",
+  measurementId: "G-9T6482R4T2"
 };
 
 let db = null;
@@ -1967,6 +2021,25 @@ async function confirmCompletion() {
     soundboxLang: activeSelectedApp.SOUNDBOX_LANG
   };
 
+  // DIRECT SUB-100MS FIRESTORE STATUS UPDATE
+  if (isFirebaseActive && db && activeSelectedApp.docId) {
+    try {
+      const fbUpdate = {
+        STATUS: finalStatus,
+        REMARKS: remarksValue || '',
+        UPDATED_AT: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      if (vpaValue) fbUpdate.MERCHANTVPA = vpaValue;
+      if (selectedFileName) fbUpdate.PDF_NAME = selectedFileName;
+      
+      db.collection("leads").doc(activeSelectedApp.docId).update(fbUpdate).then(() => {
+        console.log("🔥 Admin status synced directly to Firestore!");
+      }).catch(err => console.warn("Firestore status update notice:", err));
+    } catch(err) {
+      console.warn("Firestore update error:", err);
+    }
+  }
+
   try {
     await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -1993,6 +2066,51 @@ function showToast(msg, type='') {
   t.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = '', 4000);
+}
+
+function exportDataToCSV() {
+  const allItems = [...(ALL_DATA.qr || []), ...(ALL_DATA.sb || []), ...(ALL_DATA.lead || [])];
+  if (allItems.length === 0) {
+    showToast("No data to export!", "warning");
+    return;
+  }
+
+  const headers = ["Type", "Merchant / Entity Name", "SOL ID", "Account No", "VPA", "Mobile No", "Status", "Remarks", "Created Date"];
+  const rows = allItems.map(item => {
+    const type = item.type ? item.type.toUpperCase() : (item.MERCHANTNAME ? 'QR' : (item.ACCOUNT_NAME ? 'SOUNDBOX' : 'LEAD'));
+    const name = item.MERCHANTNAME || item.ACCOUNT_NAME || item.MERCHANT_NAME || '';
+    const sol = item.SOL_ID || item.SOL || '';
+    const acct = item.ACCOUNTNO || item.ACCOUNT_NUMBER || item.ACCOUNT_NO || '';
+    const vpa = item.MERCHANTVPA || item.VPA || '';
+    const mob = item.MOBILENO || item.MOBILE_NUMBER || item.MERCHANT_MOBILE || '';
+    const status = item.STATUS || 'Pending Review';
+    const remarks = item.REMARKS || '';
+    const created = item.CREATED_DATE || item.CREATED_AT || '';
+
+    return [
+      `"${type}"`,
+      `"${name.replace(/"/g, '""')}"`,
+      `"${sol}"`,
+      `"${acct}"`,
+      `"${vpa}"`,
+      `"${mob}"`,
+      `"${status}"`,
+      `"${remarks.replace(/"/g, '""')}"`,
+      `"${created}"`
+    ].join(",");
+  });
+
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `IOB_Dindigul_Leads_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`📊 Exported ${allItems.length} records to CSV!`, "success");
 }
 </script>
 </body>
