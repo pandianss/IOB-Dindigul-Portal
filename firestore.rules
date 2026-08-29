@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// IOB Dindigul Merchant Services Portal
+//
+// SCOPE NOTE: the portal authenticates staff with a roll number + password held
+// in the browser, not with Firebase Auth. These rules therefore gate on
+// anonymous Firebase Auth, which stops drive-by access from anyone who merely
+// reads the config out of the page source, but does NOT prove who the caller
+// is. To make this genuinely secure you still need, in order of importance:
+//   1. App Check (reCAPTCHA Enterprise) so only the real site can call the API.
+//   2. Real Firebase Auth accounts for staff, then swap the `signedIn()` checks
+//      below for role checks against a custom claim.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Fields a branch user is allowed to set when creating a request.
+    function validNewLead() {
+      return request.resource.data.keys().hasAll(['type', 'STATUS', 'CREATED_AT'])
+          && request.resource.data.type in ['qr', 'soundbox', 'lead']
+          && request.resource.data.STATUS == 'Pending Review'
+          && request.resource.data.size() < 60;
+    }
+
+    // Fields the admin/vendor workflow is allowed to change afterwards.
+    function onlyWorkflowFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly([
+          'STATUS', 'VENDOR_REMARKS', 'MERCHANTVPA', 'QR_PDF_URL', 'PDF_NAME',
+          'COMPLETED_DATE', 'UPDATED_DATE', 'UPDATED_AT',
+          'DOWNLOAD_COUNT', 'SOUNDBOX_CREATED'
+        ]);
+    }
+
+    match /leads/{docId} {
+      allow read:   if signedIn();
+      allow create: if signedIn() && validNewLead();
+      allow update: if signedIn() && onlyWorkflowFields();
+      // Records are never removed from the client; delete via console or a
+      // privileged Cloud Function only.
+      allow delete: if false;
+    }
+
+    match /staff/{roll} {
+      allow read:  if signedIn();
+      // Tighten to an admin custom claim once real Firebase Auth is in place.
+      allow write: if signedIn();
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
