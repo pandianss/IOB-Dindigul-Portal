@@ -1911,8 +1911,9 @@ function updateThemeIcon(theme) {
 }
 
 // ─────────────────────────────────────────────
-// FIREBASE REAL-TIME ENGINE
+// CONFIGURATION & FIREBASE REAL-TIME ENGINE
 // ─────────────────────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILWqzxB6jb9RopXU_vZhHbusPdbrj70FcQx6vGcyrAQTTy_gW4goL/exec";
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCcWvwBEKPZtowPA-np8qr5GpQVCt6OMLM",
   authDomain: "digitaldindigul-f78f9.firebaseapp.com",
@@ -1937,10 +1938,12 @@ function initFirebaseEngine() {
       }
       db = firebase.firestore();
       db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-      // Security rules require a signed-in caller; the portal has no Firebase
-      // Auth accounts yet, so sign in anonymously.
-      if (!firebase.auth().currentUser) {
-        firebase.auth().signInAnonymously().catch(e => console.warn("Auth notice:", e.message));
+      if (firebase.auth) {
+        try {
+          if (!firebase.auth().currentUser) {
+            firebase.auth().signInAnonymously().catch(() => {});
+          }
+        } catch(e) {}
       }
       isFirebaseActive = true;
       console.log("🔥 Firebase Firestore Engine Ready!");
@@ -1952,6 +1955,46 @@ function initFirebaseEngine() {
   return false;
 }
 
+function isRealMerchantLead(item) {
+  if (!item) return false;
+  if (item.designation || item.cadre || (item.roll && !item.PRODUCT && !item.MERCHANTNAME && !item.ACCOUNT_NAME && !item.MERCHANT_NAME)) {
+    return false;
+  }
+  return (item.MERCHANTNAME || item.ACCOUNT_NAME || item.MERCHANT_NAME || item.VPA || item.PRODUCT || item.SOL_ID) ? true : false;
+}
+
+function mergeDatasets(base, incoming) {
+  const result = {
+    qr: [...(base.qr || [])],
+    sb: [...(base.sb || [])],
+    lead: [...(base.lead || [])]
+  };
+
+  ['qr', 'sb', 'lead'].forEach(category => {
+    if (incoming[category] && Array.isArray(incoming[category])) {
+      incoming[category].forEach(newItem => {
+        if (!isRealMerchantLead(newItem)) return;
+        const key = newItem.docId || newItem.MERCHANTVPA || newItem.ACCOUNTNO || newItem.MOBILENO || newItem.MERCHANTNAME || newItem.ACCOUNT_NAME;
+        if (!key) {
+          result[category].unshift(newItem);
+          return;
+        }
+        const existingIdx = result[category].findIndex(item => {
+          const itemKey = item.docId || item.MERCHANTVPA || item.ACCOUNTNO || item.MOBILENO || item.MERCHANTNAME || item.ACCOUNT_NAME;
+          return itemKey && String(itemKey).trim().toLowerCase() === String(key).trim().toLowerCase();
+        });
+        if (existingIdx >= 0) {
+          result[category][existingIdx] = { ...result[category][existingIdx], ...newItem };
+        } else {
+          result[category].unshift(newItem);
+        }
+      });
+    }
+  });
+
+  return result;
+}
+
 let realtimeAttached = false;
 function setupRealtimeFirebaseListener() {
   if (realtimeAttached) return true;
@@ -1959,26 +2002,23 @@ function setupRealtimeFirebaseListener() {
 
   try {
     db.collection("leads").orderBy("CREATED_AT", "desc").limit(500).onSnapshot(snapshot => {
-      const next = { qr: [], sb: [], lead: [] };
+      const incoming = { qr: [], sb: [], lead: [] };
 
       snapshot.forEach(doc => {
         const data = doc.data();
         data.docId = doc.id;
-        if (data.type === 'qr') next.qr.push(data);
-        else if (data.type === 'soundbox') next.sb.push(data);
-        else if (data.type === 'lead') next.lead.push(data);
-        else if (data.MERCHANTNAME) next.qr.push(data);
-        else if (data.ACCOUNT_NAME) next.sb.push(data);
-        else next.lead.push(data);
+        if (data.type === 'qr' || data.MERCHANTNAME) incoming.qr.push(data);
+        else if (data.type === 'soundbox' || data.ACCOUNT_NAME) incoming.sb.push(data);
+        else if (data.type === 'lead' || data.MERCHANT_NAME || data.PRODUCT) incoming.lead.push(data);
       });
 
-      // Firestore is the single source of truth, so replace rather than merge
-      TRACKING_DATA = next;
-      localStorage.setItem('iob_portal_cache_data', JSON.stringify(next));
-      renderStatusTable();
+      if (incoming.qr.length > 0 || incoming.sb.length > 0 || incoming.lead.length > 0) {
+        TRACKING_DATA = mergeDatasets(TRACKING_DATA, incoming);
+        localStorage.setItem('iob_portal_cache_data', JSON.stringify(TRACKING_DATA));
+        renderStatusTable();
+      }
     }, err => {
       console.warn("Firestore snapshot notice:", err.message);
-      showToast("Live data unavailable: " + err.message, "error");
     });
 
     realtimeAttached = true;
@@ -1989,8 +2029,8 @@ function setupRealtimeFirebaseListener() {
   return false;
 }
 
-// Paints the cached snapshot instantly, then lets the realtime listener take over.
-function loadStatusData() {
+// Paints the cached snapshot instantly, then lets the realtime listener and Apps Script fetch sync in background
+async function loadStatusData() {
   const cached = localStorage.getItem('iob_portal_cache_data');
   if (cached) {
     try {
@@ -2002,6 +2042,24 @@ function loadStatusData() {
     } catch(e) {}
   }
   setupRealtimeFirebaseListener();
+
+  // Background fetch from Apps Script (15s timeout)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (data && (data.qr || data.sb || data.lead)) {
+      TRACKING_DATA = mergeDatasets(TRACKING_DATA, data);
+      localStorage.setItem('iob_portal_cache_data', JSON.stringify(TRACKING_DATA));
+      renderStatusTable();
+    }
+  } catch(e) {
+    clearTimeout(timeoutId);
+    console.warn("Background fetch note:", e.message);
+  }
 }
 
 function formatBranchLoc(solId, branchName, district) {
