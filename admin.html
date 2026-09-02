@@ -1430,34 +1430,52 @@ function exportDataToCSV() {
   }
 
   if (allItems.length === 0) {
-    // If still 0, provide direct link to static export file
     window.open('iob_dindigul_applications_data.csv', '_blank');
     showToast("Opening backup applications CSV...", "info");
     return;
   }
 
+  const staffList = getFullStaffList();
   const clean = (val) => '"' + String(val == null ? '' : val).replace(/"/g, '""').trim() + '"';
 
   const headers = [
     "Category",
-    "Application ID",
-    "Date / Timestamp",
-    "Merchant / Entity Name",
-    "Account Number",
-    "Contact Mobile",
-    "SOL ID",
-    "Branch Name",
-    "District",
-    "Staff Roll No",
-    "Staff Name",
-    "Staff Mobile",
-    "Staff Designation",
-    "Soundbox Needed",
     "Status",
-    "VPA",
-    "File / PDF URL",
-    "Vendor Remarks",
-    "Completed At"
+    "Merchant_Entity_Name",
+    "Account_Number",
+    "IFSC_Code",
+    "VPA_UPI_ID",
+    "Mobile_Number",
+    "Email_ID",
+    "GST_Number",
+    "Merchant_Type",
+    "MCC_Code",
+    "Latitude",
+    "Longitude",
+    "Address_Line_1",
+    "Address_Line_2",
+    "Post_Office_City",
+    "PIN_Code",
+    "State",
+    "District",
+    "Sub_District_Taluk",
+    "SOL_ID",
+    "Branch_Name",
+    "Region",
+    "Soundbox_Required",
+    "Soundbox_Language",
+    "Product_Lead",
+    "No_Of_Devices",
+    "Contact_Person",
+    "Contact_Mobile",
+    "Staff_Roll_No",
+    "Staff_Name",
+    "Staff_Designation",
+    "Staff_Mobile",
+    "QR_PDF_URL",
+    "Vendor_Remarks",
+    "Created_Date",
+    "Completed_Date"
   ];
 
   const rows = allItems.map(item => {
@@ -1465,45 +1483,85 @@ function exportDataToCSV() {
     const isLead = item.CATEGORY === 'Product Lead' || item._type === 'lead';
     const category = isLead ? 'Product Lead' : (isSb ? 'Soundbox' : 'Merchant QR');
     
-    const id = item.ID || item.docId || '';
-    const time = item.TIMESTAMP || item.CREATED_AT || item.CREATED_DATE || '';
-    const name = item.MERCHANT_NAME || item.MERCHANTNAME || item.ACCOUNT_NAME || '';
-    const acct = item.ACCOUNT_NO || item.ACCOUNTNO || item.ACCOUNT_NUMBER || '';
-    const mob = item.CONTACT_MOBILE || item.MOBILENO || item.MOBILE_NUMBER || item.MERCHANT_MOBILE || '';
     const sol = item.SOL_ID || item.SOL || '';
-    const branch = item.BRANCH_NAME || (BRANCHES[String(sol).padStart(4, '0')] ? BRANCHES[String(sol).padStart(4, '0')].name : '');
-    const district = item.DISTRICT || (BRANCHES[String(sol).padStart(4, '0')] ? BRANCHES[String(sol).padStart(4, '0')].district : '');
+    const solPadded = String(sol).padStart(4, '0');
+    const branchInfo = BRANCHES[solPadded] || {};
+    const branchName = item.BRANCH_NAME || branchInfo.name || (sol ? `Branch ${sol}` : '');
+    const district = item.DISTRICT || item.CITY || branchInfo.district || '';
+
     const staffRoll = item.STAFF_ROLL || '';
-    const staffName = item.STAFF_NAME || item.CONTACT_NAME || '';
-    const staffMob = item.STAFF_MOBILE || '';
-    const staffDesig = item.STAFF_DESIGNATION || '';
-    const sbNeeded = (item.SOUNDBOX_NEEDED === 'YES' || isSb) ? 'YES' : 'NO';
+    const stMeta = staffList[staffRoll] || {};
+    const staffName = item.STAFF_NAME || item.CONTACT_NAME || stMeta.name || '';
+    const staffDesig = item.STAFF_DESIGNATION || stMeta.designation || '';
+    const staffMob = item.STAFF_MOBILE || stMeta.mobile || '';
+
+    const name = item.MERCHANTNAME || item.MERCHANT_NAME || item.ACCOUNT_NAME || '';
+    const acct = item.ACCOUNTNO || item.ACCOUNT_NO || item.ACCOUNT_NUMBER || '';
+    const ifsc = item.IFSC || '';
+    const vpa = item.MERCHANTVPA || item.VPA || '';
+    const mob = item.MOBILENO || item.MOBILE_NUMBER || item.CONTACT_MOBILE || item.MOBILE_NO || '';
+    const email = item.EMAILID || item.EMAIL || item.EMAIL_ID || '';
+    const gst = item.GSTNO || item.GST || item.GST_NO || '';
+    const merchantType = item.MERCHANTTYPE || item.MERCHANT_TYPE || '';
+    const mcc = item.MCCCODE || item.MCC || item.MCC_CODE || '';
+    const lat = item.LATITUDE || '';
+    const lng = item.LONGITUDE || '';
+    const addr1 = item.ADDRESS1 || item.ADDRESS || '';
+    const addr2 = item.ADDRESS2 || '';
+    const poCity = item.POSTOFFICENAME || item.CITY || '';
+    const pincode = item.PINCODE || item.PIN_CODE || branchInfo.pincode || '';
+    const state = item.STATE || 'TamilNadu';
+    const subdistrict = item.SUBDISTRICT || '';
+    const sbRequired = (item.SOUNDBOX_REQUIRED === 'Yes' || isSb || item.SOUNDBOX_NEEDED === 'YES') ? 'Yes' : 'No';
+    const sbLang = item.SOUNDBOX_LANG || item.LANGUAGE || '';
+    const product = item.PRODUCT || '';
+    const noOfDevices = item.NO_OF_DEVICES || '';
+    const contactPerson = item.CONTACT_NAME || '';
+    const contactMob = item.CONTACT_MOBILE || '';
+    const qrPdf = item.QR_PDF_URL || item.FILE_URL || '';
     const status = item.STATUS || 'Pending Review';
-    const vpa = item.VPA || item.MERCHANTVPA || '';
-    const fileUrl = item.FILE_URL || '';
     const remarks = item.VENDOR_REMARKS || item.REMARKS || '';
-    const completedAt = item.COMPLETED_AT || '';
+    const createdDate = item.TIMESTAMP || item.CREATED_AT || item.CREATED_DATE || item.UPDATED_DATE || '';
+    const completedDate = item.COMPLETED_DATE || item.COMPLETED_AT || '';
 
     return [
       clean(category),
-      clean(id),
-      clean(time),
+      clean(status),
       clean(name),
       clean(acct),
+      clean(ifsc),
+      clean(vpa),
       clean(mob),
-      clean(sol),
-      clean(branch),
+      clean(email),
+      clean(gst),
+      clean(merchantType),
+      clean(mcc),
+      clean(lat),
+      clean(lng),
+      clean(addr1),
+      clean(addr2),
+      clean(poCity),
+      clean(pincode),
+      clean(state),
       clean(district),
+      clean(subdistrict),
+      clean(solPadded),
+      clean(branchName),
+      clean("Dindigul"),
+      clean(sbRequired),
+      clean(sbLang),
+      clean(product),
+      clean(noOfDevices),
+      clean(contactPerson),
+      clean(contactMob),
       clean(staffRoll),
       clean(staffName),
-      clean(staffMob),
       clean(staffDesig),
-      clean(sbNeeded),
-      clean(status),
-      clean(vpa),
-      clean(fileUrl),
+      clean(staffMob),
+      clean(qrPdf),
       clean(remarks),
-      clean(completedAt)
+      clean(createdDate),
+      clean(completedDate)
     ].join(",");
   });
 
@@ -1512,12 +1570,12 @@ function exportDataToCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `IOB_Dindigul_Applications_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `IOB_Dindigul_Complete_Export_${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast(`📊 Exported ${allItems.length} records to CSV!`, "success");
+  showToast(`📊 Exported ${allItems.length} records with full data (Email, Lat/Lng, Address, etc.)!`, "success");
 }
 </script>
 </body>
