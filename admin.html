@@ -1414,38 +1414,96 @@ function showToast(msg, type='') {
 }
 
 function exportDataToCSV() {
-  const allItems = [...(ALL_DATA.qr || []), ...(ALL_DATA.sb || []), ...(ALL_DATA.lead || [])];
+  let allItems = [...(ALL_DATA.qr || []), ...(ALL_DATA.sb || []), ...(ALL_DATA.lead || [])];
+  
+  // Fallback to cached data if in-memory is empty
   if (allItems.length === 0) {
-    showToast("No data to export!", "warning");
+    try {
+      const cached = localStorage.getItem('iob_portal_cache_data');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          allItems = [...(parsed.qr || []), ...(parsed.sb || []), ...(parsed.lead || [])];
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (allItems.length === 0) {
+    // If still 0, provide direct link to static export file
+    window.open('iob_dindigul_applications_data.csv', '_blank');
+    showToast("Opening backup applications CSV...", "info");
     return;
   }
 
-  const headers = ["Type", "Merchant / Entity Name", "SOL ID", "Account No", "VPA", "Mobile No", "Staff Name", "Staff Roll", "Status", "Remarks", "Created Date"];
+  const clean = (val) => '"' + String(val == null ? '' : val).replace(/"/g, '""').trim() + '"';
+
+  const headers = [
+    "Category",
+    "Application ID",
+    "Date / Timestamp",
+    "Merchant / Entity Name",
+    "Account Number",
+    "Contact Mobile",
+    "SOL ID",
+    "Branch Name",
+    "District",
+    "Staff Roll No",
+    "Staff Name",
+    "Staff Mobile",
+    "Staff Designation",
+    "Soundbox Needed",
+    "Status",
+    "VPA",
+    "File / PDF URL",
+    "Vendor Remarks",
+    "Completed At"
+  ];
+
   const rows = allItems.map(item => {
-    const type = item._type || (item.MERCHANTNAME ? 'QR' : (item.ACCOUNT_NAME ? 'SOUNDBOX' : 'LEAD'));
-    const name = item.MERCHANTNAME || item.ACCOUNT_NAME || item.MERCHANT_NAME || '';
+    const isSb = item.SOUNDBOX_NEEDED === 'YES' || item.CATEGORY === 'Soundbox' || item._type === 'sb';
+    const isLead = item.CATEGORY === 'Product Lead' || item._type === 'lead';
+    const category = isLead ? 'Product Lead' : (isSb ? 'Soundbox' : 'Merchant QR');
+    
+    const id = item.ID || item.docId || '';
+    const time = item.TIMESTAMP || item.CREATED_AT || item.CREATED_DATE || '';
+    const name = item.MERCHANT_NAME || item.MERCHANTNAME || item.ACCOUNT_NAME || '';
+    const acct = item.ACCOUNT_NO || item.ACCOUNTNO || item.ACCOUNT_NUMBER || '';
+    const mob = item.CONTACT_MOBILE || item.MOBILENO || item.MOBILE_NUMBER || item.MERCHANT_MOBILE || '';
     const sol = item.SOL_ID || item.SOL || '';
-    const acct = item.ACCOUNTNO || item.ACCOUNT_NUMBER || item.ACCOUNT_NO || '';
-    const vpa = item.MERCHANTVPA || item.VPA || '';
-    const mob = item.MOBILENO || item.MOBILE_NUMBER || item.MERCHANT_MOBILE || '';
-    const staffName = item.STAFF_NAME || item.CONTACT_NAME || '';
+    const branch = item.BRANCH_NAME || (BRANCHES[String(sol).padStart(4, '0')] ? BRANCHES[String(sol).padStart(4, '0')].name : '');
+    const district = item.DISTRICT || (BRANCHES[String(sol).padStart(4, '0')] ? BRANCHES[String(sol).padStart(4, '0')].district : '');
     const staffRoll = item.STAFF_ROLL || '';
+    const staffName = item.STAFF_NAME || item.CONTACT_NAME || '';
+    const staffMob = item.STAFF_MOBILE || '';
+    const staffDesig = item.STAFF_DESIGNATION || '';
+    const sbNeeded = (item.SOUNDBOX_NEEDED === 'YES' || isSb) ? 'YES' : 'NO';
     const status = item.STATUS || 'Pending Review';
+    const vpa = item.VPA || item.MERCHANTVPA || '';
+    const fileUrl = item.FILE_URL || '';
     const remarks = item.VENDOR_REMARKS || item.REMARKS || '';
-    const created = item.CREATED_DATE || item.CREATED_AT || '';
+    const completedAt = item.COMPLETED_AT || '';
 
     return [
-      `"${type}"`,
-      `"${name.replace(/"/g, '""')}"`,
-      `"${sol}"`,
-      `"${acct}"`,
-      `"${vpa}"`,
-      `"${mob}"`,
-      `"${staffName.replace(/"/g, '""')}"`,
-      `"${staffRoll}"`,
-      `"${status}"`,
-      `"${remarks.replace(/"/g, '""')}"`,
-      `"${created}"`
+      clean(category),
+      clean(id),
+      clean(time),
+      clean(name),
+      clean(acct),
+      clean(mob),
+      clean(sol),
+      clean(branch),
+      clean(district),
+      clean(staffRoll),
+      clean(staffName),
+      clean(staffMob),
+      clean(staffDesig),
+      clean(sbNeeded),
+      clean(status),
+      clean(vpa),
+      clean(fileUrl),
+      clean(remarks),
+      clean(completedAt)
     ].join(",");
   });
 
