@@ -298,6 +298,11 @@
     <input type="password" id="adminPassInput" placeholder="Enter Password" onkeyup="if(event.key==='Enter') verifyAdminPass()">
     <button onclick="verifyAdminPass()">Unlock Dashboard</button>
     <div class="auth-error" id="adminAuthError">❌ Incorrect password. Access denied.</div>
+    <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+      <a href="iob_dindigul_applications_data.csv" download="iob_dindigul_applications_data.csv" style="display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; color:#60a5fa; font-weight:700; text-decoration:none;">
+        📥 Direct Download Data CSV (Offline Backup)
+      </a>
+    </div>
   </div>
 </div>
 
