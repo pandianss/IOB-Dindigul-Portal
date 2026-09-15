@@ -957,8 +957,8 @@
                 <input type="text" id="sb-region" value="Dindigul" placeholder="Region" readonly>
               </div>
               <div class="field">
-                <label>VPA <span class="req">*</span></label>
-                <input type="text" id="sb-vpa" placeholder="e.g. merchant@iob">
+                <label>VPA <span class="req">*</span> <span class="hint">(IOB UPI ID only — must end with @iob)</span></label>
+                <input type="text" id="sb-vpa" placeholder="e.g. merchant@iob" autocomplete="off" autocapitalize="none" spellcheck="false">
               </div>
               <div class="field">
                 <label>Account Name <span class="req">*</span></label>
@@ -1644,6 +1644,9 @@ const RE_PINCODE = /^[1-9]\d{5}$/;
 // GSTIN: 2-digit state code, 10-char PAN, entity digit, literal Z, checksum char.
 const RE_GST     = /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$/;
 const RE_VPA     = /^[A-Za-z0-9._-]{2,64}@[A-Za-z]{2,32}$/;
+// Soundbox is an IOB-issued device, so its UPI ID must sit on the bank's own
+// handle. Records already carry @ybl and @iob.in values that do not belong.
+const RE_VPA_IOB = /^[A-Za-z0-9._-]{2,64}@iob$/i;
 
 const VALIDATORS = {
   text:    (v) => v.length >= 2 || 'Please enter at least 2 characters',
@@ -1654,6 +1657,12 @@ const VALIDATORS = {
   pincode: (v) => RE_PINCODE.test(v) || 'Enter a valid 6-digit pincode',
   gst:     (v) => RE_GST.test(v) || 'GSTIN must be 15 characters, e.g. 33ABCDE1234F1Z5',
   vpa:     (v) => RE_VPA.test(v) || 'Enter a valid UPI ID, e.g. merchantname@iob',
+  vpaIob:  (v) => {
+    if (RE_VPA_IOB.test(v)) return true;
+    if (!v.includes('@')) return 'Enter the IOB UPI ID, e.g. merchantname@iob';
+    const handle = v.split('@').pop();
+    return `Soundbox UPI ID must be an IOB one ending in @iob (you entered @${handle})`;
+  },
   acc15:   (v) => /^\d{15}$/.test(v) || ('Current Account number must be exactly 15 digits (you entered ' + v.length + ')'),
   acc:     (v) => /^\d{9,18}$/.test(v) || 'Account number must be 9 to 18 digits',
   devices: (v) => (/^\d+$/.test(v) && +v >= 1 && +v <= 99) || 'Enter a number of devices between 1 and 99',
@@ -1681,7 +1690,7 @@ const FORM_SPECS = {
     ['qr-subdistrict',  'text',    'Sub-district']
   ],
   soundbox: [
-    ['sb-vpa',         'vpa',     'VPA'],
+    ['sb-vpa',         'vpaIob',  'VPA'],
     ['sb-accountname', 'name',    'Account name'],
     ['sb-mobile',      'mobile',  'Mobile number'],
     ['sb-address',     'text',    'Address'],
@@ -1811,11 +1820,14 @@ function attachInputGuards() {
   const email = document.getElementById('qr-email');
   if (email) email.addEventListener('input', () => { email.value = email.value.replace(/\s/g, ''); });
 
-  const vpaFields = ['qr-merchantvpa', 'sb-vpa'];
-  vpaFields.forEach(id => {
+  // Strip whitespace and lowercase only the handle — local parts are used
+  // case-sensitively by the vendor (e.g. PPQR01.CUJZBZ@iob), so leave them be.
+  ['qr-merchantvpa', 'sb-vpa'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => {
-      el.value = el.value.toLowerCase().replace(/\s/g, '');
+      const v = el.value.replace(/\s/g, '');
+      const at = v.lastIndexOf('@');
+      el.value = at === -1 ? v : v.slice(0, at) + '@' + v.slice(at + 1).toLowerCase();
     });
   });
 
