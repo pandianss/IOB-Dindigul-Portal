@@ -1351,10 +1351,17 @@ async function confirmCompletion() {
   const vpaValue = document.getElementById('modalVpaInput').value.trim();
   const remarksValue = document.getElementById('modalRemarksInput').value.trim();
 
-  if (activeSelectedApp._type === 'QR' && statusVal === 'Completed' && !vpaValue) {
-    showToast("Please enter/confirm the generated Merchant VPA for QR Code", "error");
-    document.getElementById('modalVpaInput').focus();
-    return;
+  if (activeSelectedApp._type === 'QR' && statusVal === 'Completed') {
+    if (!vpaValue) {
+      showToast("Please enter/confirm the generated Merchant VPA for QR Code", "error");
+      document.getElementById('modalVpaInput').focus();
+      return;
+    }
+    if (!/^[A-Za-z0-9._-]{2,64}@[A-Za-z]{2,32}$/.test(vpaValue)) {
+      showToast("That VPA is not valid — expected something like merchantname@iob", "error");
+      document.getElementById('modalVpaInput').focus();
+      return;
+    }
   }
 
   const btn = document.getElementById('btnConfirmComplete');

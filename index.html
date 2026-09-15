@@ -188,6 +188,8 @@
   .field input.autofilled { border-color: var(--success) !important; }
   .field .hint { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
   .sol-error { font-size: 0.75rem; color: var(--error); font-weight: 600; margin-top: 3px; display: none; }
+  .field .field-error { font-size: 0.72rem; color: var(--error); font-weight: 600; margin-top: 2px; display: none; line-height: 1.35; }
+  .field .field-error.show { display: block; }
 
   /* ── MCC DROPDOWN ── */
   .mcc-wrapper { position: relative; }
@@ -796,11 +798,11 @@
               </div>
               <div class="field">
                 <label>ACCOUNTNO <span class="req">*</span></label>
-                <input type="text" id="qr-accountno" placeholder="Bank Account Number" inputmode="numeric">
+                <input type="text" id="qr-accountno" placeholder="Bank Account Number (9-18 digits)" maxlength="18" inputmode="numeric" autocomplete="off">
               </div>
               <div class="field">
                 <label>IFSC <span class="req">*</span></label>
-                <input type="text" id="qr-ifsc" placeholder="e.g. IOBA0000174" style="text-transform:uppercase">
+                <input type="text" id="qr-ifsc" placeholder="e.g. IOBA0000174" maxlength="11" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">
               </div>
               <div class="field">
                 <label>MOBILENO <span class="req">*</span></label>
@@ -808,11 +810,11 @@
               </div>
               <div class="field">
                 <label>EMAILID <span class="req">*</span></label>
-                <input type="email" id="qr-email" placeholder="merchant@email.com">
+                <input type="email" id="qr-email" placeholder="merchant@email.com" autocomplete="off" autocapitalize="none" spellcheck="false">
               </div>
               <div class="field">
                 <label>GSTNO <span class="hint">(Not Mandatory)</span></label>
-                <input type="text" id="qr-gstno" placeholder="15-digit GSTIN (Optional)" style="text-transform:uppercase">
+                <input type="text" id="qr-gstno" placeholder="15-digit GSTIN (Optional)" maxlength="15" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">
               </div>
               <div class="field">
                 <label>MERCHANTTYPE <span class="req">*</span></label>
@@ -1627,77 +1629,206 @@ function getGPS(prefix) {
   );
 }
 
-function validateFormFields() {
-  let valid = true;
+// ─────────────────────────────────────────────
+// FIELD VALIDATION
+// Presence alone let malformed IFSC codes, emails and account numbers through,
+// so every field now carries a format rule and its own inline error message.
+// ─────────────────────────────────────────────
+
+// IFSC is always 11 chars: 4-letter bank code, a literal 0, then 6 alphanumerics.
+const RE_IFSC    = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+// Indian mobile numbers are 10 digits starting 6-9.
+const RE_MOBILE  = /^[6-9]\d{9}$/;
+const RE_EMAIL   = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const RE_PINCODE = /^[1-9]\d{5}$/;
+// GSTIN: 2-digit state code, 10-char PAN, entity digit, literal Z, checksum char.
+const RE_GST     = /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$/;
+const RE_VPA     = /^[A-Za-z0-9._-]{2,64}@[A-Za-z]{2,32}$/;
+
+const VALIDATORS = {
+  text:    (v) => v.length >= 2 || 'Please enter at least 2 characters',
+  name:    (v) => v.length >= 3 || 'Please enter the full name (at least 3 characters)',
+  ifsc:    (v) => RE_IFSC.test(v) || 'IFSC must be 11 characters, e.g. IOBA0000174',
+  mobile:  (v) => RE_MOBILE.test(v) || 'Enter a 10-digit mobile number starting with 6, 7, 8 or 9',
+  email:   (v) => RE_EMAIL.test(v) || 'Enter a valid email address, e.g. merchant@gmail.com',
+  pincode: (v) => RE_PINCODE.test(v) || 'Enter a valid 6-digit pincode',
+  gst:     (v) => RE_GST.test(v) || 'GSTIN must be 15 characters, e.g. 33ABCDE1234F1Z5',
+  vpa:     (v) => RE_VPA.test(v) || 'Enter a valid UPI ID, e.g. merchantname@iob',
+  acc15:   (v) => /^\d{15}$/.test(v) || ('Current Account number must be exactly 15 digits (you entered ' + v.length + ')'),
+  acc:     (v) => /^\d{9,18}$/.test(v) || 'Account number must be 9 to 18 digits',
+  devices: (v) => (/^\d+$/.test(v) && +v >= 1 && +v <= 99) || 'Enter a number of devices between 1 and 99',
+  lat:     (v) => (parseFloat(v) >= 8 && parseFloat(v) <= 13.6) || 'Latitude looks outside Tamil Nadu — recapture GPS',
+  lng:     (v) => (parseFloat(v) >= 76 && parseFloat(v) <= 80.4) || 'Longitude looks outside Tamil Nadu — recapture GPS'
+};
+
+// Field specs per request type: [id, rule, label, optional]
+const FORM_SPECS = {
+  qr: [
+    ['qr-merchantname', 'name',    'Merchant name'],
+    ['qr-merchantvpa',  'vpa',     'Merchant VPA', true],
+    ['qr-accountno',    'acc',     'Account number'],
+    ['qr-ifsc',         'ifsc',    'IFSC'],
+    ['qr-mobile',       'mobile',  'Mobile number'],
+    ['qr-email',        'email',   'Email'],
+    ['qr-gstno',        'gst',     'GSTIN', true],
+    ['qr-merchanttype', null,      'Merchant type'],
+    ['qr-lat',          'lat',     'Latitude'],
+    ['qr-lng',          'lng',     'Longitude'],
+    ['qr-addr1',        'text',    'Address line 1'],
+    ['qr-postoffice',   'text',    'Post office'],
+    ['qr-pincode',      'pincode', 'Pincode'],
+    ['qr-district',     'text',    'District'],
+    ['qr-subdistrict',  'text',    'Sub-district']
+  ],
+  soundbox: [
+    ['sb-vpa',         'vpa',     'VPA'],
+    ['sb-accountname', 'name',    'Account name'],
+    ['sb-mobile',      'mobile',  'Mobile number'],
+    ['sb-address',     'text',    'Address'],
+    ['sb-pincode',     'pincode', 'Pincode'],
+    ['sb-city',        'text',    'City'],
+    ['sb-state',       'text',    'State']
+  ],
+  lead: [
+    ['lead-accountno',     'acc15',   'Current Account number'],
+    ['lead-merchantname',  'name',    'Merchant name'],
+    ['lead-mobile',        'mobile',  'Mobile number'],
+    ['lead-devices',       'devices', 'Number of devices'],
+    ['lead-contactname',   'name',    'Contact name'],
+    ['lead-contactmobile', 'mobile',  'Contact mobile number']
+  ]
+};
+
+function setFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const wrap = el.closest('.field') || el.parentElement;
+  let node = wrap ? wrap.querySelector('.field-error') : null;
+
+  if (msg) {
+    el.classList.add('error');
+    if (wrap && !node) {
+      node = document.createElement('div');
+      node.className = 'field-error';
+      wrap.appendChild(node);
+    }
+    if (node) { node.textContent = msg; node.classList.add('show'); }
+  } else {
+    el.classList.remove('error');
+    if (node) node.classList.remove('show');
+  }
+}
+
+function clearAllFieldErrors() {
   document.querySelectorAll('.field input, .field select').forEach(e => e.classList.remove('error'));
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
+}
 
-  function check(id) {
+// Returns an error message, or an empty string when the field is acceptable.
+function checkField(id, rule, label, optional) {
+  const el = document.getElementById(id);
+  if (!el) return '';
+  const val = (el.value || '').trim();
+
+  if (!val) return optional ? '' : (label + ' is required');
+  if (!rule) return '';
+
+  const res = VALIDATORS[rule](val);
+  return res === true ? '' : res;
+}
+
+function validateSol(prefix) {
+  const el = document.getElementById(prefix + '-solid');
+  if (!el) return '';
+  const raw = (el.value || '').replace(/\D/g, '');
+  if (!raw) return 'Branch SOL ID is required';
+  if (!BRANCHES[raw.padStart(4, '0')]) return 'Not a valid Dindigul region SOL ID';
+  return '';
+}
+
+function validateFormFields() {
+  clearAllFieldErrors();
+
+  const spec = FORM_SPECS[currentType] || [];
+  let firstBadId = null;
+  let errorCount = 0;
+
+  function flag(id, msg) {
+    setFieldError(id, msg);
+    if (msg) {
+      errorCount++;
+      if (!firstBadId) firstBadId = id;
+    }
+  }
+
+  spec.forEach(([id, rule, label, optional]) => flag(id, checkField(id, rule, label, optional)));
+
+  // SOL ID is required for soundbox and lead, and for QR only when a soundbox is wanted
+  const needsSol = currentType === 'soundbox' || currentType === 'lead' ||
+                   (currentType === 'qr' && document.getElementById('qr-require-sb').checked);
+  if (needsSol) {
+    const prefix = currentType === 'soundbox' ? 'sb' : (currentType === 'lead' ? 'lead' : 'qr');
+    flag(prefix + '-solid', validateSol(prefix));
+  }
+
+  // MCC sits behind a searchable dropdown, so flag the search box itself
+  if (currentType === 'qr' || currentType === 'soundbox') {
+    const prefix = currentType === 'qr' ? 'qr' : 'sb';
+    if (!document.getElementById(prefix + '-mcc-value').value) {
+      flag(prefix + '-mcc-search', 'Select a merchant category (MCC) from the list');
+    }
+  }
+
+  if (errorCount) {
+    const el = document.getElementById(firstBadId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
+    showToast(errorCount === 1
+      ? 'Please correct the highlighted field'
+      : 'Please correct the ' + errorCount + ' highlighted fields', 'error');
+  }
+
+  return errorCount === 0;
+}
+
+// Normalise values as they are typed, so what gets stored matches what we validate.
+function attachInputGuards() {
+  ['qr-accountno', 'qr-mobile', 'qr-pincode', 'sb-mobile', 'sb-pincode',
+   'lead-accountno', 'lead-mobile', 'lead-contactmobile'].forEach(id => {
     const el = document.getElementById(id);
-    if (!el || !el.value.trim()) {
-      if (el) el.classList.add('error');
-      valid = false;
-    }
-  }
+    if (el) el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, ''); });
+  });
 
-  if (currentType === 'qr') {
-    check('qr-merchantname'); check('qr-accountno');
-    check('qr-ifsc'); check('qr-mobile'); check('qr-email'); check('qr-merchanttype');
-    check('qr-lat'); check('qr-lng'); check('qr-addr1'); check('qr-postoffice');
-    check('qr-pincode'); check('qr-district'); check('qr-subdistrict');
-    if (!document.getElementById('qr-mcc-value').value) {
-      document.getElementById('qr-mcc-search').classList.add('error');
-      valid = false;
-    }
-    if (document.getElementById('qr-require-sb').checked) {
-      const solRaw = document.getElementById('qr-solid').value.replace(/\D/g, '');
-      const padded = solRaw.padStart(4, '0');
-      if (!solRaw || !BRANCHES[padded]) {
-        document.getElementById('qr-solid').classList.add('error');
-        showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
-        valid = false;
-      }
-    }
-  }
+  ['qr-ifsc', 'qr-gstno'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+  });
 
-  if (currentType === 'soundbox') {
-    const solRaw = document.getElementById('sb-solid').value.replace(/\D/g, '');
-    const padded = solRaw.padStart(4, '0');
-    if (!solRaw || !BRANCHES[padded]) {
-      document.getElementById('sb-solid').classList.add('error');
-      showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
-      valid = false;
-    }
-    check('sb-vpa'); check('sb-accountname');
-    check('sb-mobile'); check('sb-address'); check('sb-pincode');
-    check('sb-city'); check('sb-state');
-    if (!document.getElementById('sb-mcc-value').value) {
-      document.getElementById('sb-mcc-search').classList.add('error');
-      valid = false;
-    }
-  }
+  const email = document.getElementById('qr-email');
+  if (email) email.addEventListener('input', () => { email.value = email.value.replace(/\s/g, ''); });
 
-  if (currentType === 'lead') {
-    const solRaw = document.getElementById('lead-solid').value.replace(/\D/g, '');
-    const padded = solRaw.padStart(4, '0');
-    if (!solRaw || !BRANCHES[padded]) {
-      document.getElementById('lead-solid').classList.add('error');
-      showToast('Invalid SOL ID. Must be a valid branch code from branches.csv', 'error');
-      valid = false;
-    }
-    check('lead-accountno'); check('lead-merchantname');
-    check('lead-mobile'); check('lead-devices');
-    check('lead-contactname'); check('lead-contactmobile');
+  const vpaFields = ['qr-merchantvpa', 'sb-vpa'];
+  vpaFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      el.value = el.value.toLowerCase().replace(/\s/g, '');
+    });
+  });
 
-    const acc = document.getElementById('lead-accountno').value.trim();
-    if (acc.length !== 15) {
-      document.getElementById('lead-accountno').classList.add('error');
-      showToast('Current Account number must be exactly 15 digits', 'error');
-      valid = false;
-    }
-  }
-
-  if (!valid) showToast('Please fill in all mandatory fields before submitting', 'error');
-  return valid;
+  // Validate on blur so mistakes surface at the field rather than on submit
+  Object.values(FORM_SPECS).forEach(list => list.forEach(([id, rule, label, optional]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('blur', () => {
+      // Don't nag about a required field the user has not filled in yet
+      if (!el.value.trim()) return;
+      setFieldError(id, checkField(id, rule, label, optional));
+    });
+  }));
 }
 
 function collectQR() {
@@ -1873,6 +2004,7 @@ function resetForm() {
   document.querySelectorAll('[id$="-mcc-value"]').forEach(e => e.value = '');
   document.querySelectorAll('.autofilled').forEach(e => e.classList.remove('autofilled'));
   document.querySelectorAll('.sol-error').forEach(e => e.style.display = 'none');
+  clearAllFieldErrors();
   document.getElementById('qr-sb-fields').classList.add('hidden');
   document.getElementById('sb-region').value = 'Dindigul';
   onLeadProductChange('3 in 1 POS (QR Code + POS + Soundbox)');
@@ -2208,6 +2340,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initTheme();
   setupMCC('qr');
   setupMCC('sb');
+  attachInputGuards();
   loadStatusData();
 });
 </script>
