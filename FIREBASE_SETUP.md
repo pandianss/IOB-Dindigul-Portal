@@ -80,3 +80,31 @@ before/after table, and applies them on click. Originals are preserved on each
 document under `DATA_CORRECTED_FROM`.
 
 Items that need a person to resolve are listed in `DATA_WORKLIST.csv`.
+
+### Status of the one-off cleanup
+
+The 16 mechanically certain corrections were applied on 2026-09-15. Each
+affected document carries `DATA_CORRECTED_FROM` with its original values, so
+nothing was destroyed. Remaining after that pass: 1 IFSC, 2 emails and 3
+soundbox VPAs that need a person, plus 2 duplicate pairs — all in
+`DATA_WORKLIST.csv`.
+
+### Applying further corrections
+
+`data-corrections.html` cannot write while the deployed rules are in force:
+`onlyWorkflowFields()` deliberately excludes `IFSC`, `EMAILID`, `ACCOUNT_NO`
+and `VPA`, because those are exactly the fields that must not be tamperable by
+an anonymous caller. To correct one of them you have two options:
+
+- Edit the document directly in the Firebase console, which bypasses rules.
+- Or open a short window: add the field names to the `hasOnly([...])` list in
+  `firestore.rules`, `firebase deploy --only firestore:rules`, run the tool,
+  then `git checkout -- firestore.rules` and deploy again. Verify the window is
+  shut by attempting a protected-field write with a **genuinely different**
+  value — writing the same value produces an empty diff and passes regardless,
+  which makes for a misleading test.
+
+Deleting a record always requires the console or a privileged Cloud Function:
+`allow delete: if false` applies to every client, which is what stops a
+drive-by wipe. The duplicate pairs in the worklist therefore have to be removed
+from the console.
