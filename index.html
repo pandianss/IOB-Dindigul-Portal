@@ -2057,7 +2057,6 @@ function updateThemeIcon(theme) {
 // ─────────────────────────────────────────────
 // CONFIGURATION & FIREBASE REAL-TIME ENGINE
 // ─────────────────────────────────────────────
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_RxcPyViFLY_ILWqzxB6jb9RopXU_vZhHbusPdbrj70FcQx6vGcyrAQTTy_gW4goL/exec";
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCcWvwBEKPZtowPA-np8qr5GpQVCt6OMLM",
   authDomain: "digitaldindigul-f78f9.firebaseapp.com",
@@ -2107,38 +2106,6 @@ function isRealMerchantLead(item) {
   return (item.MERCHANTNAME || item.ACCOUNT_NAME || item.MERCHANT_NAME || item.VPA || item.PRODUCT || item.SOL_ID) ? true : false;
 }
 
-function mergeDatasets(base, incoming) {
-  const result = {
-    qr: [...(base.qr || [])],
-    sb: [...(base.sb || [])],
-    lead: [...(base.lead || [])]
-  };
-
-  ['qr', 'sb', 'lead'].forEach(category => {
-    if (incoming[category] && Array.isArray(incoming[category])) {
-      incoming[category].forEach(newItem => {
-        if (!isRealMerchantLead(newItem)) return;
-        const key = newItem.docId || newItem.MERCHANTVPA || newItem.ACCOUNTNO || newItem.MOBILENO || newItem.MERCHANTNAME || newItem.ACCOUNT_NAME;
-        if (!key) {
-          result[category].unshift(newItem);
-          return;
-        }
-        const existingIdx = result[category].findIndex(item => {
-          const itemKey = item.docId || item.MERCHANTVPA || item.ACCOUNTNO || item.MOBILENO || item.MERCHANTNAME || item.ACCOUNT_NAME;
-          return itemKey && String(itemKey).trim().toLowerCase() === String(key).trim().toLowerCase();
-        });
-        if (existingIdx >= 0) {
-          result[category][existingIdx] = { ...result[category][existingIdx], ...newItem };
-        } else {
-          result[category].unshift(newItem);
-        }
-      });
-    }
-  });
-
-  return result;
-}
-
 let realtimeAttached = false;
 function setupRealtimeFirebaseListener() {
   if (realtimeAttached) return true;
@@ -2151,16 +2118,20 @@ function setupRealtimeFirebaseListener() {
       snapshot.forEach(doc => {
         const data = doc.data();
         data.docId = doc.id;
+        // Staff-directory documents share the collection; mergeDatasets used to
+        // screen them out, so the listener has to do it now.
+        if (!isRealMerchantLead(data)) return;
         if (data.type === 'qr' || data.MERCHANTNAME) incoming.qr.push(data);
         else if (data.type === 'soundbox' || data.ACCOUNT_NAME) incoming.sb.push(data);
         else if (data.type === 'lead' || data.MERCHANT_NAME || data.PRODUCT) incoming.lead.push(data);
       });
 
-      if (incoming.qr.length > 0 || incoming.sb.length > 0 || incoming.lead.length > 0) {
-        TRACKING_DATA = mergeDatasets(TRACKING_DATA, incoming);
-        localStorage.setItem('iob_portal_cache_data', JSON.stringify(TRACKING_DATA));
-        renderStatusTable();
-      }
+      // Firestore is the only datastore, so the snapshot replaces what we hold.
+      // Merging instead would keep rows the snapshot no longer contains, which
+      // is how deleted records lingered and the cache accumulated phantoms.
+      TRACKING_DATA = incoming;
+      localStorage.setItem('iob_portal_cache_data', JSON.stringify(incoming));
+      renderStatusTable();
     }, err => {
       console.warn("Firestore snapshot notice:", err.message);
     });
@@ -2173,37 +2144,28 @@ function setupRealtimeFirebaseListener() {
   return false;
 }
 
-// Paints the cached snapshot instantly, then lets the realtime listener and Apps Script fetch sync in background
-async function loadStatusData() {
+// Drops rows left over from the Google Sheets era. Those carry no docId, no
+// longer exist in Firestore, and used to be written back to the cache on every
+// load, so they accumulated instead of ageing out.
+function pruneLegacyCache(parsed) {
+  const keep = (list) => (Array.isArray(list) ? list.filter(item => item && item.docId) : []);
+  return { qr: keep(parsed.qr), sb: keep(parsed.sb), lead: keep(parsed.lead) };
+}
+
+// Paints the cached snapshot instantly; the realtime listener then supplies
+// the authoritative data and replaces whatever the cache held.
+function loadStatusData() {
   const cached = localStorage.getItem('iob_portal_cache_data');
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (parsed && (parsed.qr || parsed.sb || parsed.lead)) {
-        TRACKING_DATA = parsed;
+        TRACKING_DATA = pruneLegacyCache(parsed);
         renderStatusTable();
       }
     } catch(e) {}
   }
   setupRealtimeFirebaseListener();
-
-  // Background fetch from Apps Script (15s timeout)
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    if (data && (data.qr || data.sb || data.lead)) {
-      TRACKING_DATA = mergeDatasets(TRACKING_DATA, data);
-      localStorage.setItem('iob_portal_cache_data', JSON.stringify(TRACKING_DATA));
-      renderStatusTable();
-    }
-  } catch(e) {
-    clearTimeout(timeoutId);
-    console.warn("Background fetch note:", e.message);
-  }
 }
 
 function formatBranchLoc(solId, branchName, district) {
