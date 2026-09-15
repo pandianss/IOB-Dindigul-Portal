@@ -53,6 +53,30 @@ still need doing:
   `signedIn()` checks in `firestore.rules` for role checks, and gate the
   `staff` collection to admins only.
 
-Note also that `ADMIN_PASSWORD` in `admin.html` is a plaintext constant shipped
-to every visitor. It gates the dashboard UI, not the data — the rules above are
-what actually protect the records.
+The dashboard password is now stored as a SHA-256 hash (`ADMIN_PASSWORD_SHA256`
+in `admin.html`) rather than plaintext, so it is no longer readable in page
+source. That raises the bar but is not a security boundary: the hash is still
+shipped to every visitor and is brute-forceable offline, and the dashboard only
+gates the UI — anyone can call Firestore directly. The rules above are what
+actually protect the records. To change the password, replace the constant with
+the SHA-256 of the new one.
+
+## Deployment order
+
+These are order-dependent. Doing them out of order takes the portal down:
+
+1. **Enable Anonymous sign-in** (Authentication -> Sign-in method). Until this
+   is on, `signInAnonymously()` fails with `auth/configuration-not-found`.
+2. **Then** deploy `firestore.rules`. The rules require `request.auth != null`,
+   so deploying them while step 1 is undone locks every user out.
+3. Provision the Storage bucket, or attaching a PDF in the admin dashboard hangs.
+
+## One-off data cleanup
+
+`data-corrections.html` recomputes the mechanically certain corrections (IFSC
+rebuilt from the record's own SOL, restored leading zeros on 15-digit accounts,
+emails missing an `@` or a dot, soundbox VPAs on `@iob.in`), shows them as a
+before/after table, and applies them on click. Originals are preserved on each
+document under `DATA_CORRECTED_FROM`.
+
+Items that need a person to resolve are listed in `DATA_WORKLIST.csv`.

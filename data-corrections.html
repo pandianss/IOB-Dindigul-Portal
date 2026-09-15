@@ -1,0 +1,191 @@
+<title>Data Corrections — IOB Dindigul Portal</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #ffffff; --ink: #1a2440; --muted: #6b7a99;
+    --line: #d7dfee; --accent: #1a3a7a; --ok: #166534; --warn: #b45309; --err: #b91c1c;
+  }
+  :root:not([data-theme="light"]) { }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1220; --card: #151c2e; --ink: #e8edf7; --muted: #94a3bd;
+      --line: #263248; --accent: #7aa2e8; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1220; --card: #151c2e; --ink: #e8edf7; --muted: #94a3bd;
+    --line: #263248; --accent: #7aa2e8; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+  }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; padding: 24px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
+  .from { color: var(--err); text-decoration: line-through; }
+  .to { color: var(--ok); font-weight: 700; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 11px 20px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .note { border-left: 3px solid var(--warn); padding-left: 12px; color: var(--muted); margin: 14px 0; }
+  .status { margin-top: 14px; font-weight: 600; }
+  .muted { color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <h1>Data Corrections</h1>
+  <p class="sub">One-off cleanup of malformed values in the <code>leads</code> collection. Recomputed live, so it never shows stale suggestions.</p>
+
+  <div class="card">
+    <div class="note">
+      Only mechanically certain corrections appear here: IOB IFSC codes rebuilt from the record's own SOL ID,
+      15-digit account numbers whose leading zero was lost to numeric conversion, emails missing an
+      <code>@</code> or a dot in a known domain, and soundbox VPAs on the <code>@iob.in</code> handle
+      instead of <code>@iob</code>. Every original value is preserved on the document under
+      <code>DATA_CORRECTED_FROM</code>. Anything needing a human decision is listed in
+      <code>DATA_WORKLIST.csv</code> instead.
+    </div>
+    <div id="summary" class="muted">Loading…</div>
+    <div class="scroll"><table id="tbl" hidden>
+      <thead><tr><th>Doc ID</th><th>Merchant</th><th>Field</th><th>Current</th><th>Corrected to</th><th>Why</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="status" id="status"></div>
+    <p><button id="apply" disabled>Apply corrections</button></p>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  apiKey: "AIzaSyCcWvwBEKPZtowPA-np8qr5GpQVCt6OMLM",
+  authDomain: "digitaldindigul-f78f9.firebaseapp.com",
+  projectId: "digitaldindigul-f78f9",
+  storageBucket: "digitaldindigul-f78f9.firebasestorage.app",
+  messagingSenderId: "451914130954",
+  appId: "1:451914130954:web:c582c386f29c0affb0a1f3"
+};
+
+const RE_IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const RE_EMAIL = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const RE_VPA_IOB = /^[A-Za-z0-9._-]{2,64}@iob$/i;
+
+let db, pending = [];
+
+// Mirrors the rules in index.html; only returns a correction when it is certain.
+function planCorrections(docs) {
+  const out = [];
+  for (const d of docs) {
+    const merchant = d.MERCHANTNAME || d.ACCOUNT_NAME || d.MERCHANT_NAME || '';
+
+    if (d.IFSC && !RE_IFSC.test(String(d.IFSC).trim().toUpperCase())) {
+      const raw = String(d.IFSC).trim();
+      const digits = raw.replace(/\D/g, '');
+      const sol = d.SOL_ID ? String(d.SOL_ID).replace(/\D/g, '') : '';
+      const six = sol ? sol.padStart(6, '0') : (digits.length >= 6 ? digits.slice(-6) : '');
+      const cand = six ? 'IOBA0' + six : '';
+      if (cand && RE_IFSC.test(cand) && /^IOB/i.test(raw)) {
+        out.push({ id: d.id, merchant, field: 'IFSC', from: raw, to: cand, why: 'IOB IFSC is IOBA0 + 6-digit SOL' });
+      }
+    }
+
+    if (d.EMAILID && !RE_EMAIL.test(String(d.EMAILID).trim())) {
+      const raw = String(d.EMAILID).trim();
+      let cand = null;
+      if (/@(gmail|yahoo|outlook|hotmail|rediffmail)com$/i.test(raw)) cand = raw.replace(/@(\w+)com$/i, '@$1.com');
+      else if (!raw.includes('@') && /(gmail|yahoo|outlook|hotmail|rediffmail)\.com$/i.test(raw)) cand = raw.replace(/(gmail|yahoo|outlook|hotmail|rediffmail)\.com$/i, '@$1.com');
+      if (cand && RE_EMAIL.test(cand)) {
+        out.push({ id: d.id, merchant, field: 'EMAILID', from: raw, to: cand, why: 'missing @ or dot in a known domain' });
+      }
+    }
+
+    if (d.ACCOUNT_NO && !/^\d{15}$/.test(String(d.ACCOUNT_NO).trim())) {
+      const raw = String(d.ACCOUNT_NO).trim();
+      const cand = raw.padStart(15, '0');
+      const sol = d.SOL_ID ? String(d.SOL_ID).replace(/\D/g, '').padStart(4, '0') : '';
+      if (/^\d+$/.test(raw) && cand.length === 15 && (!sol || cand.startsWith(sol))) {
+        out.push({ id: d.id, merchant, field: 'ACCOUNT_NO', from: raw, to: cand, why: 'restores leading zero; prefix matches SOL ' + (sol || 'n/a') });
+      }
+    }
+
+    if ((d.type === 'soundbox' || d.ACCOUNT_NAME) && d.VPA && d.VPA !== 'Pending Generation'
+        && !RE_VPA_IOB.test(String(d.VPA).trim()) && /@iob\.in$/i.test(String(d.VPA).trim())) {
+      const raw = String(d.VPA).trim();
+      out.push({ id: d.id, merchant, field: 'VPA', from: raw, to: raw.replace(/@iob\.in$/i, '@iob'), why: 'wrong IOB handle (@iob.in)' });
+    }
+  }
+  return out;
+}
+
+function render(list) {
+  const tbl = document.getElementById('tbl');
+  const body = tbl.querySelector('tbody');
+  body.innerHTML = list.map(f => `<tr>
+      <td><code>${f.id}</code></td>
+      <td>${f.merchant || '<span class="muted">—</span>'}</td>
+      <td>${f.field}</td>
+      <td><code class="from">${f.from}</code></td>
+      <td><code class="to">${f.to}</code></td>
+      <td class="muted">${f.why}</td>
+    </tr>`).join('');
+  tbl.hidden = list.length === 0;
+}
+
+async function init() {
+  if (!firebase.apps.length) firebase.initializeApp(CONFIG);
+  db = firebase.firestore();
+  try { await firebase.auth().signInAnonymously(); } catch (e) { /* rules may not require it yet */ }
+
+  const snap = await db.collection('leads').get();
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  pending = planCorrections(docs);
+
+  document.getElementById('summary').textContent =
+    pending.length
+      ? `${pending.length} correction${pending.length === 1 ? '' : 's'} ready across ${snap.size} records.`
+      : `Nothing to correct — all ${snap.size} records are clean.`;
+  render(pending);
+  document.getElementById('apply').disabled = pending.length === 0;
+}
+
+document.getElementById('apply').addEventListener('click', async () => {
+  const btn = document.getElementById('apply');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.textContent = 'Applying…';
+
+  try {
+    const byDoc = {};
+    for (const f of pending) (byDoc[f.id] = byDoc[f.id] || []).push(f);
+    const stamp = new Date().toISOString();
+
+    let batch = db.batch(), n = 0;
+    for (const id in byDoc) {
+      const upd = {}, orig = {};
+      for (const f of byDoc[id]) { upd[f.field] = f.to; orig[f.field] = f.from; }
+      upd.DATA_CORRECTED_AT = stamp;
+      upd.DATA_CORRECTED_FROM = orig;   // never destroy the original value
+      batch.set(db.collection('leads').doc(id), upd, { merge: true });
+      if (++n >= 400) { await batch.commit(); batch = db.batch(); n = 0; }
+    }
+    if (n) await batch.commit();
+
+    status.textContent = `✅ Applied ${pending.length} corrections. Re-checking…`;
+    await init();
+    status.textContent += ' Done.';
+  } catch (e) {
+    status.textContent = '❌ Failed: ' + e.message;
+    btn.disabled = false;
+  }
+});
+
+init().catch(e => {
+  document.getElementById('summary').textContent = 'Could not load: ' + e.message;
+});
+</script>

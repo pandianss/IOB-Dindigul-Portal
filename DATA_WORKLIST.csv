@@ -1,0 +1,12 @@
+Doc ID,Type,Field,Current Value,Merchant / Account Name,Problem,Action needed
+qr_12,QR,IFSC,9363795079@IOB,BABY S,A UPI ID was typed into the IFSC box and the record has no SOL ID to derive it from,Ask the branch for the account's IFSC (IOB format is IOBA0 + 6-digit SOL)
+qr_5,QR,EMAILID,karthiksekar12132005,Suppuraj,No @ and no domain — nothing to recover,Ask the branch for the merchant's email
+qr_74,QR,EMAILID,cha,CHANDRAJOTHI CEMENT SHOP,Truncated to three characters,Ask the branch for the merchant's email
+qr_38,QR,GSTNO,33cnfpm5169lizl,S m store,"Malformed GSTIN. Uppercased it is 33CNFPM5169LIZL; position 13 is 'I' where a digit belongs, so it may be a mistyped 1",Verify the GSTIN with the merchant (field is optional — clear it if unavailable)
+sb_13,Soundbox,VPA,9994571615@ybl,Sree Angalaeswari Rice Flour Mill,PhonePe handle on an IOB soundbox request,Obtain the merchant's IOB VPA (@iob)
+sb_14,Soundbox,VPA,KALAIARASI MOHAMMAD IBRAHIM,270301000006940,A person's name was entered instead of a UPI ID,Obtain the merchant's IOB VPA (@iob)
+aTawM5I9sLgvju5zBH8w,Soundbox,VPA,Infant jesus mat school,Infant jesus matriculation school,A merchant name was entered instead of a UPI ID,Obtain the merchant's IOB VPA (@iob)
+P3iMFLyTbJU12iZ0cBtd,QR,DUPLICATE,Dr Viajaya B,Dr Viajaya B,"Same merchant as VbmVdawoNIEfS9hTtHiz, spelled differently",Decide which record to keep and delete the other
+VbmVdawoNIEfS9hTtHiz,QR,DUPLICATE,Dr B Vijaya,Dr B Vijaya,"Same merchant as P3iMFLyTbJU12iZ0cBtd, spelled differently",Decide which record to keep and delete the other
+qr_17,QR,DUPLICATE,VENKATESWARA MEDICALS,VENKATESWARA MEDICALS,Same merchant name as qr_4,Confirm whether these are two genuine requests or one duplicate
+qr_4,QR,DUPLICATE,VENKATESWARA MEDICALS,VENKATESWARA MEDICALS,Same merchant name as qr_17,Confirm whether these are two genuine requests or one duplicate
