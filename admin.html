@@ -727,10 +727,39 @@ function initFirebaseEngine() {
   return false;
 }
 
+// Resolves once Firebase has a signed-in user, so writes are never issued
+// before the auth token exists. Rejects rather than hanging if sign-in fails.
+function ensureSignedIn(timeoutMs = 10000) {
+  if (!firebase.auth) return Promise.resolve(null);
+  if (firebase.auth().currentUser) return Promise.resolve(firebase.auth().currentUser);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { off(); reject(new Error('Could not reach the sign-in service. Check your connection and retry.')); }, timeoutMs);
+    const off = firebase.auth().onAuthStateChanged(user => {
+      if (!user) return;
+      clearTimeout(timer); off(); resolve(user);
+    });
+  });
+}
+
 let adminRealtimeAttached = false;
+
+// The security rules require an authenticated caller. A listener attached
+// before sign-in completes fails with permission-denied and never retries, so
+// wait for the auth state before subscribing.
 function setupAdminRealtimeListener() {
   if (adminRealtimeAttached) return true;
   if (!initFirebaseEngine()) return false;
+
+  if (firebase.auth && firebase.auth().currentUser) return attachAdminListener();
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (user) attachAdminListener();
+  });
+  return true;
+}
+
+function attachAdminListener() {
+  if (adminRealtimeAttached) return true;
 
   try {
     db.collection("leads").orderBy("CREATED_AT", "desc").limit(1000).onSnapshot(snapshot => {
@@ -756,6 +785,11 @@ function setupAdminRealtimeListener() {
       renderTable();
     }, err => {
       console.warn("Admin Firestore listener notice:", err.message);
+      // Release the latch so a later sign-in can re-subscribe.
+      adminRealtimeAttached = false;
+      if (err.code === 'permission-denied') {
+        showToast('Live data unavailable — please reload', 'error');
+      }
     });
 
     setupStaffListener();
@@ -1361,6 +1395,7 @@ async function confirmCompletion() {
     }
 
     if (db && activeSelectedApp.docId) {
+      await ensureSignedIn();   // rules reject writes from an unauthenticated caller
       await db.collection("leads").doc(activeSelectedApp.docId).update({
         ...updatedFields,
         UPDATED_AT: firebase.firestore.FieldValue.serverTimestamp()
