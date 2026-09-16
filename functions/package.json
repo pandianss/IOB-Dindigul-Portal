@@ -2,7 +2,7 @@
   "name": "iob-dindigul-portal-functions",
   "description": "Notification triggers for the IOB Dindigul Merchant Services Portal",
   "main": "index.js",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "scripts": {
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
