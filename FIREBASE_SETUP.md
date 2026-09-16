@@ -157,3 +157,30 @@ git. The consequence is that `firebase deploy --only functions` from a fresh
 clone fails with *"no value for the following environment variables"* until the
 file is recreated. Commit it if reproducible deploys matter more than keeping
 the address out of the repository.
+
+## Admin accounts (required for correcting merchant details)
+
+The "✏️ Correct Details" button on each row edits account number, IFSC, mobile,
+email and VPA. Those decide where money lands, so the rules gate them on a named
+admin account, not the shared dashboard password — that password is compared in
+the browser and the rules cannot see it, while every visitor holds an anonymous
+token.
+
+Set an admin up once:
+
+1. **Authentication → Sign-in method → enable Email/Password.**
+2. **Authentication → Users → Add user.** Give the person their own email and a
+   password. One account per admin; do not share a login, or the audit trail
+   in `CORRECTION_HISTORY` becomes meaningless.
+3. Copy that user's **UID** from the users list.
+4. **Firestore → Data → create a collection `admins`**, with a document whose
+   **ID is that UID**. The contents are not read, only the document's existence,
+   but a field like `email` makes the roster legible.
+
+Revoking an admin is deleting their `admins/{uid}` document. No redeploy is
+needed either way.
+
+The dashboard password still opens the dashboard and the status workflow is
+unchanged; the admin sign-in is a second, narrower gate that appears only when
+correcting a protected field. Rules were verified after deployment: an
+anonymous caller cannot write `ACCOUNTNO` and cannot enumerate `/admins`.
