@@ -1496,6 +1496,13 @@ function openModal(item) {
   selectedFileName = null;
   document.getElementById('pdfFileInput').value = "";
 
+  // Reset the confirm button. If a previous attempt left it disabled, every
+  // later one is dead on arrival: the click does nothing and the label still
+  // reads "Updating..." before anything has been clicked.
+  const confirmBtn = document.getElementById('btnConfirmComplete');
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = "Update Status";
+
   // Show what is already attached, so replacing a wrong QR code is an obvious
   // action rather than something you have to know is possible.
   const existingBox = document.getElementById('existingPdfBox');
@@ -1667,15 +1674,31 @@ async function confirmCompletion() {
       renderTable();
     }
 
+    let queuedOffline = false;
     if (db && activeSelectedApp.docId) {
       await ensureSignedIn();   // rules reject writes from an unauthenticated caller
-      await FB.updateDoc(FB.doc(db, "leads", activeSelectedApp.docId), {
+      const write = FB.updateDoc(FB.doc(db, "leads", activeSelectedApp.docId), {
         ...updatedFields,
         UPDATED_AT: FB.serverTimestamp()
       });
+
+      // Firestore applies the change locally straight away but only settles this
+      // promise once the server acknowledges it, so on a dropped connection it
+      // stays pending indefinitely. Awaiting it unguarded left the button
+      // disabled for good. Report honestly instead and let it sync in the
+      // background; a genuine rejection still lands in the catch below.
+      write.catch(err => console.warn("Deferred status write failed:", err.message));
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        write.then(() => 'ok'),
+        new Promise(res => setTimeout(() => res(TIMEOUT), 8000))
+      ]);
+      queuedOffline = outcome === TIMEOUT;
     }
 
-    showToast("✅ Status updated successfully!", "success");
+    showToast(queuedOffline
+      ? "Saved on this device — it will sync when the connection returns"
+      : "✅ Status updated successfully!", queuedOffline ? "warning" : "success");
     closeModal();
   } catch(e) {
     showToast("Update notice: " + e.message, "warning");
@@ -1779,6 +1802,9 @@ function openCorrectModal(item) {
   Object.keys(CORRECT_RULES).forEach(id => setCorrectError(id, ''));
 
   document.getElementById('adminSignInError').style.display = 'none';
+  const saveBtn = document.getElementById('btnSaveCorrection');
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save corrections';
   document.getElementById('correctModal').classList.add('open');
   refreshCorrectModalAccess();
 }
