@@ -1357,7 +1357,7 @@ function onStaffRollInputModal(roll) {
 
     // Lookup branch details
     const branch = BRANCHES[staff.sol] || { name: 'Branch ' + staff.sol };
-    badge.innerHTML = `✓ <strong>${staff.name}</strong> (${staff.designation}) — <strong>Branch:</strong> ${staff.sol} (${branch.name})`;
+    badge.innerHTML = `✓ <strong>${escapeHtml(staff.name)}</strong> (${escapeHtml(staff.designation)}) — <strong>Branch:</strong> ${escapeHtml(staff.sol)} (${escapeHtml(branch.name)})`;
     badge.style.display = 'block';
 
     // Auto-fill SOL ID and Branch Name in background form if empty or incomplete
@@ -1608,7 +1608,7 @@ function setupMCC(prefix) {
       matches.forEach(m => {
         const item = document.createElement('div');
         item.className = 'mcc-item';
-        item.innerHTML = `<span class="code">${m.code}</span>${m.desc}`;
+        item.innerHTML = `<span class="code">${escapeHtml(m.code)}</span>${escapeHtml(m.desc)}`;
         item.onclick = () => {
           hidden.value = m.code;
           search.value = m.code + ' - ' + m.desc;
@@ -2365,27 +2365,27 @@ function renderStatusTable() {
       statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
     }
 
-    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:2px">📅 Created: ${item.CREATED_DATE}</div>` : '';
-    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `⏱ Updated: ${item.COMPLETED_DATE || item.UPDATED_DATE}` : '';
-    const remarksStr = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${item.VENDOR_REMARKS}</div>` : '';
+    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:2px">📅 Created: ${escapeHtml(item.CREATED_DATE)}</div>` : '';
+    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `⏱ Updated: ${escapeHtml(item.COMPLETED_DATE || item.UPDATED_DATE)}` : '';
+    const remarksStr = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic">Remarks: ${escapeHtml(item.VENDOR_REMARKS)}</div>` : '';
 
     let detailCol = '';
     if (item._type === 'Lead') {
-      detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${item.NO_OF_DEVICES || 1}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${item.CONTACT_NAME || ''} (${item.CONTACT_MOBILE || ''})</div>`;
+      detailCol = `<div style="font-size:0.75rem"><strong>Devices:</strong> ${escapeHtml(item.NO_OF_DEVICES || 1)}</div><div style="font-size:0.72rem;color:var(--muted)">Contact: ${item.CONTACT_NAME || ''} (${escapeHtml(item.CONTACT_MOBILE || '')})</div>`;
     } else {
       const dlCount = parseInt(item.DOWNLOAD_COUNT || '0');
       detailCol = item.QR_PDF_URL
-        ? `<a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item.docId}', this)" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>`
+        ? `<a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeAttr(item.docId)}" class="btn-pdf">📄 Download QR PDF <span class="dl-badge" title="Download Count">📥 <span class="dl-badge-count">${dlCount}</span></span></a>`
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
     }
 
     return `
       <tr>
         <td>${typeBadge}</td>
-        <td><strong>${item._name || '-'}</strong></td>
-        <td><div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div></td>
-        <td>${item._mobile || '-'}</td>
-        <td><strong>${item._loc || '-'}</strong></td>
+        <td><strong>${escapeHtml(item._name || '-')}</strong></td>
+        <td><div>${escapeHtml(item._vpa || '-')}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${escapeHtml(item._acc || '-')}</div></td>
+        <td>${escapeHtml(item._mobile || '-')}</td>
+        <td><strong>${escapeHtml(item._loc || '-')}</strong></td>
         <td>${statusBadge}${createdStr}<div style="font-size:0.7rem;color:var(--muted);margin-top:2px">${dateStr}</div>${remarksStr}</td>
         <td>${detailCol}</td>
       </tr>
@@ -2429,8 +2429,39 @@ async function loadMccList() {
   }
 }
 
+// Renders user-supplied text into markup safely. Merchant and staff names are
+// attacker-influenced: anyone can create a lead, so a name like
+// <img src=x onerror=...> would otherwise run in whoever opens the page.
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Only http(s) links are emitted. A stored javascript: URL would otherwise
+// execute when someone clicks the QR PDF link.
+function safeUrl(value) {
+  const v = String(value == null ? '' : value).trim();
+  return /^https?:\/\//i.test(v) ? escapeHtml(v) : '';
+}
+
+// Escapes a value destined for an HTML attribute. Document ids are generated,
+// but nothing user-influenced should reach markup unescaped by convention.
+function escapeAttr(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// One delegated listener rather than a handler per rendered row.
+function wireTableActions() {
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-act="download"]');
+    if (el) trackDownload(el.getAttribute('data-doc'), el);
+  });
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  wireTableActions();
   attachInputGuards();
   loadStatusData();
   await loadMccList();

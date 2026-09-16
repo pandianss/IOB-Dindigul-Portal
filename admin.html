@@ -769,6 +769,7 @@ initTheme();
 
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  wireTableActions();
   checkAdminAuth();
   whenSdkReady().then(setupAdminRealtimeListener);
 
@@ -1149,13 +1150,13 @@ function renderTable() {
 
       return `
         <tr>
-          <td><strong>${s.roll}</strong></td>
-          <td><strong>${s.name}</strong></td>
+          <td><strong>${escapeHtml(s.roll)}</strong></td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
           <td><span style="font-size:0.8rem;color:var(--muted)">${s.designation || '-'}</span></td>
-          <td><code>${s.sol}</code> — ${bName}</td>
+          <td><code>${escapeHtml(s.sol)}</code> — ${escapeHtml(bName)}</td>
           <td>${statusBadge}</td>
           <td style="text-align:center">
-            <button type="button" class="btn-action" style="background:var(--card-header);border:1px solid var(--border);color:var(--text)" onclick="adminResetStaffPassword('${s.roll}')">🔄 Reset to Default</button>
+            <button type="button" class="btn-action" style="background:var(--card-header);border:1px solid var(--border);color:var(--text)" data-act="resetpass" data-roll="${escapeHtml(s.roll)}">🔄 Reset to Default</button>
           </td>
         </tr>
       `;
@@ -1255,6 +1256,7 @@ function renderTable() {
     return;
   }
 
+  renderedRecords = {};
   tbody.innerHTML = items.map(item => {
     let typeBadge = '';
     if (item._type === 'QR') typeBadge = '<span class="badge-type qr">📲 QR Code</span>';
@@ -1273,23 +1275,30 @@ function renderTable() {
       statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
     }
 
-    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 ${item.CREATED_DATE}</div>` : '';
-    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `<div style="font-size:0.7rem;color:var(--muted)">⏱ ${item.COMPLETED_DATE || item.UPDATED_DATE}</div>` : '';
-    const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:2px">💬 ${item.VENDOR_REMARKS}</div>` : '';
+    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 ${escapeHtml(item.CREATED_DATE)}</div>` : '';
+    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `<div style="font-size:0.7rem;color:var(--muted)">⏱ ${escapeHtml(item.COMPLETED_DATE || item.UPDATED_DATE)}</div>` : '';
+    const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:2px">💬 ${escapeHtml(item.VENDOR_REMARKS)}</div>` : '';
 
-    const jsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-    const actionBtn = `<button type="button" class="btn-action" onclick='openModal(${jsonStr})'>⚙️ Update Status</button>`
-      + `<br><button type="button" class="btn-correct" onclick='openCorrectModal(${jsonStr})'>✏️ Correct Details</button>`;
+    // The record is looked up by id on click rather than serialised into the
+    // markup. Embedding JSON in an attribute was injectable: the old escaping
+    // replaced ' and " but never &, so a merchant name containing &quot; decoded
+    // back into a real quote, broke out of the handler and ran as script in the
+    // admin's session. Anyone can create a lead, so that name was attacker
+    // controlled.
+    renderedRecords[item.docId] = item;
+    const rowId = escapeHtml(item.docId || '');
+    const actionBtn = `<button type="button" class="btn-action" data-act="status" data-doc="${rowId}">⚙️ Update Status</button>`
+      + `<br><button type="button" class="btn-correct" data-act="correct" data-doc="${rowId}">✏️ Correct Details</button>`;
 
     const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes' ? '<div style="font-size:0.7rem;color:var(--warning);font-weight:700;margin-top:2px">🔊 Soundbox Requested</div>' : '';
 
     // Staff details column
     let staffDisplay = '<span style="color:var(--muted);font-size:0.78rem">-</span>';
     if (item._staffName || item._staffRoll) {
-      const sRollText = item._staffRoll ? `<span style="font-size:0.74rem;color:var(--muted)"> (Roll: ${item._staffRoll})</span>` : '';
-      staffDisplay = `<div><strong>${item._staffName || 'Staff'}</strong>${sRollText}</div>`;
+      const sRollText = item._staffRoll ? `<span style="font-size:0.74rem;color:var(--muted)"> (Roll: ${escapeHtml(item._staffRoll)})</span>` : '';
+      staffDisplay = `<div><strong>${escapeHtml(item._staffName || 'Staff')}</strong>${sRollText}</div>`;
       if (item.CONTACT_MOBILE) {
-        staffDisplay += `<div style="font-size:0.74rem;color:var(--muted)">📞 ${item.CONTACT_MOBILE}</div>`;
+        staffDisplay += `<div style="font-size:0.74rem;color:var(--muted)">📞 ${escapeHtml(item.CONTACT_MOBILE)}</div>`;
       }
     }
 
@@ -1298,22 +1307,22 @@ function renderTable() {
     const localDl = localStorage.getItem('dl_cnt_' + itemKey) || localStorage.getItem('dl_cnt_' + item._sheetName + '_' + item.rowIndex) || 0;
     const dlCount = Math.max(parseInt(item.DOWNLOAD_COUNT || '0'), parseInt(localDl));
     const pdfBtn = item.QR_PDF_URL
-      ? `<div style="margin-top:4px"><a href="${item.QR_PDF_URL}" target="_blank" onclick="trackDownload('${item.docId || itemKey}', this)" class="btn-pdf" style="font-size:0.74rem;color:var(--iob-blue);text-decoration:none;font-weight:700">📄 Download QR PDF <span style="background:var(--card-header);padding:1px 6px;border-radius:6px;font-size:0.7rem">📥 ${dlCount}</span></a></div>`
+      ? `<div style="margin-top:4px"><a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeHtml(item.docId || itemKey)}" class="btn-pdf" style="font-size:0.74rem;color:var(--iob-blue);text-decoration:none;font-weight:700">📄 Download QR PDF <span style="background:var(--card-header);padding:1px 6px;border-radius:6px;font-size:0.7rem">📥 ${dlCount}</span></a></div>`
       : '';
 
     if (item._type === 'Lead') {
-      detailsDisplay = `<div><strong>${item.PRODUCT || '-'}</strong> (${item.NO_OF_DEVICES || 1} units)</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item.ACCOUNT_NO || '-'}</div>`;
+      detailsDisplay = `<div><strong>${escapeHtml(item.PRODUCT || '-')}</strong> (${escapeHtml(item.NO_OF_DEVICES || 1)} units)</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${escapeHtml(item.ACCOUNT_NO || '-')}</div>`;
     } else {
-      detailsDisplay = `<div>${item._vpa || '-'}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${item._acc || '-'}</div>${pdfBtn}`;
+      detailsDisplay = `<div>${escapeHtml(item._vpa || '-')}</div><div style="font-size:0.74rem;color:var(--muted)">Acc: ${escapeHtml(item._acc || '-')}</div>${pdfBtn}`;
     }
 
     return `
       <tr>
         <td>${typeBadge}${sbIndicator}</td>
-        <td><div><strong>${item._name || '-'}</strong></div><div style="font-size:0.74rem;color:var(--muted)">📞 ${item._mobile || '-'}</div></td>
+        <td><div><strong>${escapeHtml(item._name || '-')}</strong></div><div style="font-size:0.74rem;color:var(--muted)">📞 ${escapeHtml(item._mobile || '-')}</div></td>
         <td>${detailsDisplay}</td>
         <td>${staffDisplay}</td>
-        <td><strong>${item._loc || '-'}</strong></td>
+        <td><strong>${escapeHtml(item._loc || '-')}</strong></td>
         <td>${statusBadge}${createdStr}${dateStr}${remarksInfo}</td>
         <td style="text-align:center">${actionBtn}</td>
       </tr>
@@ -1359,14 +1368,14 @@ function renderStaffDirectoryTable() {
     const bName = s.sol === '3933' || s.sol === '0892' ? 'Regional Office Dindigul' : (BRANCHES[s.sol] ? BRANCHES[s.sol].name : 'Branch ' + s.sol);
     return `
       <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 12px;font-weight:700;color:var(--iob-blue)">${roll}</td>
-        <td style="padding:8px 12px;font-weight:700">${s.name}</td>
-        <td style="padding:8px 12px;font-size:0.8rem;color:var(--muted)">${s.designation}</td>
-        <td style="padding:8px 12px"><code>${s.sol}</code> — ${bName}</td>
-        <td style="padding:8px 12px"><span style="background:var(--card-header);padding:3px 8px;border-radius:10px;font-size:0.75rem;font-weight:700">${s.cadre || 'General'}</span></td>
+        <td style="padding:8px 12px;font-weight:700;color:var(--iob-blue)">${escapeHtml(roll)}</td>
+        <td style="padding:8px 12px;font-weight:700">${escapeHtml(s.name)}</td>
+        <td style="padding:8px 12px;font-size:0.8rem;color:var(--muted)">${escapeHtml(s.designation)}</td>
+        <td style="padding:8px 12px"><code>${escapeHtml(s.sol)}</code> — ${escapeHtml(bName)}</td>
+        <td style="padding:8px 12px"><span style="background:var(--card-header);padding:3px 8px;border-radius:10px;font-size:0.75rem;font-weight:700">${escapeHtml(s.cadre || 'General')}</span></td>
         <td style="padding:8px 12px;text-align:center">
-          <button type="button" style="background:rgba(59,130,246,0.15);color:var(--iob-blue);border:1px solid var(--iob-blue);padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700;margin-right:4px" onclick="openStaffModal('${roll}')">✏️ Edit</button>
-          <button type="button" style="background:rgba(239,68,68,0.15);color:var(--error);border:1px solid var(--error);padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700" onclick="deleteStaffMember('${roll}')">🗑️ Delete</button>
+          <button type="button" style="background:rgba(59,130,246,0.15);color:var(--iob-blue);border:1px solid var(--iob-blue);padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700;margin-right:4px" data-act="editstaff" data-roll="${escapeHtml(roll)}">✏️ Edit</button>
+          <button type="button" style="background:rgba(239,68,68,0.15);color:var(--error);border:1px solid var(--error);padding:4px 8px;border-radius:6px;font-size:0.78rem;cursor:pointer;font-weight:700" data-act="delstaff" data-roll="${escapeHtml(roll)}">🗑️ Delete</button>
         </td>
       </tr>
     `;
@@ -1382,7 +1391,7 @@ function openStaffModal(roll) {
 
   if (roll && getFullStaffList()[roll]) {
     const s = getFullStaffList()[roll];
-    title.textContent = `Edit Staff Member — Roll ${roll}`;
+    title.textContent = `Edit Staff Member — Roll ${escapeHtml(roll)}`;
     rollInput.value = roll;
     rollInput.readOnly = true;
     document.getElementById('modalStaffName').value = s.name || '';
@@ -1435,7 +1444,7 @@ function saveStaffFromModal() {
 }
 
 function deleteStaffMember(roll) {
-  if (!confirm(`Are you sure you want to delete staff member Roll No: ${roll}?`)) return;
+  if (!confirm(`Are you sure you want to delete staff member Roll No: ${escapeHtml(roll)}?`)) return;
 
   let staff = { ...getFullStaffList() };
   delete staff[roll];
@@ -1446,13 +1455,13 @@ function deleteStaffMember(roll) {
     FB.deleteDoc(FB.doc(db, "staff", String(roll))).catch(() => {});
   }
 
-  showToast(`🗑️ Deleted staff roll ${roll}`, "success");
+  showToast(`🗑️ Deleted staff roll ${escapeHtml(roll)}`, "success");
   renderStaffDirectoryTable();
 }
 
 function adminResetStaffPassword(roll) {
   localStorage.removeItem('staff_pass_' + roll);
-  showToast(`✅ Password for Roll No: ${roll} reset to DEFAULT (${roll})!`, "success");
+  showToast(`✅ Password for Roll No: ${escapeHtml(roll)} reset to DEFAULT (${escapeHtml(roll)})!`, "success");
   renderTable();
 }
 
@@ -1477,12 +1486,12 @@ function openModal(item) {
     titleEl.textContent = "⚙️ Update Merchant Product Lead Status";
     remarksLabel.textContent = "Vendor / Admin Remarks (e.g. Dispatched to POS Vendor)";
     summary.innerHTML = `
-      <div><strong>Product:</strong> ${item.PRODUCT || '-'}</div>
-      <div><strong>Merchant:</strong> ${item.MERCHANT_NAME || item._name}</div>
-      <div><strong>Current Acc No:</strong> ${item.ACCOUNT_NO || '-'}</div>
-      <div><strong>Devices Required:</strong> ${item.NO_OF_DEVICES || 1}</div>
-      <div><strong>Mobile No:</strong> ${item._mobile || '-'}</div>
-      <div><strong>Branch Contact / Sourced:</strong> ${item.CONTACT_NAME || item.STAFF_NAME || '-'} (${item.CONTACT_MOBILE || ''})</div>
+      <div><strong>Product:</strong> ${escapeHtml(item.PRODUCT || '-')}</div>
+      <div><strong>Merchant:</strong> ${escapeHtml(item.MERCHANT_NAME || item._name)}</div>
+      <div><strong>Current Acc No:</strong> ${escapeHtml(item.ACCOUNT_NO || '-')}</div>
+      <div><strong>Devices Required:</strong> ${escapeHtml(item.NO_OF_DEVICES || 1)}</div>
+      <div><strong>Mobile No:</strong> ${escapeHtml(item._mobile || '-')}</div>
+      <div><strong>Branch Contact / Sourced:</strong> ${escapeHtml(item.CONTACT_NAME || item.STAFF_NAME || '-')} (${escapeHtml(item.CONTACT_MOBILE || '')})</div>
     `;
     vpaContainer.classList.add('hidden');
     sbNotice.classList.add('hidden');
@@ -1491,12 +1500,12 @@ function openModal(item) {
     remarksLabel.textContent = "Vendor / Admin Remarks";
     summary.innerHTML = `
       <div><strong>Type:</strong> Soundbox Application</div>
-      <div><strong>Merchant:</strong> ${item.ACCOUNT_NAME || item._name}</div>
-      <div><strong>VPA:</strong> ${item.VPA || '-'}</div>
-      <div><strong>Language:</strong> ${item.LANGUAGE || 'ta'}</div>
-      <div><strong>Mobile:</strong> ${item._mobile}</div>
-      <div><strong>Sourced Staff:</strong> ${item.STAFF_NAME || '-'} (${item.STAFF_ROLL || ''})</div>
-      <div><strong>Location / SOL:</strong> ${item._loc}</div>
+      <div><strong>Merchant:</strong> ${escapeHtml(item.ACCOUNT_NAME || item._name)}</div>
+      <div><strong>VPA:</strong> ${escapeHtml(item.VPA || '-')}</div>
+      <div><strong>Language:</strong> ${escapeHtml(item.LANGUAGE || 'ta')}</div>
+      <div><strong>Mobile:</strong> ${escapeHtml(item._mobile)}</div>
+      <div><strong>Sourced Staff:</strong> ${escapeHtml(item.STAFF_NAME || '-')} (${escapeHtml(item.STAFF_ROLL || '')})</div>
+      <div><strong>Location / SOL:</strong> ${escapeHtml(item._loc)}</div>
     `;
     vpaContainer.classList.add('hidden');
     sbNotice.classList.add('hidden');
@@ -1505,12 +1514,12 @@ function openModal(item) {
     remarksLabel.textContent = "Admin Remarks";
     summary.innerHTML = `
       <div><strong>Type:</strong> Payment QR Application</div>
-      <div><strong>Merchant:</strong> ${item.MERCHANTNAME || item._name}</div>
-      <div><strong>Account No:</strong> ${item.ACCOUNTNO || '-'}</div>
-      <div><strong>Mobile:</strong> ${item.MOBILENO || '-'}</div>
-      <div><strong>Sourced Staff:</strong> ${item.STAFF_NAME || '-'} (${item.STAFF_ROLL || ''})</div>
-      <div><strong>District / SOL:</strong> ${item._loc}</div>
-      <div><strong>Soundbox Req:</strong> ${item.SOUNDBOX_REQUIRED || 'No'}</div>
+      <div><strong>Merchant:</strong> ${escapeHtml(item.MERCHANTNAME || item._name)}</div>
+      <div><strong>Account No:</strong> ${escapeHtml(item.ACCOUNTNO || '-')}</div>
+      <div><strong>Mobile:</strong> ${escapeHtml(item.MOBILENO || '-')}</div>
+      <div><strong>Sourced Staff:</strong> ${escapeHtml(item.STAFF_NAME || '-')} (${escapeHtml(item.STAFF_ROLL || '')})</div>
+      <div><strong>District / SOL:</strong> ${escapeHtml(item._loc)}</div>
+      <div><strong>Soundbox Req:</strong> ${escapeHtml(item.SOUNDBOX_REQUIRED || 'No')}</div>
     `;
     
     if (item.SOUNDBOX_REQUIRED === 'Yes') sbNotice.classList.remove('hidden');
@@ -1863,6 +1872,44 @@ async function saveCorrection() {
 // ─────────────────────────────────────────────
 
 let bulkRows = [];
+
+// Records currently on screen, keyed by document id. Rows carry only the id in
+// a data attribute; the object is fetched from here on click, so nothing
+// user-supplied is ever parsed as code.
+let renderedRecords = {};
+
+// One delegated listener per table instead of a handler per button. Attached
+// once at startup, so it keeps working as rows are re-rendered.
+function wireTableActions() {
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.getAttribute('data-act');
+    const docId = el.getAttribute('data-doc');
+    const roll = el.getAttribute('data-roll');
+
+    if (act === 'status' || act === 'correct') {
+      const record = renderedRecords[docId];
+      if (!record) { showToast('That record is no longer on screen — refresh', 'warning'); return; }
+      (act === 'status' ? openModal : openCorrectModal)(record);
+    } else if (act === 'download') {
+      trackDownload(docId, el);          // the anchor still navigates normally
+    } else if (act === 'resetpass') {
+      adminResetStaffPassword(roll);
+    } else if (act === 'editstaff') {
+      openStaffModal(roll);
+    } else if (act === 'delstaff') {
+      deleteStaffMember(roll);
+    }
+  });
+}
+
+// Only http(s) links are emitted. A stored javascript: URL would otherwise
+// execute when someone clicks the QR PDF link.
+function safeUrl(value) {
+  const v = String(value == null ? '' : value).trim();
+  return /^https?:\/\//i.test(v) ? escapeHtml(v) : '';
+}
 
 // Merchant names and filenames are user-supplied and go into innerHTML below.
 function escapeHtml(value) {
