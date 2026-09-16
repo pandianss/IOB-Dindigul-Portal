@@ -11,9 +11,36 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<!--
+  Firebase, modular SDK. Only the SDK lives in a module: the rest of the page is
+  a classic script, because every button here is wired with an inline onclick
+  and module scope would hide those functions from the markup.
+
+  Exposed on window.FB so the classic script can reach them, with fbReady
+  resolving once the app, Firestore and Auth are constructed. Module scripts are
+  deferred, so this runs after parsing but before DOMContentLoaded, which is
+  where the app starts.
+-->
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, addDoc, updateDoc, getDocs, query, orderBy, limit,
+    onSnapshot, serverTimestamp, increment
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+  window.FB = {
+    initializeApp, getApps, initializeFirestore,
+    persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, addDoc, updateDoc, getDocs, query, orderBy, limit,
+    onSnapshot, serverTimestamp, increment,
+    getAuth, signInAnonymously, onAuthStateChanged
+  };
+  window.dispatchEvent(new Event('fb-sdk-ready'));
+</script>
 <style>
   :root, [data-theme="dark"] {
     --iob-blue: #3b82f6;
@@ -1960,9 +1987,9 @@ async function executeSubmission() {
       STATUS: 'Pending Review',
       DOWNLOAD_COUNT: 0,
       CREATED_AT: new Date().toISOString(),
-      TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
+      TIMESTAMP: FB.serverTimestamp()
     };
-    const docRef = await db.collection("leads").add(fbDoc);
+    const docRef = await FB.addDoc(FB.collection(db, "leads"), fbDoc);
 
     // Auto-create the linked Soundbox record when a QR request needs one
     if (currentType === 'qr' && newItem.SOUNDBOX_REQUIRED === 'Yes') {
@@ -1983,7 +2010,7 @@ async function executeSubmission() {
 async function createLinkedSoundbox(qr, parentDocId) {
   const sol = qr.SOL_ID || "0174";
   const b = BRANCHES[String(sol).padStart(4, '0')];
-  await db.collection("leads").add({
+  await FB.addDoc(FB.collection(db, "leads"), {
     SOL_ID: sol,
     BRANCH_NAME: b && b.name ? b.name : `Branch ${sol}`,
     REGION: "Dindigul",
@@ -2003,7 +2030,7 @@ async function createLinkedSoundbox(qr, parentDocId) {
     DOWNLOAD_COUNT: 0,
     LINKED_QR_DOC: parentDocId,
     CREATED_AT: new Date().toISOString(),
-    TIMESTAMP: firebase.firestore.FieldValue.serverTimestamp()
+    TIMESTAMP: FB.serverTimestamp()
   });
 }
 
@@ -2069,39 +2096,35 @@ const DEFAULT_FIREBASE_CONFIG = {
 let db = null;
 let isFirebaseActive = false;
 
+let fbAuth = null;
+
 function initFirebaseEngine() {
+  if (db) return true;
+  if (!window.FB) return false;                 // module has not executed yet
+
   try {
     const customConfig = JSON.parse(localStorage.getItem('iob_firebase_config') || 'null');
     const config = customConfig || DEFAULT_FIREBASE_CONFIG;
 
-    if (typeof firebase !== 'undefined') {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(config);
-      }
-      db = firebase.firestore();
-      // Offline persistence. This is what lets the tracking table paint
-      // instantly from cache on load, so it is load-bearing, not a nicety.
-      //
-      // The SDK logs a deprecation notice pointing at FirestoreSettings.cache.
-      // Do not act on it here. The compat SDK does not expose
-      // persistentLocalCache or persistentMultipleTabManager at any version up
-      // to 11.10.0, and settings({ localCache: ... }) with a plain object is
-      // accepted without error while enabling nothing — a cache read after a
-      // server read then returns zero documents. Adopting the replacement means
-      // migrating both pages to the modular SDK; until then this call is the
-      // only form that actually works.
-      db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-      if (firebase.auth) {
-        try {
-          if (!firebase.auth().currentUser) {
-            firebase.auth().signInAnonymously().catch(() => {});
-          }
-        } catch(e) {}
-      }
-      isFirebaseActive = true;
-      console.log("🔥 Firebase Firestore Engine Ready!");
-      return true;
+    const app = FB.getApps().length ? FB.getApps()[0] : FB.initializeApp(config);
+
+    // Offline persistence is what lets the tracking table paint instantly from
+    // cache on load, so it is load-bearing rather than a nicety. It has to be
+    // passed at construction — calling it later is the deprecated path.
+    db = FB.initializeFirestore(app, {
+      localCache: FB.persistentLocalCache({
+        tabManager: FB.persistentMultipleTabManager()
+      })
+    });
+
+    fbAuth = FB.getAuth(app);
+    if (!fbAuth.currentUser) {
+      FB.signInAnonymously(fbAuth).catch(e => console.warn("Auth notice:", e.message));
     }
+
+    isFirebaseActive = true;
+    console.log("🔥 Firebase Firestore Engine Ready!");
+    return true;
   } catch(e) {
     console.warn("Firebase Init Notice:", e.message);
   }
@@ -2119,11 +2142,12 @@ function isRealMerchantLead(item) {
 // Resolves once Firebase has a signed-in user, so writes are never issued
 // before the auth token exists. Rejects rather than hanging if sign-in fails.
 function ensureSignedIn(timeoutMs = 10000) {
-  if (!firebase.auth) return Promise.resolve(null);
-  if (firebase.auth().currentUser) return Promise.resolve(firebase.auth().currentUser);
+  if (!fbAuth) initFirebaseEngine();
+  if (!fbAuth) return Promise.resolve(null);
+  if (fbAuth.currentUser) return Promise.resolve(fbAuth.currentUser);
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => { off(); reject(new Error('Could not reach the sign-in service. Check your connection and retry.')); }, timeoutMs);
-    const off = firebase.auth().onAuthStateChanged(user => {
+    const off = FB.onAuthStateChanged(fbAuth, user => {
       if (!user) return;
       clearTimeout(timer); off(); resolve(user);
     });
@@ -2141,9 +2165,9 @@ function setupRealtimeFirebaseListener() {
   if (realtimeAttached) return true;
   if (!initFirebaseEngine()) return false;
 
-  if (firebase.auth && firebase.auth().currentUser) return attachLeadsListener();
+  if (fbAuth && fbAuth.currentUser) return attachLeadsListener();
 
-  firebase.auth().onAuthStateChanged(user => {
+  FB.onAuthStateChanged(fbAuth, user => {
     if (user) attachLeadsListener();
   });
   return true;
@@ -2153,7 +2177,12 @@ function attachLeadsListener() {
   if (realtimeAttached) return true;
 
   try {
-    db.collection("leads").orderBy("CREATED_AT", "desc").limit(500).onSnapshot(snapshot => {
+    const leadsQuery = FB.query(
+      FB.collection(db, "leads"),
+      FB.orderBy("CREATED_AT", "desc"),
+      FB.limit(500)
+    );
+    FB.onSnapshot(leadsQuery, snapshot => {
       const incoming = { qr: [], sb: [], lead: [] };
 
       snapshot.forEach(doc => {
@@ -2212,7 +2241,26 @@ function loadStatusData() {
       }
     } catch(e) {}
   }
-  setupRealtimeFirebaseListener();
+  // The SDK is a deferred module, so it normally lands before this runs. Wait
+  // for it rather than assuming: a miss would leave no listener attached and
+  // the page showing nothing but stale cache, with no error anywhere.
+  whenSdkReady().then(setupRealtimeFirebaseListener);
+}
+
+function whenSdkReady() {
+  if (window.FB) return Promise.resolve();
+  return new Promise(resolve => {
+    window.addEventListener('fb-sdk-ready', () => resolve(), { once: true });
+    // The module can fail outright — a blocked CDN, an offline device — so do
+    // not wait forever; surface it instead.
+    setTimeout(() => {
+      if (!window.FB) {
+        console.warn('Firebase SDK did not load');
+        showToast('Could not reach the database — please reload', 'error');
+      }
+      resolve();
+    }, 15000);
+  });
 }
 
 function formatBranchLoc(solId, branchName, district) {
@@ -2235,8 +2283,8 @@ function trackDownload(docId, el) {
   if (badge) badge.textContent = parseInt(badge.textContent || '0') + 1;
 
   if (!db || !docId) return;
-  db.collection("leads").doc(docId).update({
-    DOWNLOAD_COUNT: firebase.firestore.FieldValue.increment(1)
+  FB.updateDoc(FB.doc(db, "leads", docId), {
+    DOWNLOAD_COUNT: FB.increment(1)
   }).catch(e => console.warn("Download count notice:", e.message));
 }
 

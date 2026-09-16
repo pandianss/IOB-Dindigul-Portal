@@ -11,10 +11,37 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+<!--
+  Firebase, modular SDK. Only the SDK lives in a module: the rest of the page is
+  a classic script, because every control here is wired with an inline onclick
+  and module scope would hide those functions from the markup.
+-->
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+  import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
+    query, orderBy, limit, onSnapshot, serverTimestamp, increment, arrayUnion,
+    writeBatch
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+  import {
+    getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject
+  } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js";
+
+  window.FB = {
+    initializeApp, getApps, initializeFirestore,
+    persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
+    query, orderBy, limit, onSnapshot, serverTimestamp, increment, arrayUnion,
+    writeBatch,
+    getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword,
+    getStorage, storageRef, uploadBytes, getDownloadURL, deleteObject
+  };
+  window.dispatchEvent(new Event('fb-sdk-ready'));
+</script>
 <style>
   :root, [data-theme="dark"] {
     --iob-blue: #3b82f6;
@@ -727,7 +754,7 @@ function getFullStaffList() {
 let staffRealtimeAttached = false;
 function setupStaffListener() {
   if (staffRealtimeAttached || !db) return;
-  db.collection("staff").onSnapshot(snap => {
+  FB.onSnapshot(FB.collection(db, "staff"), snap => {
     if (snap.empty) return;
     const dir = {};
     snap.forEach(doc => { dir[doc.id] = doc.data(); });
@@ -743,8 +770,8 @@ initTheme();
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
   checkAdminAuth();
-  setupAdminRealtimeListener();
-  
+  whenSdkReady().then(setupAdminRealtimeListener);
+
   // Render cached data immediately (0ms)
   updateStats();
   renderTable();
@@ -854,53 +881,66 @@ function isRealMerchantLead(item) {
 // ─────────────────────────────────────────────
 // FIREBASE REAL-TIME ENGINE FOR ADMIN
 // ─────────────────────────────────────────────
+let fbAuth = null;
+let fbStorage = null;
+
 function initFirebaseEngine() {
+  if (db) return true;
+  if (!window.FB) return false;                 // module has not executed yet
+
   try {
     const customConfig = JSON.parse(localStorage.getItem('iob_firebase_config') || 'null');
     const config = customConfig || DEFAULT_FIREBASE_CONFIG;
 
-    if (typeof firebase !== 'undefined') {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(config);
-      }
-      db = firebase.firestore();
-      // Offline persistence. This is what lets the dashboard paint instantly
-      // from cache on load, so it is load-bearing, not a nicety.
-      //
-      // The SDK logs a deprecation notice pointing at FirestoreSettings.cache.
-      // Do not act on it here. The compat SDK does not expose
-      // persistentLocalCache or persistentMultipleTabManager at any version up
-      // to 11.10.0, and settings({ localCache: ... }) with a plain object is
-      // accepted without error while enabling nothing — a cache read after a
-      // server read then returns zero documents. Adopting the replacement means
-      // migrating both pages to the modular SDK; until then this call is the
-      // only form that actually works.
-      db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-      if (firebase.auth) {
-        try {
-          if (!firebase.auth().currentUser) {
-            firebase.auth().signInAnonymously().catch(() => {});
-          }
-        } catch(e) {}
-      }
-      isFirebaseActive = true;
-      console.log("🔥 Admin Firebase Firestore Engine Ready!");
-      return true;
+    const app = FB.getApps().length ? FB.getApps()[0] : FB.initializeApp(config);
+
+    // Offline persistence is what lets the dashboard paint instantly from cache
+    // on load, so it is load-bearing rather than a nicety. It has to be passed
+    // at construction — setting it afterwards is the deprecated path.
+    db = FB.initializeFirestore(app, {
+      localCache: FB.persistentLocalCache({
+        tabManager: FB.persistentMultipleTabManager()
+      })
+    });
+
+    fbAuth = FB.getAuth(app);
+    fbStorage = FB.getStorage(app);
+    if (!fbAuth.currentUser) {
+      FB.signInAnonymously(fbAuth).catch(e => console.warn("Auth notice:", e.message));
     }
+
+    isFirebaseActive = true;
+    console.log("🔥 Admin Firebase Firestore Engine Ready!");
+    return true;
   } catch(e) {
     console.warn("Firebase Init Notice:", e.message);
   }
   return false;
 }
 
+function whenSdkReady() {
+  if (window.FB) return Promise.resolve();
+  return new Promise(resolve => {
+    window.addEventListener('fb-sdk-ready', () => resolve(), { once: true });
+    setTimeout(() => {
+      if (!window.FB) {
+        console.warn('Firebase SDK did not load');
+        showToast('Could not reach the database — please reload', 'error');
+      }
+      resolve();
+    }, 15000);
+  });
+}
+
 // Resolves once Firebase has a signed-in user, so writes are never issued
 // before the auth token exists. Rejects rather than hanging if sign-in fails.
 function ensureSignedIn(timeoutMs = 10000) {
-  if (!firebase.auth) return Promise.resolve(null);
-  if (firebase.auth().currentUser) return Promise.resolve(firebase.auth().currentUser);
+  if (!fbAuth) initFirebaseEngine();
+  if (!fbAuth) return Promise.resolve(null);
+  if (fbAuth.currentUser) return Promise.resolve(fbAuth.currentUser);
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => { off(); reject(new Error('Could not reach the sign-in service. Check your connection and retry.')); }, timeoutMs);
-    const off = firebase.auth().onAuthStateChanged(user => {
+    const off = FB.onAuthStateChanged(fbAuth, user => {
       if (!user) return;
       clearTimeout(timer); off(); resolve(user);
     });
@@ -916,9 +956,9 @@ function setupAdminRealtimeListener() {
   if (adminRealtimeAttached) return true;
   if (!initFirebaseEngine()) return false;
 
-  if (firebase.auth && firebase.auth().currentUser) return attachAdminListener();
+  if (fbAuth && fbAuth.currentUser) return attachAdminListener();
 
-  firebase.auth().onAuthStateChanged(user => {
+  FB.onAuthStateChanged(fbAuth, user => {
     if (user) attachAdminListener();
   });
   return true;
@@ -928,7 +968,12 @@ function attachAdminListener() {
   if (adminRealtimeAttached) return true;
 
   try {
-    db.collection("leads").orderBy("CREATED_AT", "desc").limit(1000).onSnapshot(snapshot => {
+    const leadsQuery = FB.query(
+      FB.collection(db, "leads"),
+      FB.orderBy("CREATED_AT", "desc"),
+      FB.limit(1000)
+    );
+    FB.onSnapshot(leadsQuery, snapshot => {
       const incoming = { qr: [], sb: [], lead: [] };
 
       snapshot.forEach(doc => {
@@ -992,7 +1037,10 @@ function fetchData() {
       }
     } catch(e) {}
   }
-  setupAdminRealtimeListener();
+  // The SDK is a deferred module, so it normally lands before this runs. Wait
+  // for it rather than assuming: a miss would leave no listener attached and
+  // the dashboard showing nothing but stale cache, with no error anywhere.
+  whenSdkReady().then(setupAdminRealtimeListener);
 }
 
 function updateStats() {
@@ -1051,8 +1099,8 @@ function trackDownload(docId, el) {
   if (badge) badge.textContent = parseInt(badge.textContent || '0') + 1;
 
   if (!db || !docId) return;
-  db.collection("leads").doc(docId).update({
-    DOWNLOAD_COUNT: firebase.firestore.FieldValue.increment(1)
+  FB.updateDoc(FB.doc(db, "leads", docId), {
+    DOWNLOAD_COUNT: FB.increment(1)
   }).catch(e => console.warn("Download count notice:", e.message));
 }
 
@@ -1378,7 +1426,7 @@ function saveStaffFromModal() {
   localStorage.setItem('iob_staff_directory', JSON.stringify(staff));
 
   if (db) {
-    db.collection("staff").doc(roll).set(staff[roll]).catch(() => {});
+    FB.setDoc(FB.doc(db, "staff", String(roll)), staff[roll]).catch(() => {});
   }
 
   showToast("✅ Staff member saved successfully!", "success");
@@ -1395,7 +1443,7 @@ function deleteStaffMember(roll) {
   localStorage.setItem('iob_staff_directory', JSON.stringify(staff));
 
   if (db) {
-    db.collection("staff").doc(roll).delete().catch(() => {});
+    FB.deleteDoc(FB.doc(db, "staff", String(roll))).catch(() => {});
   }
 
   showToast(`🗑️ Deleted staff roll ${roll}`, "success");
@@ -1563,9 +1611,9 @@ async function confirmCompletion() {
 
     if (db && activeSelectedApp.docId) {
       await ensureSignedIn();   // rules reject writes from an unauthenticated caller
-      await db.collection("leads").doc(activeSelectedApp.docId).update({
+      await FB.updateDoc(FB.doc(db, "leads", activeSelectedApp.docId), {
         ...updatedFields,
-        UPDATED_AT: firebase.firestore.FieldValue.serverTimestamp()
+        UPDATED_AT: FB.serverTimestamp()
       });
     }
 
@@ -1635,19 +1683,20 @@ function vpaRuleFor(item) {
 }
 
 function isAdminSignedIn() {
-  const u = firebase.auth().currentUser;
+  const u = fbAuth && fbAuth.currentUser;
   return !!(u && !u.isAnonymous && window.__adminVerified);
 }
 
 // The roster lives in Firestore so admins can be granted and revoked from the
 // console. A non-admin simply gets a denied read, which we treat as "no".
 async function checkAdminMembership() {
-  const u = firebase.auth().currentUser;
+  if (!db) initFirebaseEngine();
+  const u = fbAuth && fbAuth.currentUser;
   if (!u || u.isAnonymous) return false;
   try {
-    const doc = await db.collection('admins').doc(u.uid).get();
-    window.__adminVerified = doc.exists;
-    return doc.exists;
+    const snap = await FB.getDoc(FB.doc(db, 'admins', u.uid));
+    window.__adminVerified = snap.exists();
+    return snap.exists();
   } catch (e) {
     window.__adminVerified = false;
     return false;
@@ -1703,7 +1752,9 @@ async function doAdminSignIn() {
   }
 
   try {
-    await firebase.auth().signInWithEmailAndPassword(email, pwd);
+    if (!fbAuth) initFirebaseEngine();
+    if (!fbAuth) throw new Error('Database connection not ready — reload and retry.');
+    await FB.signInWithEmailAndPassword(fbAuth, email, pwd);
     document.getElementById('adminPwdInput').value = '';
     const ok = await checkAdminMembership();
     if (!ok) {
@@ -1783,15 +1834,15 @@ async function saveCorrection() {
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try {
-    const user = firebase.auth().currentUser;
+    const user = fbAuth && fbAuth.currentUser;
     update.CORRECTED_AT = new Date().toISOString();
     update.CORRECTED_BY = user ? (user.email || user.uid) : 'unknown';
-    update.CORRECTION_HISTORY = firebase.firestore.FieldValue.arrayUnion(
+    update.CORRECTION_HISTORY = FB.arrayUnion(
       ...history.map(h => ({ ...h, at: update.CORRECTED_AT, by: update.CORRECTED_BY }))
     );
     update.UPDATED_DATE = new Date().toISOString();
 
-    await db.collection('leads').doc(item.docId).update(update);
+    await FB.updateDoc(FB.doc(db, 'leads', item.docId), update);
     showToast('✅ Updated ' + history.length + ' field' + (history.length === 1 ? '' : 's'), 'success');
     closeCorrectModal();
   } catch (e) {
@@ -2006,14 +2057,14 @@ async function runBulkQrUpload() {
 
     try {
       const safeName = row.file.name.replace(/[^A-Za-z0-9._-]/g, '_');
-      const ref = firebase.storage().ref('qr-pdfs/' + row.chosen + '/' + safeName);
-      await ref.put(row.file, { contentType: 'application/pdf' });
+      const ref = FB.storageRef(fbStorage, 'qr-pdfs/' + row.chosen + '/' + safeName);
+      await FB.uploadBytes(ref, row.file, { contentType: 'application/pdf' });
 
       const update = {
-        QR_PDF_URL: await ref.getDownloadURL(),
+        QR_PDF_URL: await FB.getDownloadURL(ref),
         PDF_NAME: row.file.name,
         UPDATED_DATE: new Date().toISOString(),
-        UPDATED_AT: firebase.firestore.FieldValue.serverTimestamp()
+        UPDATED_AT: FB.serverTimestamp()
       };
 
       // Only close a request off when a VPA already exists — the single-record
@@ -2024,7 +2075,7 @@ async function runBulkQrUpload() {
         update.COMPLETED_DATE = new Date().toISOString();
       }
 
-      await db.collection('leads').doc(row.chosen).update(update);
+      await FB.updateDoc(FB.doc(db, 'leads', row.chosen), update);
       row.state = 'done';
       ok++;
     } catch (e) {

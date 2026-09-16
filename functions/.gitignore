@@ -1,1 +1,5 @@
 node_modules/
+
+# Local function config: names the mail account, so left untracked.
+# See FIREBASE_SETUP.md before committing it.
+.env
