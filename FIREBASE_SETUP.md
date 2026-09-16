@@ -129,3 +129,31 @@ from `delete` so the intent is explicit: deletes are refused because every
 visitor holds an anonymous token and could otherwise wipe merchants' QR codes.
 Remove objects from the console. A wrong attachment is corrected by uploading
 over it, which is an update and is allowed.
+
+## Email notifications — live
+
+`onNewRequest` and `onStatusChange` are deployed to `asia-south1` on nodejs22
+and verified end to end: creating a lead and changing its status each produced
+`Notification sent` in the function logs, delivered to NOTIFY_TO.
+
+Mail goes out through Gmail SMTP using an **App Password** stored in Secret
+Manager as `SMTP_PASSWORD`. A normal Google account password will not work —
+Gmail rejects it with `534-5.7.9 Application-specific password required`. To
+rotate it, generate a new App Password, run
+`firebase functions:secrets:set SMTP_PASSWORD`, then redeploy: functions bind
+to a specific secret *version*, so a new version has no effect until the next
+`firebase deploy --only functions`.
+
+Note the sending account is a personal Gmail. An App Password grants full
+access to that Google account, and notifications stop if it is revoked or the
+account changes. A departmental mailbox would be sturdier for something branch
+staff rely on.
+
+### functions/.env is not committed
+
+`functions/.env` holds SMTP_HOST, SMTP_PORT, SMTP_USER and NOTIFY_TO. It
+contains no secrets, but it does name the mail account, so it was left out of
+git. The consequence is that `firebase deploy --only functions` from a fresh
+clone fails with *"no value for the following environment variables"* until the
+file is recreated. Commit it if reproducible deploys matter more than keeping
+the address out of the repository.
