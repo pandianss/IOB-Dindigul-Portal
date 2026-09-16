@@ -112,9 +112,38 @@ exports.onStatusChange = onDocumentUpdated(
   async (event) => {
     const before = event.data.before.data();
     const after = event.data.after.data();
-    if (!before || !after || before.STATUS === after.STATUS) return;
+    if (!before || !after) return;
 
     const merchant = after.MERCHANTNAME || after.MERCHANT_NAME || after.ACCOUNT_NAME || "Merchant";
+
+    // A branch chasing a request that has been sitting. This is the path a
+    // duplicate submission used to take, so it has to reach someone or the
+    // branch will just submit again.
+    const remindersBefore = Number(before.REMINDER_COUNT || 0);
+    const remindersAfter = Number(after.REMINDER_COUNT || 0);
+    if (remindersAfter > remindersBefore) {
+      await send(
+        `⏰ Reminder ${remindersAfter}: ${merchant} is still waiting`,
+        shell(
+          "A branch is chasing an open request",
+          [
+            ["Merchant Name", merchant],
+            ["Current Status", after.STATUS || "Pending Review"],
+            ["Times chased", String(remindersAfter)],
+            ["Reminder sent by", after.LAST_REMINDER_BY || "-"],
+            ["Originally submitted", String(after.CREATED_AT || "").slice(0, 10)],
+            ["Branch SOL ID", after.SOL_ID || "-"],
+            ["Account", after.ACCOUNTNO || after.ACCOUNT_NO || "-"],
+          ],
+          "Open Admin Dashboard ⚙️",
+          ADMIN_URL,
+          "IOB Dindigul Regional Office • Reminder from Branch"
+        )
+      );
+      return;
+    }
+
+    if (before.STATUS === after.STATUS) return;
 
     await send(
       `🔔 Status Update: ${merchant} ➔ ${after.STATUS}`,

@@ -54,7 +54,10 @@ service cloud.firestore {
         .hasOnly([
           'STATUS', 'VENDOR_REMARKS', 'MERCHANTVPA', 'QR_PDF_URL', 'PDF_NAME',
           'COMPLETED_DATE', 'UPDATED_DATE', 'UPDATED_AT',
-          'DOWNLOAD_COUNT', 'SOUNDBOX_CREATED'
+          'DOWNLOAD_COUNT', 'SOUNDBOX_CREATED',
+          // A branch nudging a request that has been waiting, instead of
+          // submitting a duplicate.
+          'REMINDER_COUNT', 'LAST_REMINDER_AT', 'LAST_REMINDER_BY'
         ]);
     }
 

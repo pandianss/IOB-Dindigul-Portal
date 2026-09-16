@@ -298,6 +298,11 @@
     font-weight: 700; cursor: pointer; margin-top: 4px;
   }
   .btn-correct:hover { background: rgba(245,158,11,0.25); }
+  .reminder-flag {
+    display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(239,68,68,0.15); color: var(--error);
+    font-size: 0.7rem; font-weight: 700; border: 1px solid rgba(239,68,68,0.35);
+  }
   .field-error-msg { font-size: 0.72rem; color: var(--error); font-weight: 600; margin-top: 3px; display: none; }
   .field-error-msg.show { display: block; }
 
@@ -1290,6 +1295,11 @@ function renderTable() {
     const actionBtn = `<button type="button" class="btn-action" data-act="status" data-doc="${rowId}">⚙️ Update Status</button>`
       + `<br><button type="button" class="btn-correct" data-act="correct" data-doc="${rowId}">✏️ Correct Details</button>`;
 
+    const reminders = parseInt(item.REMINDER_COUNT || 0);
+    const reminderBadge = reminders
+      ? `<div class="reminder-flag" title="Chased ${reminders} time${reminders === 1 ? '' : 's'}${item.LAST_REMINDER_BY ? ', last by ' + escapeHtml(item.LAST_REMINDER_BY) : ''}">⏰ ${reminders} reminder${reminders === 1 ? '' : 's'}</div>`
+      : '';
+
     const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes' ? '<div style="font-size:0.7rem;color:var(--warning);font-weight:700;margin-top:2px">🔊 Soundbox Requested</div>' : '';
 
     // Staff details column
@@ -1323,7 +1333,7 @@ function renderTable() {
         <td>${detailsDisplay}</td>
         <td>${staffDisplay}</td>
         <td><strong>${escapeHtml(item._loc || '-')}</strong></td>
-        <td>${statusBadge}${createdStr}${dateStr}${remarksInfo}</td>
+        <td>${statusBadge}${reminderBadge}${createdStr}${dateStr}${remarksInfo}</td>
         <td style="text-align:center">${actionBtn}</td>
       </tr>
     `;
