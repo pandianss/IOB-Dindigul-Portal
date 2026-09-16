@@ -1950,6 +1950,7 @@ async function saveCorrection() {
 
 let bulkRows = [];
 let bulkUploading = false;
+let bulkFinished = false;
 
 // Records currently on screen, keyed by document id. Rows carry only the id in
 // a data attribute; the object is fetched from here on click, so nothing
@@ -2035,6 +2036,7 @@ function bulkCandidates() {
 function openBulkQrModal() {
   bulkRows = [];
   bulkUploading = false;
+  bulkFinished = false;
   document.getElementById('bulkQrInput').value = '';
   document.getElementById('bulkSummary').hidden = true;
   document.getElementById('bulkScroll').hidden = true;
@@ -2164,7 +2166,7 @@ function bulkStateBadge(row) {
     case 'nonumber':  return '<span class="bulk-badge bad">no account number in filename</span>';
     case 'uploading': return '<span class="bulk-badge done">uploading' +
       (row.progress ? ' ' + row.progress + '%' : '…') + '</span>';
-    case 'queued':    return '<span class="bulk-badge warn">saved here, syncing</span>';
+    case 'queued':    return '<span class="bulk-badge warn" title="The upload finished but the record update has not reached the server yet. It will sync on its own; re-run this file if the record still looks unchanged later.">not confirmed yet</span>';
     case 'done':      return '<span class="bulk-badge ok">✓ attached</span>';
     case 'failed':    return '<span class="bulk-badge bad">' + (row.result || 'failed') + '</span>';
     default:          return '';
@@ -2239,7 +2241,7 @@ function renderBulkTable(rejectedCount) {
   // in-flight row matches none of the pre-upload states.
   if (counts.working)   chips.push('<span class="bulk-chip">' + counts.working + ' uploading</span>');
   if (counts.done)      chips.push('<span class="bulk-chip ok">' + counts.done + ' attached</span>');
-  if (counts.queued)    chips.push('<span class="bulk-chip warn">' + counts.queued + ' syncing</span>');
+  if (counts.queued)    chips.push('<span class="bulk-chip warn">' + counts.queued + ' not confirmed</span>');
   if (counts.failed)    chips.push('<span class="bulk-chip bad">' + counts.failed + ' failed</span>');
 
   const summary = document.getElementById('bulkSummary');
@@ -2272,6 +2274,11 @@ function updateBulkButton() {
 }
 
 async function runBulkQrUpload() {
+  // After a batch the same button reads "Done" and should dismiss the dialog.
+  // It used to re-enter this function, find nothing to upload and return, so
+  // clicking it did nothing at all.
+  if (bulkFinished) { closeBulkQrModal(); return; }
+
   const queue = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace'));
   if (!queue.length) return;
 
@@ -2361,11 +2368,33 @@ async function runBulkQrUpload() {
     renderBulkTable(0);
   }
 
+  // A row that timed out is not necessarily lost: Firestore may have synced it
+  // moments later. Ask the server rather than leaving the operator guessing.
+  if (queued) {
+    btn.textContent = 'Verifying…';
+    await new Promise(r => setTimeout(r, 4000));
+    try {
+      const fresh = await FB.getDocs(FB.query(FB.collection(db, 'leads'), FB.limit(1000)));
+      const byId = {};
+      fresh.forEach(d => { byId[d.id] = d.data(); });
+      for (const row of bulkRows) {
+        if (row.state !== 'queued') continue;
+        const saved = byId[row.chosen];
+        if (saved && saved.QR_PDF_URL) { row.state = 'done'; queued--; ok++; }
+      }
+    } catch (e) {
+      console.warn('Verification read failed:', e.message);
+    }
+    renderBulkTable(0);
+  }
+
   bulkUploading = false;
+  bulkFinished = true;
+  btn.disabled = false;
   btn.textContent = 'Done';
   const parts = [];
   if (ok) parts.push('attached ' + ok);
-  if (queued) parts.push(queued + ' saved on this device, syncing');
+  if (queued) parts.push(queued + ' not confirmed — check the record and retry if needed');
   if (failed) parts.push(failed + ' failed');
   showToast(
     (failed || queued ? '' : '✅ ') + parts.join(', ') + (failed || queued ? '' : ' QR PDF' + (ok === 1 ? '' : 's')),
