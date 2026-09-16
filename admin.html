@@ -28,7 +28,7 @@
     getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword
   } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
   import {
-    getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject
+    getStorage, ref as storageRef, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject
   } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js";
 
   window.FB = {
@@ -38,7 +38,7 @@
     query, orderBy, limit, onSnapshot, serverTimestamp, increment, arrayUnion,
     writeBatch,
     getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword,
-    getStorage, storageRef, uploadBytes, getDownloadURL, deleteObject
+    getStorage, storageRef, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject
   };
   window.dispatchEvent(new Event('fb-sdk-ready'));
 </script>
@@ -1949,6 +1949,7 @@ async function saveCorrection() {
 // ─────────────────────────────────────────────
 
 let bulkRows = [];
+let bulkUploading = false;
 
 // Records currently on screen, keyed by document id. Rows carry only the id in
 // a data attribute; the object is fetched from here on click, so nothing
@@ -2033,6 +2034,7 @@ function bulkCandidates() {
 
 function openBulkQrModal() {
   bulkRows = [];
+  bulkUploading = false;
   document.getElementById('bulkQrInput').value = '';
   document.getElementById('bulkSummary').hidden = true;
   document.getElementById('bulkScroll').hidden = true;
@@ -2160,7 +2162,9 @@ function bulkStateBadge(row) {
     case 'ambiguous': return '<span class="bulk-badge warn">' + row.matches.length + ' requests share this account — pick one</span>';
     case 'nomatch':   return '<span class="bulk-badge bad">no request with this account</span>';
     case 'nonumber':  return '<span class="bulk-badge bad">no account number in filename</span>';
-    case 'uploading': return '<span class="bulk-badge done">uploading…</span>';
+    case 'uploading': return '<span class="bulk-badge done">uploading' +
+      (row.progress ? ' ' + row.progress + '%' : '…') + '</span>';
+    case 'queued':    return '<span class="bulk-badge warn">saved here, syncing</span>';
     case 'done':      return '<span class="bulk-badge ok">✓ attached</span>';
     case 'failed':    return '<span class="bulk-badge bad">' + (row.result || 'failed') + '</span>';
     default:          return '';
@@ -2212,12 +2216,17 @@ function renderBulkTable(rejectedCount) {
     '</tr>';
   }).join('');
 
-  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0 };
+  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0,
+                   working: 0, done: 0, queued: 0, failed: 0 };
   bulkRows.forEach(r => {
     if (r.state === 'ready') counts.ready++;
     else if (r.state === 'replace') counts.replace++;
     else if (r.state === 'ambiguous') counts.ambiguous++;
     else if (r.state === 'nomatch' || r.state === 'nonumber') counts.unmatched++;
+    else if (r.state === 'uploading') counts.working++;
+    else if (r.state === 'done') counts.done++;
+    else if (r.state === 'queued') counts.queued++;
+    else if (r.state === 'failed') counts.failed++;
   });
 
   const chips = [];
@@ -2226,9 +2235,16 @@ function renderBulkTable(rejectedCount) {
   if (counts.ambiguous) chips.push('<span class="bulk-chip warn">' + counts.ambiguous + ' need a choice</span>');
   if (counts.unmatched) chips.push('<span class="bulk-chip bad">' + counts.unmatched + ' unmatched</span>');
   if (rejectedCount)    chips.push('<span class="bulk-chip bad">' + rejectedCount + ' not a PDF</span>');
+  // Without these the summary read "No files selected" mid-upload, because an
+  // in-flight row matches none of the pre-upload states.
+  if (counts.working)   chips.push('<span class="bulk-chip">' + counts.working + ' uploading</span>');
+  if (counts.done)      chips.push('<span class="bulk-chip ok">' + counts.done + ' attached</span>');
+  if (counts.queued)    chips.push('<span class="bulk-chip warn">' + counts.queued + ' syncing</span>');
+  if (counts.failed)    chips.push('<span class="bulk-chip bad">' + counts.failed + ' failed</span>');
 
   const summary = document.getElementById('bulkSummary');
-  summary.innerHTML = chips.join('') || '<span class="bulk-chip">No files selected</span>';
+  summary.innerHTML = chips.join('') ||
+    (bulkRows.length ? '' : '<span class="bulk-chip">No files selected</span>');
   summary.hidden = false;
   document.getElementById('bulkScroll').hidden = bulkRows.length === 0;
   document.getElementById('bulkOptsRow').hidden = bulkRows.length === 0;
@@ -2246,6 +2262,9 @@ function onBulkPick(index, docId) {
 }
 
 function updateBulkButton() {
+  // renderBulkTable runs on every progress tick, so leave the button alone once
+  // an upload is under way or it overwrites the "Uploading 2 of 5" label.
+  if (bulkUploading) return;
   const n = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace')).length;
   const btn = document.getElementById('btnBulkUpload');
   btn.disabled = n === 0;
@@ -2258,16 +2277,18 @@ async function runBulkQrUpload() {
 
   const btn = document.getElementById('btnBulkUpload');
   btn.disabled = true;
+  bulkUploading = true;
 
   try {
     await ensureSignedIn();
   } catch (e) {
     showToast('Sign-in failed: ' + e.message, 'error');
+    bulkUploading = false;
     btn.disabled = false;
     return;
   }
 
-  let ok = 0, failed = 0;
+  let ok = 0, failed = 0, queued = 0;
 
   for (let i = 0; i < queue.length; i++) {
     const row = queue[i];
@@ -2277,7 +2298,25 @@ async function runBulkQrUpload() {
 
     try {
       const ref = FB.storageRef(fbStorage, qrPdfPath(row.chosen));
-      await FB.uploadBytes(ref, row.file, { contentType: 'application/pdf' });
+
+      // Resumable, so the row can report real progress. A plain upload gives no
+      // feedback at all, which makes a slow connection look like a hang.
+      await new Promise((resolve, reject) => {
+        const task = FB.uploadBytesResumable(ref, row.file, { contentType: 'application/pdf' });
+        const stall = setTimeout(() => {
+          task.cancel();
+          reject(new Error('upload timed out'));
+        }, 120000);
+        task.on('state_changed',
+          snap => {
+            row.progress = snap.totalBytes
+              ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
+            renderBulkTable(0);
+          },
+          err => { clearTimeout(stall); reject(err); },
+          () => { clearTimeout(stall); resolve(); }
+        );
+      });
 
       const update = {
         QR_PDF_URL: await FB.getDownloadURL(ref),
@@ -2301,9 +2340,19 @@ async function runBulkQrUpload() {
         update.COMPLETED_DATE = new Date().toISOString();
       }
 
-      await FB.updateDoc(FB.doc(db, 'leads', row.chosen), update);
-      row.state = 'done';
-      ok++;
+      // Guarded for the same reason as the status dialog: Firestore applies the
+      // change locally at once but only settles this promise on server
+      // acknowledgement, so an unguarded await can never return.
+      const write = FB.updateDoc(FB.doc(db, 'leads', row.chosen), update);
+      write.catch(err => console.warn('Deferred bulk write failed:', err.message));
+      const TIMEOUT = Symbol('timeout');
+      const outcome = await Promise.race([
+        write.then(() => 'ok'),
+        new Promise(res => setTimeout(() => res(TIMEOUT), 15000))
+      ]);
+
+      row.state = outcome === TIMEOUT ? 'queued' : 'done';
+      if (outcome === TIMEOUT) queued++; else ok++;
     } catch (e) {
       row.state = 'failed';
       row.result = e.code || e.message;
@@ -2312,11 +2361,15 @@ async function runBulkQrUpload() {
     renderBulkTable(0);
   }
 
+  bulkUploading = false;
   btn.textContent = 'Done';
+  const parts = [];
+  if (ok) parts.push('attached ' + ok);
+  if (queued) parts.push(queued + ' saved on this device, syncing');
+  if (failed) parts.push(failed + ' failed');
   showToast(
-    failed ? ('Attached ' + ok + ' PDF' + (ok === 1 ? '' : 's') + ', ' + failed + ' failed')
-           : ('✅ Attached ' + ok + ' QR PDF' + (ok === 1 ? '' : 's')),
-    failed ? 'warning' : 'success'
+    (failed || queued ? '' : '✅ ') + parts.join(', ') + (failed || queued ? '' : ' QR PDF' + (ok === 1 ? '' : 's')),
+    failed ? 'warning' : (queued ? 'warning' : 'success')
   );
 }
 
