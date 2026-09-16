@@ -108,3 +108,24 @@ Deleting a record always requires the console or a privileged Cloud Function:
 `allow delete: if false` applies to every client, which is what stops a
 drive-by wipe. The duplicate pairs in the worklist therefore have to be removed
 from the console.
+
+## Storage notes
+
+Two things cost real time when first deploying the Storage rules, both worth
+knowing before you touch them again.
+
+`firebase deploy --only storage` can report *"latest version of storage.rules
+already up to date, skipping upload"* and release nothing, leaving Firebase's
+locked default ruleset live while the CLI reports success. If uploads fail with
+`storage/unauthorized` right after a deploy that said "skipping", change the
+file (even trivially) to force a genuine upload. Rules then take roughly 30-60
+seconds to propagate, so a test run immediately after a deploy can report a
+failure that has already been fixed.
+
+`request.resource` is null on a delete. Folding size and content-type checks
+into a single `allow write` therefore denies deletes as a side effect of those
+expressions failing, rather than as a decision. The rules split `create, update`
+from `delete` so the intent is explicit: deletes are refused because every
+visitor holds an anonymous token and could otherwise wipe merchants' QR codes.
+Remove objects from the console. A wrong attachment is corrected by uploading
+over it, which is an update and is allowed.
