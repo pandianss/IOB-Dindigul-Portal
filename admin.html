@@ -864,6 +864,17 @@ function initFirebaseEngine() {
         firebase.initializeApp(config);
       }
       db = firebase.firestore();
+      // Offline persistence. This is what lets the dashboard paint instantly
+      // from cache on load, so it is load-bearing, not a nicety.
+      //
+      // The SDK logs a deprecation notice pointing at FirestoreSettings.cache.
+      // Do not act on it here. The compat SDK does not expose
+      // persistentLocalCache or persistentMultipleTabManager at any version up
+      // to 11.10.0, and settings({ localCache: ... }) with a plain object is
+      // accepted without error while enabling nothing — a cache read after a
+      // server read then returns zero documents. Adopting the replacement means
+      // migrating both pages to the modular SDK; until then this call is the
+      // only form that actually works.
       db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
       if (firebase.auth) {
         try {
