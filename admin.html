@@ -199,6 +199,7 @@
   .bulk-scroll { max-height: 42vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
   .bulk-table select { width: 100%; font-size: 0.75rem; padding: 4px; border-radius: 6px;
     background: var(--input-bg); color: var(--text); border: 1px solid var(--border-light); }
+  .bulk-warn { font-size: 0.7rem; color: var(--warning); margin-top: 2px; font-weight: 700; }
   .bulk-opts { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
 
   .portal-link {
@@ -663,20 +664,21 @@
       <div class="bulk-scroll" id="bulkScroll" hidden>
         <table class="bulk-table">
           <thead><tr>
-            <th style="width:30%">File</th>
-            <th style="width:14%">Account</th>
-            <th style="width:30%">Matched request</th>
-            <th style="width:26%">Result</th>
+            <th style="width:24%">File</th>
+            <th style="width:12%">Account</th>
+            <th style="width:24%">Matched request</th>
+            <th style="width:20%">UPI ID from PDF</th>
+            <th style="width:20%">Result</th>
           </tr></thead>
           <tbody id="bulkTableBody"></tbody>
         </table>
       </div>
 
-      <label class="bulk-opts" id="bulkOptsRow" hidden>
-        <input type="checkbox" id="bulkMarkCompleted">
-        Also mark matched requests as Completed
-        <span style="font-size:0.72rem">(only those that already have a VPA — the rest keep their current status)</span>
-      </label>
+      <div class="bulk-opts" id="bulkOptsRow" hidden>
+        The UPI ID is read from each sheet, written to its record, and the request
+        marked Completed. A sheet with no readable UPI ID is still attached, but
+        the request keeps its current status.
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeBulkQrModal()">Cancel</button>
@@ -2036,7 +2038,6 @@ function openBulkQrModal() {
   document.getElementById('bulkScroll').hidden = true;
   document.getElementById('bulkOptsRow').hidden = true;
   document.getElementById('bulkTableBody').innerHTML = '';
-  document.getElementById('bulkMarkCompleted').checked = false;
   const btn = document.getElementById('btnBulkUpload');
   btn.disabled = true;
   btn.textContent = 'Upload';
@@ -2048,7 +2049,67 @@ function closeBulkQrModal() {
   bulkRows = [];
 }
 
-function onBulkQrFiles(fileList) {
+// pdf.js, fetched the first time a batch is opened rather than on every visit
+// to the dashboard. The UMD build is used deliberately: this page is a classic
+// script, so an ES module build would not expose pdfjsLib to it.
+const PDFJS_VERSION = '3.11.174';
+let pdfJsLoading = null;
+
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(true);
+  if (pdfJsLoading) return pdfJsLoading;
+  pdfJsLoading = new Promise(resolve => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.min.js';
+    sc.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.worker.min.js';
+      resolve(true);
+    };
+    sc.onerror = () => resolve(false);   // fall back to attaching without reading
+    document.head.appendChild(sc);
+  });
+  return pdfJsLoading;
+}
+
+// The vendor's QR sheets carry a text layer, so the UPI ID can be read straight
+// out of the file instead of being typed in per record.
+function parseQrPdfText(items) {
+  const clean = items.map(x => String(x || '').trim()).filter(Boolean);
+  const text = clean.join(' ');
+  const m = text.match(/UPI\s*ID\s*[:\-]?\s*([A-Za-z0-9._-]{2,64}@[A-Za-z][A-Za-z0-9.]{1,31})/i)
+         || text.match(/(?:^|\s)([A-Za-z0-9._-]{2,64}@iob)(?:\s|$)/i);
+  const name = clean.find(x => !/UPI\s*ID/i.test(x) && !/SCAN\s*&\s*PAY/i.test(x) && x.length > 2) || '';
+  return { vpa: m ? m[1].trim() : '', name };
+}
+
+async function readQrPdf(file) {
+  try {
+    if (!(await loadPdfJs())) return { vpa: '', name: '', error: 'reader unavailable' };
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let items = [];
+    for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+      const content = await (await pdf.getPage(i)).getTextContent();
+      items = items.concat(content.items.map(x => x.str));
+      if (parseQrPdfText(items).vpa) break;
+    }
+    return parseQrPdfText(items);
+  } catch (e) {
+    return { vpa: '', name: '', error: e.message };
+  }
+}
+
+// Names are compared loosely — the PDF prints them uppercased and the record
+// may differ in spacing or punctuation. A mismatch is a warning, not a block,
+// because it usually means a file was matched to the wrong merchant.
+function namesLookAlike(a, b) {
+  const norm = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const x = norm(a), y = norm(b);
+  if (!x || !y) return true;
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+async function onBulkQrFiles(fileList) {
   const files = [...fileList].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
   const rejected = fileList.length - files.length;
 
@@ -2073,6 +2134,22 @@ function onBulkQrFiles(fileList) {
     };
   });
 
+  renderBulkTable(rejected);
+
+  // Read the UPI ID out of each sheet. Done after the first render so the match
+  // list appears immediately and the IDs fill in as they are parsed.
+  for (const row of bulkRows) {
+    if (row.state === 'nomatch' || row.state === 'nonumber') continue;
+    const parsed = await readQrPdf(row.file);
+    row.vpa = parsed.vpa;
+    row.pdfName = parsed.name;
+    row.readError = parsed.error || '';
+
+    const rec = row.matches.find(m => m.docId === row.chosen);
+    row.nameMismatch = !!(rec && parsed.name &&
+      !namesLookAlike(parsed.name, rec.MERCHANTNAME || rec.ACCOUNT_NAME || rec.MERCHANT_NAME));
+    renderBulkTable(rejected);
+  }
   renderBulkTable(rejected);
 }
 
@@ -2111,11 +2188,26 @@ function renderBulkTable(rejectedCount) {
       matchCell = '<span style="color:var(--muted)">—</span>';
     }
 
+    let vpaCell;
+    if (row.vpa) {
+      vpaCell = '<code>' + escapeHtml(row.vpa) + '</code>' +
+        (row.nameMismatch
+          ? '<div class="bulk-warn">⚠ PDF is for "' + escapeHtml(row.pdfName) + '"</div>'
+          : '');
+    } else if (row.readError) {
+      vpaCell = '<span class="bulk-badge bad">could not read</span>';
+    } else if (row.state === 'nomatch' || row.state === 'nonumber') {
+      vpaCell = '<span style="color:var(--muted)">—</span>';
+    } else {
+      vpaCell = '<span style="color:var(--muted)">reading…</span>';
+    }
+
     const skip = (row.state === 'nomatch' || row.state === 'nonumber') ? ' class="skip"' : '';
     return '<tr' + skip + '>' +
       '<td class="bulk-file">' + escapeHtml(row.file.name) + '</td>' +
       '<td>' + (row.acct || '<span style="color:var(--muted)">—</span>') + '</td>' +
       '<td>' + matchCell + '</td>' +
+      '<td>' + vpaCell + '</td>' +
       '<td>' + bulkStateBadge(row) + '</td>' +
     '</tr>';
   }).join('');
@@ -2166,7 +2258,6 @@ async function runBulkQrUpload() {
 
   const btn = document.getElementById('btnBulkUpload');
   btn.disabled = true;
-  const markCompleted = document.getElementById('bulkMarkCompleted').checked;
 
   try {
     await ensureSignedIn();
@@ -2195,10 +2286,17 @@ async function runBulkQrUpload() {
         UPDATED_AT: FB.serverTimestamp()
       };
 
-      // Only close a request off when a VPA already exists — the single-record
-      // flow requires one, and a QR without it is not actually onboarded.
+      // The sheet carries the generated UPI ID, so the record can be filled in
+      // and closed off without anyone retyping it. A request is only completed
+      // when a VPA is actually known: a QR with no ID is not onboarded.
       const rec = row.matches.find(m => m.docId === row.chosen);
-      if (markCompleted && rec && (rec.MERCHANTVPA || rec.VPA)) {
+      const vpa = row.vpa || (rec && (rec.MERCHANTVPA || rec.VPA)) || '';
+      const isPlaceholder = /^pending/i.test(String(rec && rec.MERCHANTVPA || ''));
+
+      if (row.vpa && (isPlaceholder || !rec.MERCHANTVPA)) {
+        update.MERCHANTVPA = row.vpa;
+      }
+      if (vpa && !/^pending/i.test(vpa)) {
         update.STATUS = 'Completed';
         update.COMPLETED_DATE = new Date().toISOString();
       }
