@@ -132,6 +132,48 @@
   }
   .btn-csv-export:hover { background: rgba(16,185,129,0.25); }
 
+  .btn-bulk-qr {
+    background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4);
+    color: var(--iob-blue-light); border-radius: 8px; padding: 7px 14px; font-size: 0.82rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-bulk-qr:hover { background: rgba(59,130,246,0.25); }
+
+  /* ── BULK QR UPLOAD ── */
+  .modal-card.wide { max-width: 860px; }
+  .bulk-drop {
+    border: 2px dashed var(--border-light); border-radius: 12px; padding: 22px;
+    text-align: center; cursor: pointer; transition: all 0.2s; background: var(--input-bg);
+  }
+  .bulk-drop:hover, .bulk-drop.dragover { border-color: var(--iob-blue); background: var(--input-focus); }
+  .bulk-drop strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+  .bulk-drop span { font-size: 0.78rem; color: var(--muted); }
+
+  .bulk-summary { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700; }
+  .bulk-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-light); }
+  .bulk-chip.ok { background: rgba(16,185,129,0.15); color: var(--success); border-color: rgba(16,185,129,0.4); }
+  .bulk-chip.warn { background: rgba(245,158,11,0.15); color: var(--warning); border-color: rgba(245,158,11,0.4); }
+  .bulk-chip.bad { background: rgba(239,68,68,0.15); color: var(--error); border-color: rgba(239,68,68,0.4); }
+
+  .bulk-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .bulk-table th {
+    text-align: left; padding: 7px 8px; color: var(--muted); font-weight: 700;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card);
+    text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.04em;
+  }
+  .bulk-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .bulk-table tr.skip { opacity: 0.45; }
+  .bulk-file { font-family: ui-monospace, Menlo, monospace; font-size: 0.74rem; word-break: break-all; }
+  .bulk-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+  .bulk-badge.ok { background: rgba(16,185,129,0.18); color: var(--success); }
+  .bulk-badge.warn { background: rgba(245,158,11,0.18); color: var(--warning); }
+  .bulk-badge.bad { background: rgba(239,68,68,0.18); color: var(--error); }
+  .bulk-badge.done { background: rgba(59,130,246,0.18); color: var(--iob-blue-light); }
+  .bulk-scroll { max-height: 42vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+  .bulk-table select { width: 100%; font-size: 0.75rem; padding: 4px; border-radius: 6px;
+    background: var(--input-bg); color: var(--text); border: 1px solid var(--border-light); }
+  .bulk-opts { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+
   .portal-link {
     background: var(--card); border: 1px solid var(--border-light);
     color: var(--text); border-radius: 8px; padding: 7px 14px; font-size: 0.82rem;
@@ -312,6 +354,7 @@
     <span class="header-title">Indian Overseas Bank — Merchant Admin Console</span>
   </div>
   <div class="header-right">
+    <button type="button" class="btn-bulk-qr" onclick="openBulkQrModal()" title="Attach many vendor QR PDFs at once, matched by account number in the filename">📦 Bulk QR Upload</button>
     <button type="button" class="btn-csv-export" onclick="exportDataToCSV()" title="Export all merchant records to CSV/Excel">📊 Export CSV</button>
     <button type="button" id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">☀️</button>
     <a href="index.html" class="portal-link">← Branch Portal</a>
@@ -482,6 +525,48 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" id="btnConfirmComplete" onclick="confirmCompletion()">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK QR PDF UPLOAD MODAL -->
+<div class="modal-overlay" id="bulkQrModal">
+  <div class="modal-card wide">
+    <div class="modal-header">
+      <h3>📦 Bulk QR PDF Upload</h3>
+      <button class="modal-close" onclick="closeBulkQrModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="bulk-drop" id="bulkDrop" onclick="document.getElementById('bulkQrInput').click()">
+        <strong>Drop the vendor's QR PDFs here, or click to choose</strong>
+        <span>Each file is matched to a request by the account number in its filename.
+              Leading zeros are optional, and extra text around the number is ignored.</span>
+      </div>
+      <input type="file" id="bulkQrInput" accept="application/pdf" multiple style="display:none" onchange="onBulkQrFiles(this.files)">
+
+      <div class="bulk-summary" id="bulkSummary" hidden></div>
+
+      <div class="bulk-scroll" id="bulkScroll" hidden>
+        <table class="bulk-table">
+          <thead><tr>
+            <th style="width:30%">File</th>
+            <th style="width:14%">Account</th>
+            <th style="width:30%">Matched request</th>
+            <th style="width:26%">Result</th>
+          </tr></thead>
+          <tbody id="bulkTableBody"></tbody>
+        </table>
+      </div>
+
+      <label class="bulk-opts" id="bulkOptsRow" hidden>
+        <input type="checkbox" id="bulkMarkCompleted">
+        Also mark matched requests as Completed
+        <span style="font-size:0.72rem">(only those that already have a VPA — the rest keep their current status)</span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeBulkQrModal()">Cancel</button>
+      <button class="btn-confirm" id="btnBulkUpload" onclick="runBulkQrUpload()" disabled>Upload</button>
     </div>
   </div>
 </div>
@@ -1421,6 +1506,245 @@ function showToast(msg, type='') {
   t.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = '', 4000);
+}
+
+// ─────────────────────────────────────────────
+// BULK QR PDF UPLOAD
+// The vendor returns QR codes in batches, named by the merchant's account
+// number. Each file is matched back to its request rather than attached one
+// at a time through the status modal.
+// ─────────────────────────────────────────────
+
+let bulkRows = [];
+
+// Merchant names and filenames are user-supplied and go into innerHTML below.
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Account numbers are stored inconsistently: roughly a third lost their
+// leading zero to numeric conversion somewhere upstream, so 037602000000784
+// and 37602000000784 are the same account. Compare without leading zeros so
+// either form in the filename or the record matches.
+function canonAccount(value) {
+  const digits = String(value == null ? '' : value).replace(/\D/g, '');
+  return digits.replace(/^0+/, '');
+}
+
+// Pulls the account number out of a filename. Takes the longest run of digits,
+// so "QR_037602000000784_SriBalaji.pdf" and "37602000000784.pdf" both work.
+function accountFromFilename(name) {
+  const runs = String(name).replace(/\.pdf$/i, '').match(/\d+/g) || [];
+  if (!runs.length) return '';
+
+  const longest = runs.reduce((a, b) => (b.length > a.length ? b : a), '');
+  if (longest.length >= 9) return canonAccount(longest);
+
+  // Nothing long enough on its own: the number may be split by separators,
+  // as in "0376-0200-0000-784.pdf". Only fall back to joining every run when
+  // the total is a plausible account length, so "IMG_1234.pdf" stays unmatched
+  // and a suffix like "_v2" cannot quietly corrupt a real number.
+  const joined = runs.join('');
+  return (joined.length >= 13 && joined.length <= 18) ? canonAccount(joined) : '';
+}
+
+function bulkCandidates() {
+  return [...(ALL_DATA.qr || []), ...(ALL_DATA.lead || [])].filter(isRealMerchantLead);
+}
+
+function openBulkQrModal() {
+  bulkRows = [];
+  document.getElementById('bulkQrInput').value = '';
+  document.getElementById('bulkSummary').hidden = true;
+  document.getElementById('bulkScroll').hidden = true;
+  document.getElementById('bulkOptsRow').hidden = true;
+  document.getElementById('bulkTableBody').innerHTML = '';
+  document.getElementById('bulkMarkCompleted').checked = false;
+  const btn = document.getElementById('btnBulkUpload');
+  btn.disabled = true;
+  btn.textContent = 'Upload';
+  document.getElementById('bulkQrModal').classList.add('open');
+}
+
+function closeBulkQrModal() {
+  document.getElementById('bulkQrModal').classList.remove('open');
+  bulkRows = [];
+}
+
+function onBulkQrFiles(fileList) {
+  const files = [...fileList].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  const rejected = fileList.length - files.length;
+
+  const pool = bulkCandidates();
+
+  bulkRows = files.map(file => {
+    const acct = accountFromFilename(file.name);
+    const matches = acct ? pool.filter(r => canonAccount(r.ACCOUNTNO || r.ACCOUNT_NO) === acct) : [];
+
+    let state;
+    if (!acct) state = 'nonumber';
+    else if (matches.length === 0) state = 'nomatch';
+    else if (matches.length > 1) state = 'ambiguous';
+    else if (matches[0].QR_PDF_URL) state = 'replace';
+    else state = 'ready';
+
+    return {
+      file, acct, matches,
+      chosen: matches.length === 1 ? matches[0].docId : '',
+      state,
+      result: ''
+    };
+  });
+
+  renderBulkTable(rejected);
+}
+
+function bulkStateBadge(row) {
+  switch (row.state) {
+    case 'ready':     return '<span class="bulk-badge ok">will attach</span>';
+    case 'replace':   return '<span class="bulk-badge warn">replaces existing PDF</span>';
+    case 'ambiguous': return '<span class="bulk-badge warn">' + row.matches.length + ' requests share this account — pick one</span>';
+    case 'nomatch':   return '<span class="bulk-badge bad">no request with this account</span>';
+    case 'nonumber':  return '<span class="bulk-badge bad">no account number in filename</span>';
+    case 'uploading': return '<span class="bulk-badge done">uploading…</span>';
+    case 'done':      return '<span class="bulk-badge ok">✓ attached</span>';
+    case 'failed':    return '<span class="bulk-badge bad">' + (row.result || 'failed') + '</span>';
+    default:          return '';
+  }
+}
+
+function labelFor(rec) {
+  const name = rec.MERCHANTNAME || rec.MERCHANT_NAME || rec.ACCOUNT_NAME || '(unnamed)';
+  return name + ' — ' + (rec.STATUS || 'Pending Review');
+}
+
+function renderBulkTable(rejectedCount) {
+  const body = document.getElementById('bulkTableBody');
+
+  body.innerHTML = bulkRows.map((row, i) => {
+    let matchCell;
+    if (row.state === 'ambiguous') {
+      matchCell = '<select onchange="onBulkPick(' + i + ', this.value)">' +
+        '<option value="">— choose which request —</option>' +
+        row.matches.map(m => '<option value="' + m.docId + '">' + escapeHtml(labelFor(m)) + '</option>').join('') +
+        '</select>';
+    } else if (row.matches.length === 1) {
+      matchCell = escapeHtml(labelFor(row.matches[0]));
+    } else {
+      matchCell = '<span style="color:var(--muted)">—</span>';
+    }
+
+    const skip = (row.state === 'nomatch' || row.state === 'nonumber') ? ' class="skip"' : '';
+    return '<tr' + skip + '>' +
+      '<td class="bulk-file">' + escapeHtml(row.file.name) + '</td>' +
+      '<td>' + (row.acct || '<span style="color:var(--muted)">—</span>') + '</td>' +
+      '<td>' + matchCell + '</td>' +
+      '<td>' + bulkStateBadge(row) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0 };
+  bulkRows.forEach(r => {
+    if (r.state === 'ready') counts.ready++;
+    else if (r.state === 'replace') counts.replace++;
+    else if (r.state === 'ambiguous') counts.ambiguous++;
+    else if (r.state === 'nomatch' || r.state === 'nonumber') counts.unmatched++;
+  });
+
+  const chips = [];
+  if (counts.ready)     chips.push('<span class="bulk-chip ok">' + counts.ready + ' ready</span>');
+  if (counts.replace)   chips.push('<span class="bulk-chip warn">' + counts.replace + ' will replace an existing PDF</span>');
+  if (counts.ambiguous) chips.push('<span class="bulk-chip warn">' + counts.ambiguous + ' need a choice</span>');
+  if (counts.unmatched) chips.push('<span class="bulk-chip bad">' + counts.unmatched + ' unmatched</span>');
+  if (rejectedCount)    chips.push('<span class="bulk-chip bad">' + rejectedCount + ' not a PDF</span>');
+
+  const summary = document.getElementById('bulkSummary');
+  summary.innerHTML = chips.join('') || '<span class="bulk-chip">No files selected</span>';
+  summary.hidden = false;
+  document.getElementById('bulkScroll').hidden = bulkRows.length === 0;
+  document.getElementById('bulkOptsRow').hidden = bulkRows.length === 0;
+
+  updateBulkButton();
+}
+
+function onBulkPick(index, docId) {
+  const row = bulkRows[index];
+  if (!row) return;
+  row.chosen = docId;
+  const rec = row.matches.find(m => m.docId === docId);
+  row.state = docId ? (rec && rec.QR_PDF_URL ? 'replace' : 'ready') : 'ambiguous';
+  renderBulkTable(0);
+}
+
+function updateBulkButton() {
+  const n = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace')).length;
+  const btn = document.getElementById('btnBulkUpload');
+  btn.disabled = n === 0;
+  btn.textContent = n ? 'Upload ' + n + ' PDF' + (n === 1 ? '' : 's') : 'Upload';
+}
+
+async function runBulkQrUpload() {
+  const queue = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace'));
+  if (!queue.length) return;
+
+  const btn = document.getElementById('btnBulkUpload');
+  btn.disabled = true;
+  const markCompleted = document.getElementById('bulkMarkCompleted').checked;
+
+  try {
+    await ensureSignedIn();
+  } catch (e) {
+    showToast('Sign-in failed: ' + e.message, 'error');
+    btn.disabled = false;
+    return;
+  }
+
+  let ok = 0, failed = 0;
+
+  for (let i = 0; i < queue.length; i++) {
+    const row = queue[i];
+    row.state = 'uploading';
+    renderBulkTable(0);
+    btn.textContent = 'Uploading ' + (i + 1) + ' of ' + queue.length + '…';
+
+    try {
+      const safeName = row.file.name.replace(/[^A-Za-z0-9._-]/g, '_');
+      const ref = firebase.storage().ref('qr-pdfs/' + row.chosen + '/' + safeName);
+      await ref.put(row.file, { contentType: 'application/pdf' });
+
+      const update = {
+        QR_PDF_URL: await ref.getDownloadURL(),
+        PDF_NAME: row.file.name,
+        UPDATED_DATE: new Date().toISOString(),
+        UPDATED_AT: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      // Only close a request off when a VPA already exists — the single-record
+      // flow requires one, and a QR without it is not actually onboarded.
+      const rec = row.matches.find(m => m.docId === row.chosen);
+      if (markCompleted && rec && (rec.MERCHANTVPA || rec.VPA)) {
+        update.STATUS = 'Completed';
+        update.COMPLETED_DATE = new Date().toISOString();
+      }
+
+      await db.collection('leads').doc(row.chosen).update(update);
+      row.state = 'done';
+      ok++;
+    } catch (e) {
+      row.state = 'failed';
+      row.result = e.code || e.message;
+      failed++;
+    }
+    renderBulkTable(0);
+  }
+
+  btn.textContent = 'Done';
+  showToast(
+    failed ? ('Attached ' + ok + ' PDF' + (ok === 1 ? '' : 's') + ', ' + failed + ' failed')
+           : ('✅ Attached ' + ok + ' QR PDF' + (ok === 1 ? '' : 's')),
+    failed ? 'warning' : 'success'
+  );
 }
 
 function exportDataToCSV() {
