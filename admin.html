@@ -298,6 +298,13 @@
     font-weight: 700; cursor: pointer; margin-top: 4px;
   }
   .btn-correct:hover { background: rgba(245,158,11,0.25); }
+  .existing-pdf {
+    background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 8px;
+    padding: 9px 12px; margin-bottom: 10px; font-size: 0.8rem;
+  }
+  .existing-pdf a { color: var(--iob-blue-light); font-weight: 700; word-break: break-all; }
+  .existing-pdf-note { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
   .reminder-flag {
     display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
     background: rgba(239,68,68,0.15); color: var(--error);
@@ -551,7 +558,12 @@
       </div>
 
       <div id="pdfUploadContainer">
-        <label style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px">
+        <div id="existingPdfBox" class="existing-pdf" hidden>
+          <span>📎 Currently attached:</span>
+          <a id="existingPdfLink" href="#" target="_blank" rel="noopener"><span id="existingPdfName"></span></a>
+          <div class="existing-pdf-note">Choosing a new file below replaces it.</div>
+        </div>
+        <label id="pdfUploadLabel" style="font-size:0.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px">
           Upload PDF Document / Confirmation (Optional)
         </label>
         <div class="file-dropzone" onclick="document.getElementById('pdfFileInput').click()">
@@ -1482,8 +1494,23 @@ function openModal(item) {
   activeSelectedApp = item;
   selectedFileObj = null;
   selectedFileName = null;
-  document.getElementById('fileNameDisplay').textContent = "Click to choose PDF file";
   document.getElementById('pdfFileInput').value = "";
+
+  // Show what is already attached, so replacing a wrong QR code is an obvious
+  // action rather than something you have to know is possible.
+  const existingBox = document.getElementById('existingPdfBox');
+  const hasPdf = !!item.QR_PDF_URL;
+  existingBox.hidden = !hasPdf;
+  if (hasPdf) {
+    document.getElementById('existingPdfLink').href = safeUrl(item.QR_PDF_URL);
+    document.getElementById('existingPdfName').textContent = item.PDF_NAME || 'QR code PDF';
+  }
+  document.getElementById('pdfUploadLabel').textContent = hasPdf
+    ? 'Replace QR PDF (optional)'
+    : 'Upload PDF Document / Confirmation (Optional)';
+  document.getElementById('fileNameDisplay').textContent = hasPdf
+    ? 'Click to choose a replacement PDF'
+    : 'Click to choose PDF file';
 
   const titleEl = document.getElementById('modalTitle');
   const summary = document.getElementById('modalAppSummary');
@@ -1617,6 +1644,18 @@ async function confirmCompletion() {
       updatedFields.COMPLETED_DATE = new Date().toISOString().split('T')[0];
     }
     if (vpaValue && activeSelectedApp._type === 'QR') updatedFields.MERCHANTVPA = vpaValue;
+
+    // Attach or replace the QR PDF. This upload had been dropped from this
+    // function, so choosing a file appeared to work and was silently discarded.
+    if (selectedFileObj && activeSelectedApp.docId) {
+      btn.textContent = "Uploading PDF...";
+      await ensureSignedIn();
+      const ref = FB.storageRef(fbStorage, qrPdfPath(activeSelectedApp.docId));
+      await FB.uploadBytes(ref, selectedFileObj, { contentType: 'application/pdf' });
+      updatedFields.QR_PDF_URL = await FB.getDownloadURL(ref);
+      updatedFields.PDF_NAME = selectedFileName || 'qr.pdf';
+      btn.textContent = "Saving...";
+    }
 
     // Apply to local memory immediately for 0ms feedback
     const cat = activeSelectedApp._type === 'QR' ? 'qr' : (activeSelectedApp._type === 'Soundbox' ? 'sb' : 'lead');
@@ -1914,6 +1953,13 @@ function wireTableActions() {
   });
 }
 
+// Every attachment for a record lands on the same object, so replacing a wrong
+// QR code overwrites it. Using the uploaded filename would leave the previous
+// file behind forever, since the rules refuse client deletes.
+function qrPdfPath(docId) {
+  return 'qr-pdfs/' + docId + '/qr.pdf';
+}
+
 // Only http(s) links are emitted. A stored javascript: URL would otherwise
 // execute when someone clicks the QR PDF link.
 function safeUrl(value) {
@@ -2113,8 +2159,7 @@ async function runBulkQrUpload() {
     btn.textContent = 'Uploading ' + (i + 1) + ' of ' + queue.length + '…';
 
     try {
-      const safeName = row.file.name.replace(/[^A-Za-z0-9._-]/g, '_');
-      const ref = FB.storageRef(fbStorage, 'qr-pdfs/' + row.chosen + '/' + safeName);
+      const ref = FB.storageRef(fbStorage, qrPdfPath(row.chosen));
       await FB.uploadBytes(ref, row.file, { contentType: 'application/pdf' });
 
       const update = {

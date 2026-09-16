@@ -1315,8 +1315,8 @@
         that this one is still waiting.
       </div>
       <div class="dup-note closed" id="dupClosedNote" hidden>
-        The earlier request for this account is already finished. If this is a
-        genuinely new request, you can continue.
+        <span id="dupClosedText">The earlier request for this account is already
+        finished. If this is a genuinely new request, you can continue.</span>
       </div>
 
       <div class="dup-actions">
@@ -2008,26 +2008,23 @@ function isOpenStatus(status) {
   return OPEN_STATUSES.includes(String(status || 'Pending Review').trim().toLowerCase());
 }
 
-// Leading zeros are absent from a third of the stored account numbers, so both
-// sides are compared without them.
-function duplicateKeyFor(item, type) {
-  if (type === 'soundbox') {
-    const vpa = String(item.VPA || item.MERCHANTVPA || '').trim().toLowerCase();
-    return (vpa && vpa !== 'pending generation') ? 'vpa:' + vpa : '';
-  }
+// The account number is the only thing compared. Names are spelled differently
+// on every re-submission ("CMTC THENI" vs "Community Managed training center"),
+// so they identify nothing. Leading zeros are absent from a third of the stored
+// account numbers, so both sides are compared without them.
+function accountKeyOf(item) {
   const acct = String(item.ACCOUNTNO || item.ACCOUNT_NO || '').replace(/\D/g, '').replace(/^0+/, '');
-  return acct ? 'acct:' + acct : '';
+  return acct || '';
 }
 
-function findExistingRequests(newItem, type) {
-  const key = duplicateKeyFor(newItem, type);
+// Every request for this account, whatever its type. Soundbox requests are
+// absent by necessity: that form never collects an account number, so there is
+// nothing to compare them on.
+function findExistingRequests(newItem) {
+  const key = accountKeyOf(newItem);
   if (!key) return [];
-
-  const bucket = type === 'qr' ? (TRACKING_DATA.qr || [])
-               : type === 'soundbox' ? (TRACKING_DATA.sb || [])
-               : (TRACKING_DATA.lead || []);
-
-  return bucket.filter(rec => rec.docId && duplicateKeyFor(rec, type) === key);
+  return [...(TRACKING_DATA.qr || []), ...(TRACKING_DATA.lead || []), ...(TRACKING_DATA.sb || [])]
+    .filter(rec => rec.docId && accountKeyOf(rec) === key);
 }
 
 let pendingDuplicate = null;   // { newItem, type, existing }
@@ -2035,8 +2032,13 @@ let pendingDuplicate = null;   // { newItem, type, existing }
 function showDuplicateDialog(existing, newItem, type) {
   pendingDuplicate = { newItem, type, existing };
 
-  const open = existing.filter(r => isOpenStatus(r.STATUS));
-  const target = open[0] || existing[0];
+  // A request of the same type that is still open is a genuine duplicate. One
+  // of a different type is not: a Lead followed by a QR request for the same
+  // account is the normal progression, so that is shown as context and the
+  // submission is allowed to continue.
+  const sameTypeOpen = existing.filter(r => String(r.type) === type && isOpenStatus(r.STATUS));
+  const open = sameTypeOpen;
+  const target = sameTypeOpen[0] || existing.filter(r => isOpenStatus(r.STATUS))[0] || existing[0];
   const reminders = parseInt(target.REMINDER_COUNT || 0);
 
   document.getElementById('dupSummary').innerHTML =
@@ -2048,10 +2050,16 @@ function showDuplicateDialog(existing, newItem, type) {
     (reminders ? '<div class="dup-meta">⏰ ' + reminders + ' reminder' + (reminders === 1 ? '' : 's') + ' already sent</div>' : '');
 
   const stillOpen = open.length > 0;
+  const onlyOtherTypes = !stillOpen && existing.every(r => String(r.type) !== type);
+
+  document.getElementById('dupClosedText').textContent = onlyOtherTypes
+    ? 'That is a different kind of request for the same account, which is normal — a Lead is often followed by a QR request. Continue if this one is intended.'
+    : 'The earlier request for this account is already finished. If this is a genuinely new request, you can continue.';
+
   document.getElementById('dupOpenNote').hidden = !stillOpen;
   document.getElementById('dupClosedNote').hidden = stillOpen;
   document.getElementById('btnSendReminder').hidden = !stillOpen;
-  document.getElementById('btnSubmitAnyway').hidden = stillOpen;   // only when the earlier one is finished
+  document.getElementById('btnSubmitAnyway').hidden = stillOpen;   // only when no same-type request is open
 
   document.getElementById('duplicateModal').classList.add('open');
 }
@@ -2115,7 +2123,7 @@ async function executeSubmission(skipDuplicateCheck) {
   // optimistic row is added, or a refused submission would leave a phantom
   // entry in the table until the next snapshot.
   if (!skipDuplicateCheck) {
-    const existing = findExistingRequests(newItem, currentType);
+    const existing = findExistingRequests(newItem);
     if (existing.length) {
       showDuplicateDialog(existing, newItem, currentType);
       return;
