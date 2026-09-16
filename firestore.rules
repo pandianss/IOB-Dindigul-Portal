@@ -17,6 +17,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // A real, named admin — not the shared dashboard password, which is a
+    // client-side gate only and cannot be checked here. Membership is a
+    // document under /admins keyed by the account's Firebase Auth uid, so
+    // admins are granted and revoked from the console with no redeploy.
+    function isAdmin() {
+      return request.auth != null
+             && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Identity and payment fields. A wrong value here sends money to the wrong
+    // place, so correcting one requires an admin rather than any visitor
+    // holding an anonymous token.
+    function onlyCorrectableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly([
+          'ACCOUNTNO', 'ACCOUNT_NO', 'IFSC', 'EMAILID', 'MOBILENO',
+          'MOBILE_NO', 'MOBILE_NUMBER', 'MERCHANTNAME', 'ACCOUNT_NAME',
+          'MERCHANT_NAME', 'VPA', 'MERCHANTVPA', 'GSTNO',
+          'CORRECTED_AT', 'CORRECTED_BY', 'CORRECTION_HISTORY',
+          'UPDATED_DATE', 'UPDATED_AT'
+        ]);
+    }
+
     // Fields a branch user is allowed to set when creating a request.
     function validNewLead() {
       return request.resource.data.keys().hasAll(['type', 'STATUS', 'CREATED_AT'])
@@ -38,7 +61,8 @@ service cloud.firestore {
     match /leads/{docId} {
       allow read:   if signedIn();
       allow create: if signedIn() && validNewLead();
-      allow update: if signedIn() && onlyWorkflowFields();
+      allow update: if (signedIn() && onlyWorkflowFields())
+                    || (isAdmin() && onlyCorrectableFields());
       // Records are never removed from the client; delete via console or a
       // privileged Cloud Function only.
       allow delete: if false;
@@ -46,8 +70,15 @@ service cloud.firestore {
 
     match /staff/{roll} {
       allow read:  if signedIn();
-      // Tighten to an admin custom claim once real Firebase Auth is in place.
       allow write: if signedIn();
+    }
+
+    // Admin roster. A signed-in user may check their own membership so the
+    // dashboard can show or hide the editing controls; nobody may enumerate
+    // the roster, and it is writable only from the console.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
     }
 
     // Anything not matched above is denied.

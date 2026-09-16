@@ -265,6 +265,14 @@
     cursor: pointer; transition: all 0.15s; font-family: inherit;
   }
   .btn-action:hover { opacity: 0.9; }
+  .btn-correct {
+    background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4);
+    color: var(--warning); border-radius: 6px; padding: 4px 9px; font-size: 0.74rem;
+    font-weight: 700; cursor: pointer; margin-top: 4px;
+  }
+  .btn-correct:hover { background: rgba(245,158,11,0.25); }
+  .field-error-msg { font-size: 0.72rem; color: var(--error); font-weight: 600; margin-top: 3px; display: none; }
+  .field-error-msg.show { display: block; }
 
   /* ── MODALS ── */
   .modal-overlay {
@@ -525,6 +533,68 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-confirm" id="btnConfirmComplete" onclick="confirmCompletion()">Update Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- CORRECT MERCHANT DETAILS MODAL -->
+<div class="modal-overlay" id="correctModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>✏️ Correct Merchant Details</h3>
+      <button class="modal-close" onclick="closeCorrectModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="app-summary" id="correctSummary"></div>
+
+      <div id="adminSignInBox" class="field-modal" hidden>
+        <div style="font-size:0.78rem;color:var(--warning);font-weight:700;margin-bottom:6px">
+          🔐 These fields decide where money lands, so they need an admin sign-in —
+          the dashboard password is not enough.
+        </div>
+        <label>Admin email</label>
+        <input type="email" id="adminEmailInput" placeholder="admin@example.com" autocomplete="username">
+        <label style="margin-top:8px">Password</label>
+        <input type="password" id="adminPwdInput" placeholder="Password" autocomplete="current-password"
+               onkeyup="if(event.key==='Enter') doAdminSignIn()">
+        <button class="btn-confirm" style="margin-top:10px" onclick="doAdminSignIn()">Sign in</button>
+        <div class="auth-error" id="adminSignInError" style="display:none"></div>
+      </div>
+
+      <div id="correctFields" hidden>
+        <div class="field-modal">
+          <label>Account number</label>
+          <input type="text" id="correctAccount" inputmode="numeric" maxlength="18" autocomplete="off">
+          <div class="field-error-msg" id="err-correctAccount"></div>
+        </div>
+        <div class="field-modal">
+          <label>IFSC</label>
+          <input type="text" id="correctIfsc" maxlength="11" autocomplete="off" style="text-transform:uppercase">
+          <div class="field-error-msg" id="err-correctIfsc"></div>
+        </div>
+        <div class="field-modal">
+          <label>Mobile number</label>
+          <input type="text" id="correctMobile" inputmode="numeric" maxlength="10" autocomplete="off">
+          <div class="field-error-msg" id="err-correctMobile"></div>
+        </div>
+        <div class="field-modal">
+          <label>Email</label>
+          <input type="email" id="correctEmail" autocomplete="off" spellcheck="false">
+          <div class="field-error-msg" id="err-correctEmail"></div>
+        </div>
+        <div class="field-modal">
+          <label>UPI ID / VPA</label>
+          <input type="text" id="correctVpa" autocomplete="off" spellcheck="false">
+          <div class="field-error-msg" id="err-correctVpa"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">
+          Every change is recorded on the record with the previous value and who made it.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeCorrectModal()">Cancel</button>
+      <button class="btn-confirm" id="btnSaveCorrection" onclick="saveCorrection()" hidden>Save corrections</button>
     </div>
   </div>
 </div>
@@ -1149,7 +1219,8 @@ function renderTable() {
     const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:2px">💬 ${item.VENDOR_REMARKS}</div>` : '';
 
     const jsonStr = JSON.stringify(item).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-    const actionBtn = `<button type="button" class="btn-action" onclick='openModal(${jsonStr})'>⚙️ Update Status</button>`;
+    const actionBtn = `<button type="button" class="btn-action" onclick='openModal(${jsonStr})'>⚙️ Update Status</button>`
+      + `<br><button type="button" class="btn-correct" onclick='openCorrectModal(${jsonStr})'>✏️ Correct Details</button>`;
 
     const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes' ? '<div style="font-size:0.7rem;color:var(--warning);font-weight:700;margin-top:2px">🔊 Soundbox Requested</div>' : '';
 
@@ -1506,6 +1577,220 @@ function showToast(msg, type='') {
   t.className = 'show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = '', 4000);
+}
+
+// ─────────────────────────────────────────────
+// CORRECTING MERCHANT DETAILS
+// Account numbers, IFSC codes and contact details arrive with typos, and until
+// now the only way to fix one was the Firebase console. These fields decide
+// where money lands, so the security rules gate them on a named admin account
+// rather than the shared dashboard password, which is a client-side check the
+// rules cannot see.
+// ─────────────────────────────────────────────
+
+let correctTarget = null;
+
+const CORRECT_RULES = {
+  correctAccount: { field: 'account', label: 'Account number' },
+  correctIfsc:    { field: 'ifsc',    label: 'IFSC' },
+  correctMobile:  { field: 'mobile',  label: 'Mobile number' },
+  correctEmail:   { field: 'email',   label: 'Email' },
+  correctVpa:     { field: 'vpa',     label: 'UPI ID' }
+};
+
+const C_RE = {
+  ifsc:   /^[A-Z]{4}0[A-Z0-9]{6}$/,
+  mobile: /^[6-9]\d{9}$/,
+  email:  /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+  vpa:    /^[A-Za-z0-9._-]{2,64}@[A-Za-z]{2,32}$/
+};
+
+function validateCorrection(kind, value) {
+  const v = (value || '').trim();
+  if (!v) return '';                       // blank means "leave unchanged"
+  switch (kind) {
+    case 'account': return /^\d{9,18}$/.test(v) ? '' : 'Account number must be 9 to 18 digits';
+    case 'ifsc':    return C_RE.ifsc.test(v.toUpperCase()) ? '' : 'IFSC must be 11 characters, e.g. IOBA0000174';
+    case 'mobile':  return C_RE.mobile.test(v) ? '' : 'Enter a 10-digit mobile starting 6-9';
+    case 'email':   return C_RE.email.test(v) ? '' : 'Enter a valid email address';
+    case 'vpa':     return C_RE.vpa.test(v) ? '' : 'Enter a valid UPI ID, e.g. merchantname@iob';
+    default:        return '';
+  }
+}
+
+// A soundbox VPA has to sit on the bank's own handle, same as the branch form.
+function vpaRuleFor(item) {
+  return (item && (item.type === 'soundbox' || (item.ACCOUNT_NAME && !item.MERCHANTNAME))) ? 'vpaIob' : 'vpa';
+}
+
+function isAdminSignedIn() {
+  const u = firebase.auth().currentUser;
+  return !!(u && !u.isAnonymous && window.__adminVerified);
+}
+
+// The roster lives in Firestore so admins can be granted and revoked from the
+// console. A non-admin simply gets a denied read, which we treat as "no".
+async function checkAdminMembership() {
+  const u = firebase.auth().currentUser;
+  if (!u || u.isAnonymous) return false;
+  try {
+    const doc = await db.collection('admins').doc(u.uid).get();
+    window.__adminVerified = doc.exists;
+    return doc.exists;
+  } catch (e) {
+    window.__adminVerified = false;
+    return false;
+  }
+}
+
+function openCorrectModal(item) {
+  correctTarget = item;
+
+  document.getElementById('correctSummary').innerHTML =
+    '<strong>' + escapeHtml(item._name || item.MERCHANTNAME || item.ACCOUNT_NAME || 'Merchant') + '</strong>' +
+    '<div style="font-size:0.76rem;color:var(--muted);margin-top:3px">' +
+      'Current account: ' + escapeHtml(item.ACCOUNTNO || item.ACCOUNT_NO || '—') +
+      ' &nbsp;·&nbsp; IFSC: ' + escapeHtml(item.IFSC || '—') +
+    '</div>';
+
+  document.getElementById('correctAccount').value = item.ACCOUNTNO || item.ACCOUNT_NO || '';
+  document.getElementById('correctIfsc').value    = item.IFSC || '';
+  document.getElementById('correctMobile').value  = item.MOBILENO || item.MOBILE_NO || item.MOBILE_NUMBER || '';
+  document.getElementById('correctEmail').value   = item.EMAILID || '';
+  document.getElementById('correctVpa').value     = item.MERCHANTVPA || item.VPA || '';
+  Object.keys(CORRECT_RULES).forEach(id => setCorrectError(id, ''));
+
+  document.getElementById('adminSignInError').style.display = 'none';
+  document.getElementById('correctModal').classList.add('open');
+  refreshCorrectModalAccess();
+}
+
+async function refreshCorrectModalAccess() {
+  const allowed = isAdminSignedIn() || await checkAdminMembership();
+  document.getElementById('adminSignInBox').hidden = allowed;
+  document.getElementById('correctFields').hidden = !allowed;
+  document.getElementById('btnSaveCorrection').hidden = !allowed;
+}
+
+function closeCorrectModal() {
+  document.getElementById('correctModal').classList.remove('open');
+  correctTarget = null;
+  const pwd = document.getElementById('adminPwdInput');
+  if (pwd) pwd.value = '';
+}
+
+async function doAdminSignIn() {
+  const email = document.getElementById('adminEmailInput').value.trim();
+  const pwd = document.getElementById('adminPwdInput').value;
+  const err = document.getElementById('adminSignInError');
+  err.style.display = 'none';
+
+  if (!email || !pwd) {
+    err.textContent = 'Enter both email and password.';
+    err.style.display = 'block';
+    return;
+  }
+
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, pwd);
+    document.getElementById('adminPwdInput').value = '';
+    const ok = await checkAdminMembership();
+    if (!ok) {
+      err.textContent = 'That account is not on the admin roster.';
+      err.style.display = 'block';
+      return;
+    }
+    showToast('Signed in as ' + email, 'success');
+    refreshCorrectModalAccess();
+  } catch (e) {
+    err.textContent = ({
+      'auth/invalid-credential': 'Email or password is incorrect.',
+      'auth/wrong-password': 'Email or password is incorrect.',
+      'auth/user-not-found': 'Email or password is incorrect.',
+      'auth/too-many-requests': 'Too many attempts. Wait a minute and retry.',
+      'auth/operation-not-allowed': 'Email/password sign-in is not enabled on this project.'
+    })[e.code] || e.message;
+    err.style.display = 'block';
+  }
+}
+
+function setCorrectError(id, msg) {
+  const box = document.getElementById('err-' + id);
+  const input = document.getElementById(id);
+  if (box) { box.textContent = msg; box.classList.toggle('show', !!msg); }
+  if (input) input.style.borderColor = msg ? 'var(--error)' : '';
+}
+
+async function saveCorrection() {
+  if (!correctTarget || !correctTarget.docId) return;
+  const btn = document.getElementById('btnSaveCorrection');
+
+  // Normalise before validating, so what we check is what we store.
+  document.getElementById('correctAccount').value = document.getElementById('correctAccount').value.replace(/\D/g, '');
+  document.getElementById('correctMobile').value  = document.getElementById('correctMobile').value.replace(/\D/g, '');
+  document.getElementById('correctIfsc').value    = document.getElementById('correctIfsc').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  let bad = 0;
+  for (const id in CORRECT_RULES) {
+    let kind = CORRECT_RULES[id].field;
+    if (kind === 'vpa' && vpaRuleFor(correctTarget) === 'vpaIob') {
+      const v = document.getElementById(id).value.trim();
+      const msg = v && !/^[A-Za-z0-9._-]{2,64}@iob$/i.test(v)
+        ? 'Soundbox UPI ID must end with @iob' : '';
+      setCorrectError(id, msg);
+      if (msg) bad++;
+      continue;
+    }
+    const msg = validateCorrection(kind, document.getElementById(id).value);
+    setCorrectError(id, msg);
+    if (msg) bad++;
+  }
+  if (bad) { showToast('Please correct the highlighted fields', 'error'); return; }
+
+  // Only write fields that actually changed, so the audit trail stays meaningful.
+  const item = correctTarget;
+  const pairs = [
+    ['correctAccount', item.ACCOUNTNO != null ? 'ACCOUNTNO' : 'ACCOUNT_NO', item.ACCOUNTNO || item.ACCOUNT_NO || ''],
+    ['correctIfsc',   'IFSC',      item.IFSC || ''],
+    ['correctMobile', item.MOBILENO != null ? 'MOBILENO' : (item.MOBILE_NUMBER != null ? 'MOBILE_NUMBER' : 'MOBILE_NO'),
+                      item.MOBILENO || item.MOBILE_NUMBER || item.MOBILE_NO || ''],
+    ['correctEmail',  'EMAILID',   item.EMAILID || ''],
+    ['correctVpa',    item.MERCHANTVPA != null ? 'MERCHANTVPA' : 'VPA', item.MERCHANTVPA || item.VPA || '']
+  ];
+
+  const update = {};
+  const history = [];
+  for (const [inputId, field, current] of pairs) {
+    const next = document.getElementById(inputId).value.trim();
+    if (!next || String(next) === String(current)) continue;
+    update[field] = next;
+    history.push({ field: field, from: String(current), to: next });
+  }
+
+  if (!history.length) { showToast('Nothing changed', 'warning'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const user = firebase.auth().currentUser;
+    update.CORRECTED_AT = new Date().toISOString();
+    update.CORRECTED_BY = user ? (user.email || user.uid) : 'unknown';
+    update.CORRECTION_HISTORY = firebase.firestore.FieldValue.arrayUnion(
+      ...history.map(h => ({ ...h, at: update.CORRECTED_AT, by: update.CORRECTED_BY }))
+    );
+    update.UPDATED_DATE = new Date().toISOString();
+
+    await db.collection('leads').doc(item.docId).update(update);
+    showToast('✅ Updated ' + history.length + ' field' + (history.length === 1 ? '' : 's'), 'success');
+    closeCorrectModal();
+  } catch (e) {
+    showToast(e.code === 'permission-denied'
+      ? 'Denied — that account is not on the admin roster.'
+      : 'Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save corrections';
+  }
 }
 
 // ─────────────────────────────────────────────
