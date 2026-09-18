@@ -2273,6 +2273,24 @@ function updateBulkButton() {
   btn.textContent = n ? 'Upload ' + n + ' PDF' + (n === 1 ? '' : 's') : 'Upload';
 }
 
+// Mirrors a write into the in-memory table and cache so the operator sees it
+// immediately, rather than waiting on a snapshot that may be slow to arrive.
+function applyLocally(docId, fields) {
+  const patch = { ...fields };
+  delete patch.UPDATED_AT;          // a server sentinel, meaningless locally
+  for (const cat of ['qr', 'sb', 'lead']) {
+    const idx = (ALL_DATA[cat] || []).findIndex(x => x.docId === docId);
+    if (idx < 0) continue;
+    ALL_DATA[cat][idx] = { ...ALL_DATA[cat][idx], ...patch };
+    if (renderedRecords[docId]) renderedRecords[docId] = ALL_DATA[cat][idx];
+    try { localStorage.setItem('iob_portal_cache_data', JSON.stringify(ALL_DATA)); } catch(e) {}
+    updateStats();
+    renderTable();
+    return true;
+  }
+  return false;
+}
+
 async function runBulkQrUpload() {
   // After a batch the same button reads "Done" and should dismiss the dialog.
   // It used to re-enter this function, find nothing to upload and return, so
@@ -2360,6 +2378,13 @@ async function runBulkQrUpload() {
 
       row.state = outcome === TIMEOUT ? 'queued' : 'done';
       if (outcome === TIMEOUT) queued++; else ok++;
+
+      // Reflect the change in the table straight away, the way the status
+      // dialog does. Without this the bulk path depended entirely on the
+      // realtime listener to repaint, so a lagging listener left every row
+      // still reading "Pending" and the upload looked like it had not applied
+      // the status at all.
+      applyLocally(row.chosen, update);
     } catch (e) {
       row.state = 'failed';
       row.result = e.code || e.message;
