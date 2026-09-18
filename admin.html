@@ -702,9 +702,16 @@
       </div>
 
       <div class="bulk-opts" id="bulkOptsRow" hidden>
-        The UPI ID is read from each sheet, written to its record, and the request
-        marked Completed. A sheet with no readable UPI ID is still attached, but
-        the request keeps its current status.
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="bulkReplaceChk" onchange="onBulkReplaceToggle(this.checked)">
+          <span>Also replace sheets that are already attached</span>
+        </label>
+        <div style="margin-top:6px">
+          Requests that already have a sheet are skipped, so the same folder can be
+          re-run to pick up only what is missing. The UPI ID is read from each sheet
+          that is written, saved to its record, and the request marked Completed; a
+          sheet with no readable UPI ID is still attached but the status is left alone.
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1994,6 +2001,7 @@ async function saveCorrection() {
 let bulkRows = [];
 let bulkUploading = false;
 let bulkFinished = false;
+let bulkReplaceExisting = false;
 
 // Records currently on screen, keyed by document id. Rows carry only the id in
 // a data attribute; the object is fetched from here on click, so nothing
@@ -2102,6 +2110,10 @@ function openBulkQrModal() {
   bulkRows = [];
   bulkUploading = false;
   bulkFinished = false;
+  bulkReplaceExisting = false;
+  bulkRejected = 0;
+  const chk = document.getElementById('bulkReplaceChk');
+  if (chk) chk.checked = false;
   document.getElementById('bulkQrInput').value = '';
   document.getElementById('bulkSummary').hidden = true;
   document.getElementById('bulkScroll').hidden = true;
@@ -2178,42 +2190,56 @@ function namesLookAlike(a, b) {
   return x === y || x.includes(y) || y.includes(x);
 }
 
+let bulkRejected = 0;
+
+// A request that already carries a sheet is left alone. Re-running the same
+// folder is the normal way to pick up the few that were missing, and without
+// this every record is re-uploaded and re-stamped each time. Replacing a sheet
+// on purpose is still possible, both from the status dialog and by ticking the
+// option in this one.
+function stateForRow(row) {
+  if (!row.acct) return 'nonumber';
+  if (row.matches.length === 0) return 'nomatch';
+  if (!row.chosen) return 'ambiguous';
+  const rec = row.matches.find(m => m.docId === row.chosen);
+  if (rec && rec.QR_PDF_URL) return bulkReplaceExisting ? 'replace' : 'skipped';
+  return 'ready';
+}
+
 async function onBulkQrFiles(fileList) {
   const files = [...fileList].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
-  const rejected = fileList.length - files.length;
+  bulkRejected = fileList.length - files.length;
 
   const pool = bulkCandidates();
 
   bulkRows = files.map(file => {
     const acct = accountFromFilename(file.name);
     const matches = acct ? pool.filter(r => canonAccount(r.ACCOUNTNO || r.ACCOUNT_NO) === acct) : [];
-
     const target = pickBulkTarget(matches);
 
-    let state;
-    if (!acct) state = 'nonumber';
-    else if (matches.length === 0) state = 'nomatch';
-    else if (!target) state = 'ambiguous';
-    else if (target.QR_PDF_URL) state = 'replace';
-    else state = 'ready';
-
-    return {
+    const row = {
       file, acct, matches,
       chosen: target ? target.docId : '',
       // Flagged so the preview can say the choice was made rather than
       // silently picking one of several behind the operator's back.
       autoPicked: !!target && matches.length > 1,
-      state,
       result: ''
     };
+    row.state = stateForRow(row);
+    return row;
   });
 
-  renderBulkTable(rejected);
+  renderBulkTable(bulkRejected);
+  await parseSelectedPdfs();
+}
 
-  // Read the UPI ID out of each sheet. Done after the first render so the match
-  // list appears immediately and the IDs fill in as they are parsed.
+// Only sheets that are actually going to be written are opened. Reading every
+// file in a re-run would spend a second each on dozens of records that are
+// already done.
+async function parseSelectedPdfs() {
   for (const row of bulkRows) {
-    if (row.state === 'nomatch' || row.state === 'nonumber') continue;
+    if (row.state !== 'ready' && row.state !== 'replace') continue;
+    if (row.vpa !== undefined) continue;                 // already read
     const parsed = await readQrPdf(row.file);
     row.vpa = parsed.vpa;
     row.pdfName = parsed.name;
@@ -2222,15 +2248,28 @@ async function onBulkQrFiles(fileList) {
     const rec = row.matches.find(m => m.docId === row.chosen);
     row.nameMismatch = !!(rec && parsed.name &&
       !namesLookAlike(parsed.name, rec.MERCHANTNAME || rec.ACCOUNT_NAME || rec.MERCHANT_NAME));
-    renderBulkTable(rejected);
+    renderBulkTable(bulkRejected);
   }
-  renderBulkTable(rejected);
+  renderBulkTable(bulkRejected);
+}
+
+// Toggling the option re-evaluates every row and reads any sheet that has
+// newly come into scope.
+async function onBulkReplaceToggle(checked) {
+  bulkReplaceExisting = !!checked;
+  bulkRows.forEach(row => {
+    if (['uploading','done','queued','failed'].includes(row.state)) return;
+    row.state = stateForRow(row);
+  });
+  renderBulkTable(bulkRejected);
+  await parseSelectedPdfs();
 }
 
 function bulkStateBadge(row) {
   switch (row.state) {
     case 'ready':     return '<span class="bulk-badge ok">will attach</span>';
     case 'replace':   return '<span class="bulk-badge warn">replaces existing PDF</span>';
+    case 'skipped':   return '<span class="bulk-badge" title="This request already has a QR sheet. Tick the replace option below to overwrite it.">already has a sheet — skipped</span>';
     case 'ambiguous': return '<span class="bulk-badge warn">' + row.matches.length + ' requests share this account — pick one</span>';
     case 'nomatch':   return '<span class="bulk-badge bad">no request with this account</span>';
     case 'nonumber':  return '<span class="bulk-badge bad">no account number in filename</span>';
@@ -2296,7 +2335,7 @@ function renderBulkTable(rejectedCount) {
       vpaCell = '<span style="color:var(--muted)">reading…</span>';
     }
 
-    const skip = (row.state === 'nomatch' || row.state === 'nonumber') ? ' class="skip"' : '';
+    const skip = (row.state === 'nomatch' || row.state === 'nonumber' || row.state === 'skipped') ? ' class="skip"' : '';
     return '<tr' + skip + '>' +
       '<td class="bulk-file">' + escapeHtml(row.file.name) + '</td>' +
       '<td>' + (row.acct || '<span style="color:var(--muted)">—</span>') + '</td>' +
@@ -2306,13 +2345,14 @@ function renderBulkTable(rejectedCount) {
     '</tr>';
   }).join('');
 
-  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0,
+  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0, skipped: 0,
                    working: 0, done: 0, queued: 0, failed: 0 };
   bulkRows.forEach(r => {
     if (r.state === 'ready') counts.ready++;
     else if (r.state === 'replace') counts.replace++;
     else if (r.state === 'ambiguous') counts.ambiguous++;
     else if (r.state === 'nomatch' || r.state === 'nonumber') counts.unmatched++;
+    else if (r.state === 'skipped') counts.skipped++;
     else if (r.state === 'uploading') counts.working++;
     else if (r.state === 'done') counts.done++;
     else if (r.state === 'queued') counts.queued++;
@@ -2323,6 +2363,7 @@ function renderBulkTable(rejectedCount) {
   if (counts.ready)     chips.push('<span class="bulk-chip ok">' + counts.ready + ' ready</span>');
   if (counts.replace)   chips.push('<span class="bulk-chip warn">' + counts.replace + ' will replace an existing PDF</span>');
   if (counts.ambiguous) chips.push('<span class="bulk-chip warn">' + counts.ambiguous + ' need a choice</span>');
+  if (counts.skipped)   chips.push('<span class="bulk-chip">' + counts.skipped + ' already done</span>');
   if (counts.unmatched) chips.push('<span class="bulk-chip bad">' + counts.unmatched + ' unmatched</span>');
   if (rejectedCount)    chips.push('<span class="bulk-chip bad">' + rejectedCount + ' not a PDF</span>');
   // Without these the summary read "No files selected" mid-upload, because an
