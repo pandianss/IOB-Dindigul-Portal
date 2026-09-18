@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Indian Overseas Bank - Merchant Services Portal</title>
+<title>UPI QR &amp; Leads — IOB Dindigul</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,9 +65,9 @@
     --header-bg: #0f172a;
     --nav-bg: #1e293b;
     --nav-active: #111827;
-    --header-bg: #0d1424;
+    --header-bg: #111d3a;
     --header-fg: #eef2f9;
-    --header-border: #1e293b;
+    --header-border: #22346b;
     --header-accent: #7aa2e8;
     --header-btn: rgba(255,255,255,0.07);
     --header-btn-border: rgba(255,255,255,0.14);
@@ -138,12 +138,22 @@
     display: flex; align-items: center; gap: 11px;
     text-decoration: none; color: inherit; min-width: 0;
   }
-  .brand-mark {
-    width: 30px; height: 30px; flex: none;
-    color: var(--header-accent);
-    transition: transform 0.35s cubic-bezier(.34,1.3,.64,1);
+  /* The supplied logo is a self-contained blue panel with white lettering,
+     drawn for a light background. It is used as given, so the header is tuned
+     around it instead: a deep navy in the same hue family as the panel, which
+     reads as one brand block rather than a sticker on near-black. */
+  .brand-logo {
+    height: 34px; width: auto; flex: none; display: block;
+    border-radius: 7px;
+    transition: transform 0.25s cubic-bezier(.22,.9,.32,1);
   }
-  .brand:hover .brand-mark { transform: rotate(45deg); }
+  .brand:hover .brand-logo { transform: translateY(-1px) scale(1.03); }
+  .brand::after {
+    content: ""; width: 1px; height: 22px; flex: none;
+    background: currentColor; opacity: 0.18;
+    order: 1;
+  }
+  .brand-text { order: 2; }
   .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
   .brand-text strong {
     font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em;
@@ -519,7 +529,7 @@
 
     .brand-text strong { font-size: 0.86rem; }
     .brand-text small { font-size: 0.64rem; }
-    .brand-mark { width: 26px; height: 26px; }
+    .brand-logo { height: 28px; }
     .admin-label { display: none; }
     .admin-link { padding: 7px 10px; }
 
@@ -559,13 +569,10 @@
 
 <!-- HEADER -->
 <header>
-  <a class="brand" href="index.html" aria-label="IOB Merchant Services home">
-    <svg class="brand-mark" viewBox="0 0 1440 1440" aria-hidden="true" focusable="false">
-      <path fill="currentColor" d="M720 22L387 356l42 41 291-291 292 292 41-42zM720 147l-21 21-250 250 42 41 229-229 229 229 42-42zM720 272l-21 21-187 187 42 42 166-167 167 167 42-42zM366 376l-21 21-312 313 41 41 292-291 292 291 41-41zM1074 376l-21 21-312 313 42 41 291-291 292 291 42-42zM366 501l-21 21-250 250 42 42 229-229 229 229 42-42zM1074 501l-271 271 42 42 229-229 229 229 42-42zM366 626l-21 21-187 187 41 42 167-167 166 167 42-42zM1074 626l-21 21-187 187 42 42 166-167 167 167 41-42zm-1062 104c0 28 0 56 0 83L366 1168l339-339v-84l-27 27-312 312-104-104L54 772zm1416 0l-229 229h0l-125 125-125-125-187-187-27-27v83l339 339 354-354zm-1416 125v83l354 354 339-339V870L366 1209zm1416 0L1074 1209l-339-339v83l339 339 354-354zm-1416 125v83l354 354 339-339v-83l-339 339zm1416 0L1074 1334l-339-339v83l339 339 354-354z"/>
-    </svg>
+  <a class="brand" href="index.html" aria-label="UPI QR &amp; Leads home">
+    <img src="2026logo_min.svg" alt="Indian Overseas Bank" class="brand-logo">
     <span class="brand-text">
-      <strong>Indian Overseas Bank</strong>
-      <small>Merchant Services · Dindigul RO</small>
+      <strong>UPI QR &amp; Leads</strong>
     </span>
   </a>
   <div class="header-right">
