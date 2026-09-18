@@ -2517,15 +2517,15 @@ function renderStatusTable() {
     });
   });
 
+  // Every field is coerced before comparison: some records store the VPA,
+  // mobile or account as a number, and calling toLowerCase on one threw, which
+  // silently broke the search box rather than returning no matches.
   if (query) {
-    items = items.filter(item => {
-      return (item._name || '').toLowerCase().includes(query) ||
-             (item._vpa || '').toLowerCase().includes(query) ||
-             String(item._mobile || '').includes(query) ||
-             String(item._acc || '').includes(query) ||
-             (item._loc || '').toLowerCase().includes(query) ||
-             String(item.SOL_ID || '').includes(query);
-    });
+    const has = v => String(v == null ? '' : v).toLowerCase().includes(query);
+    items = items.filter(item =>
+      has(item._name) || has(item._vpa) || has(item._mobile) ||
+      has(item._acc) || has(item._loc) || has(item.SOL_ID)
+    );
   }
 
   if (items.length === 0) {

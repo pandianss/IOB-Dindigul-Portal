@@ -306,6 +306,12 @@
     font-weight: 700; cursor: pointer; margin-top: 4px;
   }
   .btn-correct:hover { background: rgba(245,158,11,0.25); }
+  .tab-count {
+    display: inline-block; min-width: 20px; padding: 1px 6px; margin-left: 4px;
+    border-radius: 10px; background: rgba(148,163,184,0.22);
+    font-size: 0.72rem; font-weight: 800;
+  }
+  .tab-btn.active .tab-count { background: rgba(255,255,255,0.22); }
   .existing-pdf {
     background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 8px;
     padding: 9px 12px; margin-bottom: 10px; font-size: 0.8rem;
@@ -463,9 +469,10 @@
   <!-- CONTROL BAR -->
   <div class="control-bar">
     <div class="tabs">
-      <button class="tab-btn active" id="tab-pending" onclick="switchTab('pending')">⏳ Pending Requests</button>
-      <button class="tab-btn" id="tab-vendor" onclick="switchTab('vendor')">🚚 Forwarded to Vendor</button>
-      <button class="tab-btn" id="tab-completed" onclick="switchTab('completed')">✅ Onboarded / Done</button>
+      <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">📋 All Requests <span class="tab-count" id="count-all"></span></button>
+      <button class="tab-btn" id="tab-pending" onclick="switchTab('pending')">⏳ Pending Requests <span class="tab-count" id="count-pending"></span></button>
+      <button class="tab-btn" id="tab-vendor" onclick="switchTab('vendor')">🚚 Forwarded to Vendor <span class="tab-count" id="count-vendor"></span></button>
+      <button class="tab-btn" id="tab-completed" onclick="switchTab('completed')">✅ Onboarded / Done <span class="tab-count" id="count-completed"></span></button>
       <button class="tab-btn" id="tab-staff" onclick="switchTab('staff')">🔑 Staff Password Reset</button>
       <button class="tab-btn" id="tab-directory" onclick="switchTab('directory')">👥 Staff Directory Management</button>
     </div>
@@ -886,7 +893,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 let db = null;
 let isFirebaseActive = false;
 let ALL_DATA = { qr: [], sb: [], lead: [] };
-let currentTab = 'pending';
+let currentTab = 'all';
 let activeSelectedApp = null;
 let selectedFileObj = null;
 let selectedFileName = null;
@@ -1101,6 +1108,14 @@ function updateStats() {
   if (elPending) elPending.textContent = pending;
   if (elVendor) elVendor.textContent = vendor;
   if (elCompleted) elCompleted.textContent = completed;
+
+  // Mirror the tallies onto the tabs, so the spread of statuses is visible
+  // whichever tab happens to be open.
+  const setCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+  setCount('count-all', total);
+  setCount('count-pending', pending);
+  setCount('count-vendor', vendor);
+  setCount('count-completed', completed);
 }
 
 function switchTab(tab) {
@@ -1264,30 +1279,38 @@ function renderTable() {
     }
   });
 
-  // Filter by Tab (Pending vs Forwarded to Vendor vs Completed)
-  items = items.filter(item => {
-    const st = item.STATUS || 'Pending Review';
-    if (currentTab === 'completed') return st === 'Completed' || st === 'Merchant Onboarded';
-    if (currentTab === 'vendor') return st === 'Forwarded to Vendor';
-    return st !== 'Completed' && st !== 'Merchant Onboarded' && st !== 'Forwarded to Vendor';
-  });
-
-  // Filter by Search Query
-  if (query) {
+  // Filter by tab. A search deliberately escapes the tab and looks at every
+  // status: hunting for a merchant from the pending queue used to report "not
+  // found" for anyone already onboarded, which reads as missing data.
+  if (!query) {
     items = items.filter(item => {
-      return (item._name || '').toLowerCase().includes(query) ||
-             (item._vpa || '').toLowerCase().includes(query) ||
-             String(item._mobile || '').includes(query) ||
-             String(item._acc || '').includes(query) ||
-             (item._loc || '').toLowerCase().includes(query) ||
-             (item._staffName || '').toLowerCase().includes(query) ||
-             String(item._staffRoll || '').includes(query) ||
-             String(item.SOL_ID || '').includes(query);
+      const st = item.STATUS || 'Pending Review';
+      if (currentTab === 'all') return true;
+      if (currentTab === 'completed') return st === 'Completed' || st === 'Merchant Onboarded';
+      if (currentTab === 'vendor') return st === 'Forwarded to Vendor';
+      return st !== 'Completed' && st !== 'Merchant Onboarded' && st !== 'Forwarded to Vendor';
     });
   }
 
+  // Filter by Search Query. Every field is coerced before comparison: some
+  // records store the VPA, mobile or account as a number rather than a string,
+  // and calling toLowerCase on one threw, which silently broke the search box
+  // for any view containing such a record.
+  if (query) {
+    const has = v => String(v == null ? '' : v).toLowerCase().includes(query);
+    items = items.filter(item =>
+      has(item._name) || has(item._vpa) || has(item._mobile) || has(item._acc) ||
+      has(item._loc) || has(item._staffName) || has(item._staffRoll) ||
+      has(item.SOL_ID) || has(item.MERCHANTVPA) || has(item.VPA) ||
+      has(item.ACCOUNTNO) || has(item.ACCOUNT_NO)
+    );
+  }
+
   if (items.length === 0) {
-    const tabName = currentTab === 'pending' ? 'Pending' : (currentTab === 'vendor' ? 'Forwarded to Vendor' : 'Completed');
+    const tabName = query ? 'matching'
+      : currentTab === 'all' ? ''
+      : currentTab === 'pending' ? 'Pending '
+      : currentTab === 'vendor' ? 'Forwarded to Vendor ' : 'Completed ';
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No ${tabName} applications or leads found.</td></tr>`;
     return;
   }
