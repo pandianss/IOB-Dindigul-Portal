@@ -66,6 +66,14 @@
     --header-bg: #0f172a;
     --nav-bg: #1e293b;
     --nav-active: #111827;
+    --header-bg: #0d1424;
+    --header-fg: #eef2f9;
+    --header-border: #1e293b;
+    --header-accent: #7aa2e8;
+    --header-btn: rgba(255,255,255,0.07);
+    --header-btn-border: rgba(255,255,255,0.14);
+    --header-btn-hover: rgba(255,255,255,0.14);
+    --ring: rgba(96,165,250,0.45);
   }
 
   [data-theme="light"] {
@@ -91,6 +99,16 @@
     --header-bg: #1a3a7a;
     --nav-bg: #e2e8f0;
     --nav-active: #ffffff;
+    /* The header changes with the theme too. Keeping it navy in both made the
+       switch look like nothing had happened, since it dominates the page. */
+    --header-bg: #ffffff;
+    --header-fg: #0f172a;
+    --header-border: #dbe3ef;
+    --header-accent: #1a3a7a;
+    --header-btn: #f1f5f9;
+    --header-btn-border: #dbe3ef;
+    --header-btn-hover: #e2e8f0;
+    --ring: rgba(26,58,122,0.35);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -132,25 +150,49 @@
   .auth-error { font-size: 0.78rem; color: var(--error); font-weight: 600; margin-top: 10px; display: none; }
 
   /* ── HEADER ── */
+  /* ── HEADER ─────────────────────────────────────────────
+     The mark is inlined rather than loaded as an image so it inherits the
+     text colour. The previous file carried its own opaque blue background,
+     which is why it sat on the bar as a pasted-on tile that matched nothing
+     around it. */
   header {
     background: var(--header-bg);
-    border-bottom: 1px solid var(--border);
-    color: #fff; padding: 0 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 64px; position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid var(--header-border);
+    color: var(--header-fg);
+    padding: 0 clamp(14px, 2.5vw, 28px);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 60px; position: sticky; top: 0; z-index: 100;
   }
-  .header-left { display: flex; align-items: center; gap: 12px; }
-  .header-logo { height: 38px; width: auto; }
-  .header-title { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
-  .header-right { display: flex; align-items: center; gap: 10px; }
+  .brand {
+    display: flex; align-items: center; gap: 11px;
+    text-decoration: none; color: inherit; min-width: 0;
+  }
+  .brand-mark {
+    width: 30px; height: 30px; flex: none;
+    color: var(--header-accent);
+    transition: transform 0.35s cubic-bezier(.34,1.3,.64,1);
+  }
+  .brand:hover .brand-mark { transform: rotate(45deg); }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .brand-text strong {
+    font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .brand-text small {
+    font-size: 0.7rem; font-weight: 500; opacity: 0.72;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .header-right { display: flex; align-items: center; gap: 8px; flex: none; }
 
   .theme-toggle-btn {
-    background: var(--card); border: 1px solid var(--border-light);
-    color: var(--text); border-radius: 8px; width: 36px; height: 36px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 1.05rem; transition: all 0.2s;
+    background: var(--header-btn); border: 1px solid var(--header-btn-border);
+    color: var(--header-fg); border-radius: 9px; width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.95rem; line-height: 1;
+    transition: background 0.18s, border-color 0.18s, transform 0.18s;
   }
-  .theme-toggle-btn:hover { border-color: var(--iob-blue); transform: scale(1.05); }
+  .theme-toggle-btn:hover { background: var(--header-btn-hover); transform: translateY(-1px); }
+  .theme-toggle-btn:active { transform: translateY(0) scale(0.95); }
 
   .btn-csv-export {
     background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4);
@@ -398,19 +440,56 @@
   .hidden { display: none !important; }
   .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); font-size: 0.86rem; }
 
-  @media (max-width: 768px) {
-    /* auto-fit handles the reflow; no fixed override needed */
-    .header-title { display: none; }
+  /* ── MOTION ──────────────────────────────────────────────
+     Kept deliberately small: the dashboard is a working tool, so motion marks
+     a change of state rather than decorating it. */
+  @keyframes riseIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .stat-card, .table-card { animation: riseIn 0.3s cubic-bezier(.22,.9,.32,1) both; }
+  .tab-btn, .btn-action, .btn-correct, .btn-bulk-qr, .btn-csv-export, .portal-link {
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.14s ease; }
+  .tab-btn:active, .btn-action:active, .btn-correct:active { transform: scale(0.97); }
+  #tableBody tr { transition: background 0.15s ease; }
+  .search-box input:focus { box-shadow: 0 0 0 3px var(--ring); }
 
-    /* The action buttons came to 287px and the header never wrapped, so on a
-       phone they pushed the whole page sideways rather than the table
-       scrolling on its own. */
-    header {
-      height: auto; min-height: 64px; padding: 8px 12px;
-      flex-wrap: wrap; gap: 8px; row-gap: 8px;
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important; scroll-behavior: auto !important;
     }
-    .header-right { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-    .btn-bulk-qr, .btn-csv-export, .portal-link { padding: 6px 10px; font-size: 0.74rem; }
+  }
+
+  @media (max-width: 768px) {
+    main { padding: 14px 12px 48px; }
+
+    /* The action buttons come to nearly 300px and the bar does not wrap on its
+       own, so without this they push the whole page sideways on a phone. */
+    header { min-height: 60px; height: auto; padding: 8px 12px;
+             flex-wrap: wrap; gap: 8px; }
+    /* Brand on its own line, actions wrapping beneath it. flex:none on the
+       action group stopped it shrinking, so it kept its full width and pushed
+       the page sideways however much the buttons were reduced. */
+    .brand { flex: 1 1 100%; min-width: 0; }
+    .header-right { flex: 1 1 100%; min-width: 0; flex-wrap: wrap;
+                    justify-content: flex-start; gap: 6px; }
+    .btn-bulk-qr, .btn-csv-export, .portal-link { padding: 6px 10px; font-size: 0.73rem; }
+    .portal-link { margin-left: auto; }
+
+    .brand-text strong { font-size: 0.86rem; }
+    .brand-text small { font-size: 0.64rem; }
+    .brand-mark { width: 26px; height: 26px; }
+
+    .stats-grid { gap: 10px; margin-bottom: 14px; }
+    .control-bar { gap: 8px; }
+    .tabs { gap: 6px; }
+    .tab-btn { padding: 8px 10px; font-size: 0.75rem; }
+    .search-box { max-width: none; }
+    table { font-size: 0.76rem; }
+    th, td { padding: 8px 9px; }
+    .modal-card { max-height: 92vh; }
+  }
+
+  @media (max-width: 380px) {
+    .brand-text small { display: none; }
   }
 </style>
 </head>
@@ -435,10 +514,15 @@
 
 <!-- HEADER -->
 <header>
-  <div class="header-left">
-    <img src="2026logo_min.svg" alt="IOB Logo" class="header-logo">
-    <span class="header-title">Indian Overseas Bank — Merchant Admin Console</span>
-  </div>
+  <a class="brand" href="admin.html" aria-label="IOB Merchant Services home">
+    <svg class="brand-mark" viewBox="0 0 1440 1440" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M720 22L387 356l42 41 291-291 292 292 41-42zM720 147l-21 21-250 250 42 41 229-229 229 229 42-42zM720 272l-21 21-187 187 42 42 166-167 167 167 42-42zM366 376l-21 21-312 313 41 41 292-291 292 291 41-41zM1074 376l-21 21-312 313 42 41 291-291 292 291 42-42zM366 501l-21 21-250 250 42 42 229-229 229 229 42-42zM1074 501l-271 271 42 42 229-229 229 229 42-42zM366 626l-21 21-187 187 41 42 167-167 166 167 42-42zM1074 626l-21 21-187 187 42 42 166-167 167 167 41-42zm-1062 104c0 28 0 56 0 83L366 1168l339-339v-84l-27 27-312 312-104-104L54 772zm1416 0l-229 229h0l-125 125-125-125-187-187-27-27v83l339 339 354-354zm-1416 125v83l354 354 339-339V870L366 1209zm1416 0L1074 1209l-339-339v83l339 339 354-354zm-1416 125v83l354 354 339-339v-83l-339 339zm1416 0L1074 1334l-339-339v83l339 339 354-354z"/>
+    </svg>
+    <span class="brand-text">
+      <strong>Indian Overseas Bank</strong>
+      <small>Merchant Admin Console</small>
+    </span>
+  </a>
   <div class="header-right">
     <button type="button" class="btn-bulk-qr" onclick="openBulkQrModal()" title="Attach many vendor QR PDFs at once, matched by account number in the filename">📦 Bulk QR Upload</button>
     <button type="button" class="btn-csv-export" onclick="exportDataToCSV()" title="Export all merchant records to CSV/Excel">📊 Export CSV</button>
