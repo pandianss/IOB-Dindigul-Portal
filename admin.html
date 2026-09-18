@@ -386,6 +386,21 @@
   .existing-pdf a { color: var(--iob-blue-light); font-weight: 700; word-break: break-all; }
   .existing-pdf-note { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
 
+  /* A quiet control: an icon, and the download tally only once there is one.
+     It previously showed two lines of coloured text plus a counter chip, which
+     drew the eye away from the merchant the row is actually about. */
+  .btn-pdf {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border-light); border-radius: 7px;
+    width: 30px; height: 28px; padding: 0;
+    font-size: 0.82rem; font-weight: 600; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    transition: color 0.16s, border-color 0.16s, background 0.16s;
+  }
+  .btn-pdf:hover { color: var(--success); border-color: var(--success); background: rgba(16,185,129,0.10); }
+  .btn-pdf.has-count { width: auto; padding: 0 8px; }
+  .dl-badge { color: inherit; font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+
   .reminder-flag {
     display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 10px;
     background: rgba(239,68,68,0.15); color: var(--error);
@@ -988,6 +1003,61 @@ function initPointerLens() {
   }, { passive: true });
 }
 
+// ─────────────────────────────────────────────
+// DATES
+// Stored values are a mix: ISO instants from the portal, plain yyyy-mm-dd from
+// the spreadsheet era, and a few already-worded strings. They were printed
+// raw, so a row read "2026-09-16T09:28:17.968Z". Rendered in Indian time,
+// since that is where every branch reading this sits.
+// ─────────────────────────────────────────────
+const IST = 'Asia/Kolkata';
+
+function formatStamp(value, opts) {
+  const withTime = !(opts && opts.dateOnly);
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+
+  // yyyy-mm-dd with no time: show the date and do not invent an hour
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(raw);
+  const d = new Date(dateOnly ? raw + 'T00:00:00' : raw);
+  if (isNaN(d.getTime())) return raw;          // already worded, leave it alone
+
+  const date = d.toLocaleDateString('en-IN',
+    { day: '2-digit', month: 'short', year: 'numeric', timeZone: IST });
+  if (dateOnly || !withTime) return date;
+
+  const time = d.toLocaleTimeString('en-IN',
+    { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: IST })
+    .replace(/\s?([ap])\.?m\.?/i, (m, p) => ' ' + p.toLowerCase() + 'm');
+  return date + ', ' + time;
+}
+
+// "3 hours ago" for anything recent, so how stale a request is reads at a
+// glance without doing arithmetic on a timestamp.
+// A few records hold nothing but a timestamp in their remarks, left over from
+// the spreadsheet migration. Printing the raw instant helps nobody, so a
+// remark that is only a date is shown as one; anything else is left as typed.
+function tidyRemark(value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  if (!/^\d{4}-\d{2}-\d{2}[T ]/.test(raw)) return raw;
+  const nice = formatStamp(raw);
+  return nice === raw ? raw : nice;
+}
+
+function relativeStamp(value) {
+  const d = new Date(String(value == null ? '' : value).trim());
+  if (isNaN(d.getTime())) return '';
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + (mins === 1 ? ' min ago' : ' mins ago');
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.round(hrs / 24);
+  if (days < 31) return days + (days === 1 ? ' day ago' : ' days ago');
+  return '';
+}
+
 // Auto-initialize Theme and Admin Engine
 initTheme();
 
@@ -1516,9 +1586,12 @@ function renderTable() {
       statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
     }
 
-    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 ${escapeHtml(item.CREATED_DATE)}</div>` : '';
-    const dateStr = item.COMPLETED_DATE || item.UPDATED_DATE ? `<div style="font-size:0.7rem;color:var(--muted)">⏱ ${escapeHtml(item.COMPLETED_DATE || item.UPDATED_DATE)}</div>` : '';
-    const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:2px">💬 ${escapeHtml(item.VENDOR_REMARKS)}</div>` : '';
+    const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:3px">📅 ${escapeHtml(formatStamp(item.CREATED_DATE))}</div>` : '';
+    const updatedRaw = item.COMPLETED_DATE || item.UPDATED_DATE;
+    const dateStr = updatedRaw
+      ? `<div style="font-size:0.7rem;color:var(--muted)" title="${escapeAttr(formatStamp(updatedRaw))}">⏱ ${escapeHtml(relativeStamp(updatedRaw) || formatStamp(updatedRaw))}</div>`
+      : '';
+    const remarksInfo = item.VENDOR_REMARKS ? `<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:2px">💬 ${escapeHtml(tidyRemark(item.VENDOR_REMARKS))}</div>` : '';
 
     // The record is looked up by id on click rather than serialised into the
     // markup. Embedding JSON in an attribute was injectable: the old escaping
@@ -1553,7 +1626,7 @@ function renderTable() {
     const localDl = localStorage.getItem('dl_cnt_' + itemKey) || localStorage.getItem('dl_cnt_' + item._sheetName + '_' + item.rowIndex) || 0;
     const dlCount = Math.max(parseInt(item.DOWNLOAD_COUNT || '0'), parseInt(localDl));
     const pdfBtn = item.QR_PDF_URL
-      ? `<div style="margin-top:4px"><a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeHtml(item.docId || itemKey)}" class="btn-pdf" style="font-size:0.74rem;color:var(--iob-blue);text-decoration:none;font-weight:700">📄 Download QR PDF <span style="background:var(--card-header);padding:1px 6px;border-radius:6px;font-size:0.7rem">📥 ${dlCount}</span></a></div>`
+      ? `<div style="margin-top:4px"><a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeHtml(item.docId || itemKey)}" class="btn-pdf${dlCount ? ' has-count' : ''}" title="Download QR PDF${dlCount ? ' · downloaded ' + dlCount + ' time' + (dlCount === 1 ? '' : 's') : ''}" aria-label="Download QR PDF">⤓${dlCount ? `<span class="dl-badge dl-badge-count">${dlCount}</span>` : ''}</a></div>`
       : '';
 
     if (item._type === 'Lead') {
@@ -2219,6 +2292,9 @@ function safeUrl(value) {
   const v = String(value == null ? '' : value).trim();
   return /^https?:\/\//i.test(v) ? escapeHtml(v) : '';
 }
+
+// Same escaping, named for the attribute case so call sites read clearly.
+function escapeAttr(value) { return escapeHtml(value); }
 
 // Merchant names and filenames are user-supplied and go into innerHTML below.
 function escapeHtml(value) {
