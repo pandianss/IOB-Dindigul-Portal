@@ -210,10 +210,17 @@
   .portal-link:hover { border-color: var(--iob-blue); color: var(--iob-blue); }
 
   /* ── MAIN CONTAINER ── */
-  main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+  /* The dashboard is a wide table with seven columns, so it benefits from the
+     whole window rather than a fixed column of it. */
+  main {
+    width: 100%;
+    max-width: 2100px;
+    margin: 0 auto;
+    padding: 24px clamp(16px, 2.5vw, 40px) 64px;
+  }
 
   /* ── STATS CARDS ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
   .stat-card {
     background: var(--card); border-radius: 12px; padding: 16px 18px;
     border: 1px solid var(--border); box-shadow: var(--shadow);
@@ -259,7 +266,7 @@
     background: var(--card); border-radius: 12px;
     border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden;
   }
-  .table-responsive { overflow-x: auto; }
+  .table-responsive { overflow-x: auto; max-width: 100%; }
   table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.83rem; }
   thead th {
     background: var(--card-header); color: var(--muted); font-weight: 700;
@@ -371,8 +378,18 @@
   .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); font-size: 0.86rem; }
 
   @media (max-width: 768px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    /* auto-fit handles the reflow; no fixed override needed */
     .header-title { display: none; }
+
+    /* The action buttons came to 287px and the header never wrapped, so on a
+       phone they pushed the whole page sideways rather than the table
+       scrolling on its own. */
+    header {
+      height: auto; min-height: 64px; padding: 8px 12px;
+      flex-wrap: wrap; gap: 8px; row-gap: 8px;
+    }
+    .header-right { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .btn-bulk-qr, .btn-csv-export, .portal-link { padding: 6px 10px; font-size: 0.74rem; }
   }
 </style>
 </head>

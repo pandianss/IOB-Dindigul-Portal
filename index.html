@@ -132,7 +132,22 @@
   .admin-link:hover { opacity: 0.9; }
 
   /* ── MAIN ── */
-  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
+  /* The shell follows the window; individual content decides how wide it wants
+     to be. A data table earns the whole screen, a form does not — 900px-wide
+     text inputs are harder to use, not easier. */
+  main {
+    width: 100%;
+    max-width: 2100px;
+    margin: 0 auto;
+    padding: 24px clamp(16px, 2.5vw, 40px) 64px;
+  }
+
+  /* The application form stays at a width where a row of fields still scans as
+     a row, and centres itself in whatever space is left. */
+  #page-apply { max-width: 1180px; margin-inline: auto; }
+
+  /* Tracking is a table, so it takes the full shell. */
+  #page-status { width: 100%; }
 
   /* ── MAIN NAV TABS ── */
   .nav-tabs {
@@ -157,7 +172,7 @@
   }
   .type-card h2 { font-size: 1.15rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
   .type-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
-  .type-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .type-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
   .type-btn {
     border: 1.5px solid var(--border); background: var(--input-bg);
     border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer;
@@ -192,7 +207,7 @@
 
   /* ── FORM LAYOUT ── */
   .form-grid { display: grid; gap: 16px; }
-  .col-2 { grid-template-columns: 1fr 1fr; }
+  .col-2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
   .span-2 { grid-column: 1 / -1; }
 
   /* ── FIELDS ── */
@@ -340,7 +355,7 @@
     background: var(--card); border-radius: 14px; border: 1px solid var(--border);
     box-shadow: var(--shadow); overflow: hidden;
   }
-  .table-responsive { overflow-x: auto; }
+  .table-responsive { overflow-x: auto; max-width: 100%; }
   table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.83rem; }
   th {
     background: var(--card-header); color: var(--muted); font-weight: 700;
@@ -396,8 +411,7 @@
   .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); font-size: 0.86rem; }
 
   @media (max-width: 768px) {
-    .type-options { grid-template-columns: 1fr; }
-    .col-2 { grid-template-columns: 1fr; }
+    /* auto-fit already collapses these to one column; nothing to override */
     .header-title { font-size: 0.85rem; }
   }
 </style>
