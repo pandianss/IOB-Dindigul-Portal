@@ -451,6 +451,43 @@
   .section-divider { border: none; border-top: 1px dashed var(--border); margin: 6px 0 14px; }
   .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); font-size: 0.86rem; }
 
+  /* ── POINTER HIGHLIGHT ───────────────────────────────────
+     A light follows the cursor across a card and the card lifts slightly
+     under it. The card scales, never the text: magnifying the text itself
+     would distort digits at the moment someone is reading an account number,
+     which is the last place to trade legibility for effect.
+
+     Confined to cards you choose between. Form fields and table rows are left
+     alone, since motion under the pointer while typing or reading a row is a
+     distraction rather than feedback.
+
+     Only on devices that actually have a pointer — a phone has no hover, and
+     the fallback there would be a highlight stuck wherever you last tapped. */
+  @media (hover: hover) and (pointer: fine) {
+    .lens {
+      position: relative;
+      isolation: isolate;
+      transition: transform 0.22s cubic-bezier(.22,.9,.32,1),
+                  border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+    .lens::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; z-index: -1;
+      opacity: 0; transition: opacity 0.25s ease;
+      background: radial-gradient(
+        16rem circle at var(--lens-x, 50%) var(--lens-y, 50%),
+        var(--lens-tint, rgba(96,165,250,0.18)), transparent 60%);
+    }
+    .lens:hover { transform: translateY(-3px) scale(1.015); }
+    .lens:hover::after { opacity: 1; }
+    .lens:active { transform: translateY(-1px) scale(0.995); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lens, .lens:hover, .lens:active { transform: none !important; }
+    .lens::after { display: none; }
+  }
+
   /* ── MOTION ──────────────────────────────────────────────
      Restrained on purpose: this is a form branch staff fill in on patchy
      mobile connections, so motion confirms an action rather than decorating
@@ -913,17 +950,17 @@
       <h2>Select Merchant Service or Product Lead</h2>
       <p>Choose whether to onboard a new QR Code, request Soundbox, or submit a Merchant Product Lead:</p>
       <div class="type-options">
-        <button type="button" class="type-btn" id="btn-qr" onclick="setType('qr')">
+        <button type="button" class="type-btn lens" id="btn-qr" onclick="setType('qr')">
           <span class="icon">📲</span>
           <span class="label">New Payment QR Code</span>
           <span class="sublabel">Generates UPI QR (Option for Soundbox)</span>
         </button>
-        <button type="button" class="type-btn" id="btn-soundbox" onclick="setType('soundbox')">
+        <button type="button" class="type-btn lens" id="btn-soundbox" onclick="setType('soundbox')">
           <span class="icon">🔊</span>
           <span class="label">Soundbox Only</span>
           <span class="sublabel">For merchants already having QR Code & VPA</span>
         </button>
-        <button type="button" class="type-btn" id="btn-lead" onclick="setType('lead')">
+        <button type="button" class="type-btn lens" id="btn-lead" onclick="setType('lead')">
           <span class="icon">💳</span>
           <span class="label">Submit Merchant Lead</span>
           <span class="sublabel">3-in-1 POS, IOB Pay, or QR Standee</span>
@@ -2695,6 +2732,37 @@ function showToast(msg, type='') {
   toastTimer = setTimeout(() => t.className = '', 4000);
 }
 
+// ─────────────────────────────────────────────
+// POINTER HIGHLIGHT
+// Writes the cursor position onto the card as a custom property, which the
+// stylesheet turns into a soft light. Coalesced into a frame so a fast pointer
+// cannot queue up more work than the display can show, and skipped entirely on
+// devices without a real pointer or where reduced motion is requested.
+// ─────────────────────────────────────────────
+function initPointerLens() {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let frame = null, pending = null;
+
+  const paint = () => {
+    frame = null;
+    if (!pending) return;
+    const { el, x, y } = pending;
+    el.style.setProperty('--lens-x', x + 'px');
+    el.style.setProperty('--lens-y', y + 'px');
+    pending = null;
+  };
+
+  document.addEventListener('pointermove', ev => {
+    const el = ev.target.closest && ev.target.closest('.lens');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    pending = { el, x: Math.round(ev.clientX - r.left), y: Math.round(ev.clientY - r.top) };
+    if (!frame) frame = requestAnimationFrame(paint);
+  }, { passive: true });
+}
+
 // Auto-initialize Theme and Data Engine
 initTheme();
 // Pulls the MCC codes out of the cacheable JSON file. The dropdown is the only
@@ -2753,6 +2821,7 @@ function wireTableActions() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  initPointerLens();
   wireTableActions();
   attachInputGuards();
   loadStatusData();

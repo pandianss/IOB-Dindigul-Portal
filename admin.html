@@ -440,6 +440,43 @@
   .hidden { display: none !important; }
   .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); font-size: 0.86rem; }
 
+  /* ── POINTER HIGHLIGHT ───────────────────────────────────
+     A light follows the cursor across a card and the card lifts slightly
+     under it. The card scales, never the text: magnifying the text itself
+     would distort digits at the moment someone is reading an account number,
+     which is the last place to trade legibility for effect.
+
+     Confined to cards you choose between. Form fields and table rows are left
+     alone, since motion under the pointer while typing or reading a row is a
+     distraction rather than feedback.
+
+     Only on devices that actually have a pointer — a phone has no hover, and
+     the fallback there would be a highlight stuck wherever you last tapped. */
+  @media (hover: hover) and (pointer: fine) {
+    .lens {
+      position: relative;
+      isolation: isolate;
+      transition: transform 0.22s cubic-bezier(.22,.9,.32,1),
+                  border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+    .lens::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      pointer-events: none; z-index: -1;
+      opacity: 0; transition: opacity 0.25s ease;
+      background: radial-gradient(
+        16rem circle at var(--lens-x, 50%) var(--lens-y, 50%),
+        var(--lens-tint, rgba(96,165,250,0.18)), transparent 60%);
+    }
+    .lens:hover { transform: translateY(-3px) scale(1.015); }
+    .lens:hover::after { opacity: 1; }
+    .lens:active { transform: translateY(-1px) scale(0.995); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lens, .lens:hover, .lens:active { transform: none !important; }
+    .lens::after { display: none; }
+  }
+
   /* ── MOTION ──────────────────────────────────────────────
      Kept deliberately small: the dashboard is a working tool, so motion marks
      a change of state rather than decorating it. */
@@ -535,28 +572,28 @@
 
   <!-- STATS -->
   <div class="stats-grid">
-    <div class="stat-card total">
+    <div class="stat-card lens total">
       <div class="info">
         <h4>Total Submissions</h4>
         <div class="num" id="stat-total">0</div>
       </div>
       <div class="icon-box">📋</div>
     </div>
-    <div class="stat-card pending">
+    <div class="stat-card lens pending">
       <div class="info">
         <h4>Pending Requests</h4>
         <div class="num" id="stat-pending">0</div>
       </div>
       <div class="icon-box">⏳</div>
     </div>
-    <div class="stat-card vendor">
+    <div class="stat-card lens vendor">
       <div class="info">
         <h4>With Vendor</h4>
         <div class="num" id="stat-vendor">0</div>
       </div>
       <div class="icon-box">🚚</div>
     </div>
-    <div class="stat-card completed">
+    <div class="stat-card lens completed">
       <div class="info">
         <h4>Onboarded / Done</h4>
         <div class="num" id="stat-completed">0</div>
@@ -913,11 +950,43 @@ function setupStaffListener() {
   staffRealtimeAttached = true;
 }
 
+// ─────────────────────────────────────────────
+// POINTER HIGHLIGHT
+// Writes the cursor position onto the card as a custom property, which the
+// stylesheet turns into a soft light. Coalesced into a frame so a fast pointer
+// cannot queue up more work than the display can show, and skipped entirely on
+// devices without a real pointer or where reduced motion is requested.
+// ─────────────────────────────────────────────
+function initPointerLens() {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let frame = null, pending = null;
+
+  const paint = () => {
+    frame = null;
+    if (!pending) return;
+    const { el, x, y } = pending;
+    el.style.setProperty('--lens-x', x + 'px');
+    el.style.setProperty('--lens-y', y + 'px');
+    pending = null;
+  };
+
+  document.addEventListener('pointermove', ev => {
+    const el = ev.target.closest && ev.target.closest('.lens');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    pending = { el, x: Math.round(ev.clientX - r.left), y: Math.round(ev.clientY - r.top) };
+    if (!frame) frame = requestAnimationFrame(paint);
+  }, { passive: true });
+}
+
 // Auto-initialize Theme and Admin Engine
 initTheme();
 
 window.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initPointerLens();
   wireTableActions();
   checkAdminAuth();
   whenSdkReady().then(setupAdminRealtimeListener);
