@@ -177,18 +177,30 @@
   .bulk-drop span { font-size: 0.78rem; color: var(--muted); }
 
   .bulk-summary { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700; }
-  .bulk-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-light); }
+  .bulk-chip { padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border-light);
+    cursor: pointer; user-select: none; transition: transform 0.12s, box-shadow 0.12s; }
+  .bulk-chip:hover { transform: translateY(-1px); }
+  .bulk-chip.selected { box-shadow: 0 0 0 2px var(--iob-blue) inset; }
+  .bulk-filter-note { font-size: 0.74rem; color: var(--muted); margin-top: 6px; }
+  .bulk-filter-note a { color: var(--iob-blue-light); font-weight: 700; cursor: pointer; }
   .bulk-chip.ok { background: rgba(16,185,129,0.15); color: var(--success); border-color: rgba(16,185,129,0.4); }
   .bulk-chip.warn { background: rgba(245,158,11,0.15); color: var(--warning); border-color: rgba(245,158,11,0.4); }
   .bulk-chip.bad { background: rgba(239,68,68,0.15); color: var(--error); border-color: rgba(239,68,68,0.4); }
 
   .bulk-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .bulk-table { table-layout: fixed; }
   .bulk-table th {
     text-align: left; padding: 7px 8px; color: var(--muted); font-weight: 700;
-    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card);
+    border-bottom: 1px solid var(--border);
+    /* Sticky without a stacking context of its own let the first rows render
+       over the heading as the list scrolled. */
+    position: sticky; top: 0; z-index: 2;
+    background: var(--card-header);
+    box-shadow: inset 0 -1px 0 var(--border);
     text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.04em;
   }
-  .bulk-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .bulk-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle;
+    overflow-wrap: anywhere; }
   .bulk-table tr.skip { opacity: 0.45; }
   .bulk-file { font-family: ui-monospace, Menlo, monospace; font-size: 0.74rem; word-break: break-all; }
   .bulk-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
@@ -2112,6 +2124,7 @@ function openBulkQrModal() {
   bulkFinished = false;
   bulkReplaceExisting = false;
   bulkRejected = 0;
+  bulkFilter = '';
   const chk = document.getElementById('bulkReplaceChk');
   if (chk) chk.checked = false;
   document.getElementById('bulkQrInput').value = '';
@@ -2287,10 +2300,45 @@ function labelFor(rec) {
   return name + ' — ' + (rec.STATUS || 'Pending Review');
 }
 
+// Which chip the list is filtered to, '' for everything.
+let bulkFilter = '';
+
+// A row's chip group. Keeps the filter and the counts reading from one rule.
+function bulkGroupOf(state) {
+  if (state === 'nomatch' || state === 'nonumber') return 'unmatched';
+  if (state === 'uploading') return 'working';
+  return state;
+}
+
+function setBulkFilter(key) {
+  bulkFilter = (bulkFilter === key) ? '' : key;   // clicking the active chip clears it
+  renderBulkTable(bulkRejected);
+}
+
+// Batches run to several thousand files, so only the rows on screen are built,
+// and a progress tick repaints the one row that changed rather than the lot.
+const BULK_RENDER_LIMIT = 300;
+
+function updateBulkRowProgress(row) {
+  const tr = document.querySelector('[data-bulk-row="' + row.__i + '"]');
+  if (!tr) return false;
+  const cell = tr.children[4];
+  if (cell) cell.innerHTML = bulkStateBadge(row);
+  return true;
+}
+
 function renderBulkTable(rejectedCount) {
   const body = document.getElementById('bulkTableBody');
 
-  body.innerHTML = bulkRows.map((row, i) => {
+  bulkRows.forEach((r, i) => { r.__i = i; });
+  const visible = bulkFilter
+    ? bulkRows.filter(r => bulkGroupOf(r.state) === bulkFilter)
+    : bulkRows;
+  const shown = visible.slice(0, BULK_RENDER_LIMIT);
+  const hiddenCount = visible.length - shown.length;
+
+  body.innerHTML = shown.map((row) => {
+    const i = row.__i;
     let matchCell;
     if (row.state === 'ambiguous') {
       matchCell = '<select onchange="onBulkPick(' + i + ', this.value)">' +
@@ -2336,14 +2384,17 @@ function renderBulkTable(rejectedCount) {
     }
 
     const skip = (row.state === 'nomatch' || row.state === 'nonumber' || row.state === 'skipped') ? ' class="skip"' : '';
-    return '<tr' + skip + '>' +
+    return '<tr data-bulk-row="' + i + '"' + skip + '>' +
       '<td class="bulk-file">' + escapeHtml(row.file.name) + '</td>' +
       '<td>' + (row.acct || '<span style="color:var(--muted)">—</span>') + '</td>' +
       '<td>' + matchCell + '</td>' +
       '<td>' + vpaCell + '</td>' +
       '<td>' + bulkStateBadge(row) + '</td>' +
     '</tr>';
-  }).join('');
+  }).join('') + (hiddenCount
+    ? '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:10px">' +
+      '… and ' + hiddenCount + ' more. Use the chips above to narrow the list.</td></tr>'
+    : '');
 
   const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0, skipped: 0,
                    working: 0, done: 0, queued: 0, failed: 0 };
@@ -2359,23 +2410,37 @@ function renderBulkTable(rejectedCount) {
     else if (r.state === 'failed') counts.failed++;
   });
 
-  const chips = [];
-  if (counts.ready)     chips.push('<span class="bulk-chip ok">' + counts.ready + ' ready</span>');
-  if (counts.replace)   chips.push('<span class="bulk-chip warn">' + counts.replace + ' will replace an existing PDF</span>');
-  if (counts.ambiguous) chips.push('<span class="bulk-chip warn">' + counts.ambiguous + ' need a choice</span>');
-  if (counts.skipped)   chips.push('<span class="bulk-chip">' + counts.skipped + ' already done</span>');
-  if (counts.unmatched) chips.push('<span class="bulk-chip bad">' + counts.unmatched + ' unmatched</span>');
-  if (rejectedCount)    chips.push('<span class="bulk-chip bad">' + rejectedCount + ' not a PDF</span>');
-  // Without these the summary read "No files selected" mid-upload, because an
-  // in-flight row matches none of the pre-upload states.
-  if (counts.working)   chips.push('<span class="bulk-chip">' + counts.working + ' uploading</span>');
-  if (counts.done)      chips.push('<span class="bulk-chip ok">' + counts.done + ' attached</span>');
-  if (counts.queued)    chips.push('<span class="bulk-chip warn">' + counts.queued + ' not confirmed</span>');
-  if (counts.failed)    chips.push('<span class="bulk-chip bad">' + counts.failed + ' failed</span>');
+  // Each chip filters the list. With a few thousand files in a batch, the rows
+  // that need attention are otherwise buried among the ones already done.
+  const chip = (key, tone, n, label) => n
+    ? '<span class="bulk-chip ' + tone + (bulkFilter === key ? ' selected' : '') +
+      '" onclick="setBulkFilter(\'' + key + '\')" title="Show only these">' +
+      n + ' ' + label + '</span>'
+    : '';
+
+  const chips = [
+    chip('ready',     'ok',   counts.ready,     'ready'),
+    chip('replace',   'warn', counts.replace,   'will replace an existing PDF'),
+    chip('ambiguous', 'warn', counts.ambiguous, 'need a choice'),
+    chip('skipped',   '',     counts.skipped,   'already done'),
+    chip('unmatched', 'bad',  counts.unmatched, 'unmatched'),
+    // Without these the summary read "No files selected" mid-upload, because an
+    // in-flight row matches none of the pre-upload states.
+    chip('working',   '',     counts.working,   'uploading'),
+    chip('done',      'ok',   counts.done,      'attached'),
+    chip('queued',    'warn', counts.queued,    'not confirmed'),
+    chip('failed',    'bad',  counts.failed,    'failed')
+  ].filter(Boolean);
+
+  if (rejectedCount) chips.push('<span class="bulk-chip bad">' + rejectedCount + ' not a PDF</span>');
 
   const summary = document.getElementById('bulkSummary');
-  summary.innerHTML = chips.join('') ||
-    (bulkRows.length ? '' : '<span class="bulk-chip">No files selected</span>');
+  summary.innerHTML = (chips.join('') ||
+    (bulkRows.length ? '' : '<span class="bulk-chip">No files selected</span>')) +
+    (bulkFilter
+      ? '<div class="bulk-filter-note">Showing only <strong>' + escapeHtml(bulkFilter) +
+        '</strong> — <a onclick="setBulkFilter(\'\')">show all ' + bulkRows.length + '</a></div>'
+      : '');
   summary.hidden = false;
   document.getElementById('bulkScroll').hidden = bulkRows.length === 0;
   document.getElementById('bulkOptsRow').hidden = bulkRows.length === 0;
@@ -2395,7 +2460,7 @@ function onBulkPick(index, docId) {
   row.autoPicked = false;                 // an explicit choice, no longer inferred
   const rec = row.matches.find(m => m.docId === docId);
   row.state = docId ? (rec && rec.QR_PDF_URL ? 'replace' : 'ready') : 'ambiguous';
-  renderBulkTable(0);
+  renderBulkTable(bulkRejected);
 }
 
 function updateBulkButton() {
@@ -2453,7 +2518,7 @@ async function runBulkQrUpload() {
   for (let i = 0; i < queue.length; i++) {
     const row = queue[i];
     row.state = 'uploading';
-    renderBulkTable(0);
+    renderBulkTable(bulkRejected);
     btn.textContent = 'Uploading ' + (i + 1) + ' of ' + queue.length + '…';
 
     try {
@@ -2471,7 +2536,9 @@ async function runBulkQrUpload() {
           snap => {
             row.progress = snap.totalBytes
               ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
-            renderBulkTable(0);
+            // Repaint one cell. Rebuilding the whole list on every tick made a
+            // large batch crawl.
+            if (!updateBulkRowProgress(row)) renderBulkTable(bulkRejected);
           },
           err => { clearTimeout(stall); reject(err); },
           () => { clearTimeout(stall); resolve(); }
@@ -2525,7 +2592,7 @@ async function runBulkQrUpload() {
       row.result = e.code || e.message;
       failed++;
     }
-    renderBulkTable(0);
+    renderBulkTable(bulkRejected);
   }
 
   // A row that timed out is not necessarily lost: Firestore may have synced it
@@ -2545,7 +2612,7 @@ async function runBulkQrUpload() {
     } catch (e) {
       console.warn('Verification read failed:', e.message);
     }
-    renderBulkTable(0);
+    renderBulkTable(bulkRejected);
   }
 
   bulkUploading = false;
