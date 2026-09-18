@@ -200,6 +200,9 @@
   .bulk-table select { width: 100%; font-size: 0.75rem; padding: 4px; border-radius: 6px;
     background: var(--input-bg); color: var(--text); border: 1px solid var(--border-light); }
   .bulk-warn { font-size: 0.7rem; color: var(--warning); margin-top: 2px; font-weight: 700; }
+  .bulk-auto { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+  .bulk-auto a { color: var(--iob-blue-light); font-weight: 700; }
+  .bulk-alt { margin-top: 4px; }
   .bulk-opts { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
 
   .portal-link {
@@ -2069,6 +2072,28 @@ function accountFromFilename(name) {
   return (joined.length >= 13 && joined.length <= 18) ? canonAccount(joined) : '';
 }
 
+// Which record a QR sheet belongs to when an account carries more than one.
+// A sheet is a QR code, so a QR request wins over a Lead for the same account —
+// a Lead followed by a QR request is the normal progression and the admin
+// should not be asked to restate it. Where two QR requests compete, the one
+// still awaiting its code wins over one already onboarded. Only a real tie,
+// two open QR requests for the same account, is left for a person; those are
+// duplicates and need deciding rather than guessing.
+function pickBulkTarget(matches) {
+  if (matches.length <= 1) return matches[0] || null;
+
+  const isOpen = r => !/completed|onboarded/i.test(String(r.STATUS || ''));
+
+  let pool = matches.filter(r => String(r.type) === 'qr');
+  if (!pool.length) pool = matches.slice();
+  if (pool.length === 1) return pool[0];
+
+  const open = pool.filter(isOpen);
+  if (open.length === 1) return open[0];
+
+  return null;
+}
+
 function bulkCandidates() {
   return [...(ALL_DATA.qr || []), ...(ALL_DATA.lead || [])].filter(isRealMerchantLead);
 }
@@ -2163,16 +2188,21 @@ async function onBulkQrFiles(fileList) {
     const acct = accountFromFilename(file.name);
     const matches = acct ? pool.filter(r => canonAccount(r.ACCOUNTNO || r.ACCOUNT_NO) === acct) : [];
 
+    const target = pickBulkTarget(matches);
+
     let state;
     if (!acct) state = 'nonumber';
     else if (matches.length === 0) state = 'nomatch';
-    else if (matches.length > 1) state = 'ambiguous';
-    else if (matches[0].QR_PDF_URL) state = 'replace';
+    else if (!target) state = 'ambiguous';
+    else if (target.QR_PDF_URL) state = 'replace';
     else state = 'ready';
 
     return {
       file, acct, matches,
-      chosen: matches.length === 1 ? matches[0].docId : '',
+      chosen: target ? target.docId : '',
+      // Flagged so the preview can say the choice was made rather than
+      // silently picking one of several behind the operator's back.
+      autoPicked: !!target && matches.length > 1,
       state,
       result: ''
     };
@@ -2228,6 +2258,24 @@ function renderBulkTable(rejectedCount) {
         '<option value="">— choose which request —</option>' +
         row.matches.map(m => '<option value="' + m.docId + '">' + escapeHtml(labelFor(m)) + '</option>').join('') +
         '</select>';
+    } else if (row.chosen) {
+      const picked = row.matches.find(m => m.docId === row.chosen) || row.matches[0];
+      matchCell = escapeHtml(labelFor(picked));
+      if (row.autoPicked) {
+        // Say so, and let it be overridden: choosing for the operator without
+        // showing the alternatives would be worse than asking.
+        const others = row.matches.filter(m => m.docId !== row.chosen);
+        matchCell += '<div class="bulk-auto">chose the ' +
+          escapeHtml(String(picked.type || 'qr').toUpperCase()) + ' request of ' +
+          row.matches.length + ' on this account' +
+          ' · <a href="#" onclick="event.preventDefault();offerBulkAlternatives(' + i + ')">change</a></div>' +
+          '<div class="bulk-alt" id="bulk-alt-' + i + '" hidden>' +
+            '<select onchange="onBulkPick(' + i + ', this.value)">' +
+              row.matches.map(m => '<option value="' + m.docId + '"' +
+                (m.docId === row.chosen ? ' selected' : '') + '>' +
+                escapeHtml(labelFor(m)) + '</option>').join('') +
+            '</select></div>';
+      }
     } else if (row.matches.length === 1) {
       matchCell = escapeHtml(labelFor(row.matches[0]));
     } else {
@@ -2294,10 +2342,16 @@ function renderBulkTable(rejectedCount) {
   updateBulkButton();
 }
 
+function offerBulkAlternatives(index) {
+  const box = document.getElementById('bulk-alt-' + index);
+  if (box) box.hidden = false;
+}
+
 function onBulkPick(index, docId) {
   const row = bulkRows[index];
   if (!row) return;
   row.chosen = docId;
+  row.autoPicked = false;                 // an explicit choice, no longer inferred
   const rec = row.matches.find(m => m.docId === docId);
   row.state = docId ? (rec && rec.QR_PDF_URL ? 'replace' : 'ready') : 'ambiguous';
   renderBulkTable(0);
