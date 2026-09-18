@@ -447,7 +447,12 @@
   }
   .btn-pdf:hover { color: var(--success); border-color: var(--success); background: rgba(16,185,129,0.10); }
   .btn-pdf.has-count { width: auto; padding: 0 8px; }
-  .dl-badge { color: inherit; font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+  .dl-badge {
+    color: inherit; font-size: 0.7rem; font-weight: 700; opacity: 0.75;
+    font-variant-numeric: tabular-nums;   /* the icon stays put as the count grows */
+  }
+  /* A count of zero is information, not an achievement, so it sits back. */
+  .btn-pdf .dl-badge:not(.nonzero) { opacity: 0.45; font-weight: 600; }
 
   /* ── TOAST ── */
   #toast {
@@ -2213,7 +2218,7 @@ function showDuplicateDialog(existing, newItem, type) {
     '<div class="dup-meta">Account ' + escapeHtml(target.ACCOUNTNO || target.ACCOUNT_NO || target.VPA || '—') + '</div>' +
     '<div class="dup-meta">Submitted ' + escapeHtml(String(target.CREATED_AT || '').slice(0, 10) || 'earlier') +
       (target.STAFF_NAME ? ' by ' + escapeHtml(target.STAFF_NAME) : '') + '</div>' +
-    '<div class="dup-meta">Status: <strong>' + escapeHtml(target.STATUS || 'Pending Review') + '</strong></div>' +
+    '<div class="dup-meta">Status: <strong>' + escapeHtml(statusLabel(target.STATUS)) + '</strong></div>' +
     (reminders ? '<div class="dup-meta">⏰ ' + reminders + ' reminder' + (reminders === 1 ? '' : 's') + ' already sent</div>' : '');
 
   const stillOpen = open.length > 0;
@@ -2619,7 +2624,10 @@ function formatBranchLoc(solId, branchName, district) {
 
 function trackDownload(docId, el) {
   const badge = el.querySelector('.dl-badge-count');
-  if (badge) badge.textContent = parseInt(badge.textContent || '0') + 1;
+  if (badge) {
+    badge.textContent = parseInt(badge.textContent || '0') + 1;
+    badge.classList.add('nonzero');        // it has been downloaded now
+  }
 
   if (!db || !docId) return;
   FB.updateDoc(FB.doc(db, "leads", docId), {
@@ -2701,7 +2709,7 @@ function renderStatusTable() {
     } else if (st === 'Rejected / Closed') {
       statusBadge = `<span class="badge-status rejected">❌ Closed</span>`;
     } else {
-      statusBadge = `<span class="badge-status pending">⏳ Pending Review</span>`;
+      statusBadge = `<span class="badge-status pending">⏳ Pending</span>`;
     }
 
     const createdStr = item.CREATED_DATE ? `<div style="font-size:0.72rem;color:var(--text);font-weight:600;margin-top:2px">📅 ${escapeHtml(formatStamp(item.CREATED_DATE))}</div>` : '';
@@ -2718,7 +2726,7 @@ function renderStatusTable() {
     } else {
       const dlCount = parseInt(item.DOWNLOAD_COUNT || '0');
       detailCol = item.QR_PDF_URL
-        ? `<a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeAttr(item.docId)}" class="btn-pdf${dlCount ? ' has-count' : ''}" title="Download QR PDF${dlCount ? ' · downloaded ' + dlCount + ' time' + (dlCount === 1 ? '' : 's') : ''}" aria-label="Download QR PDF">⤓${dlCount ? `<span class="dl-badge dl-badge-count">${dlCount}</span>` : ''}</a>`
+        ? `<a href="${safeUrl(item.QR_PDF_URL)}" target="_blank" data-act="download" data-doc="${escapeAttr(item.docId)}" class="btn-pdf has-count" title="Download QR PDF · ${dlCount ? 'downloaded ' + dlCount + ' time' + (dlCount === 1 ? '' : 's') : 'not downloaded yet'}" aria-label="Download QR PDF, downloaded ${dlCount} times">⤓<span class="dl-badge dl-badge-count${dlCount ? ' nonzero' : ''}">${dlCount}</span></a>`
         : `<span style="font-size:0.75rem;color:var(--muted)">Pending QR</span>`;
     }
 
@@ -2811,6 +2819,17 @@ function formatStamp(value, opts) {
 // A few records hold nothing but a timestamp in their remarks, left over from
 // the spreadsheet migration. Printing the raw instant helps nobody, so a
 // remark that is only a date is shown as one; anything else is left as typed.
+// What a status is called on screen. Two spellings exist in the data,
+// "Pending" and "Pending Review", both meaning the same thing and both shown
+// as Pending. Only the label changes: the stored values are left alone,
+// because the security rules require a new request to be created as
+// "Pending Review" and rewriting them would split the history again.
+function statusLabel(status) {
+  const s = String(status == null ? '' : status).trim();
+  if (/^pending/i.test(s) || !s) return 'Pending';
+  return s;
+}
+
 function tidyRemark(value) {
   const raw = String(value == null ? '' : value).trim();
   if (!raw) return '';
