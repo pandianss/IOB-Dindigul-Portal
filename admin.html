@@ -1074,6 +1074,32 @@ function relativeStamp(value) {
   return '';
 }
 
+// ─────────────────────────────────────────────
+// ORDERING
+// The query asks Firestore for CREATED_AT descending, but the table is then
+// rebuilt by concatenating the QR, soundbox and lead buckets in turn, which
+// puts every QR record above every lead regardless of date. So the assembled
+// list is sorted again here.
+//
+// CREATED_AT is the authoritative instant; older spreadsheet-era rows only
+// carry a CREATED_DATE, and a few carry neither, so the update stamp stands in
+// last. Anything undated sinks to the bottom rather than floating to the top.
+// ─────────────────────────────────────────────
+function recordTime(item) {
+  const raw = item.CREATED_AT || item.TIMESTAMP || item.CREATED_DATE ||
+              item.UPDATED_DATE || item.COMPLETED_DATE || '';
+  const s = String(raw).trim();
+  if (!s) return -Infinity;
+  // yyyy-mm-dd alone is parsed as UTC midnight by Date; pin it to local time so
+  // a same-day entry is not shunted behind one from the previous evening.
+  const t = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T00:00:00' : s).getTime();
+  return isNaN(t) ? -Infinity : t;
+}
+
+function sortNewestFirst(list) {
+  return list.sort((a, b) => recordTime(b) - recordTime(a));
+}
+
 // Auto-initialize Theme and Admin Engine
 initTheme();
 
@@ -1549,6 +1575,8 @@ function renderTable() {
       });
     }
   });
+
+  sortNewestFirst(items);
 
   // Filter by tab. A search deliberately escapes the tab and looks at every
   // status: hunting for a merchant from the pending queue used to report "not
@@ -2905,6 +2933,9 @@ function exportDataToCSV() {
     showToast("Opening backup applications CSV...", "info");
     return;
   }
+
+  // Same order the table shows, so the export lines up with the screen.
+  sortNewestFirst(allItems);
 
   const staffList = getFullStaffList();
   const clean = (val) => '"' + String(val == null ? '' : val).replace(/"/g, '""').trim() + '"';
