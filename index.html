@@ -268,7 +268,12 @@
     text-transform: uppercase; letter-spacing: 0.05em;
   }
   .field label .req { color: var(--error); margin-left: 2px; }
+  /* width is set explicitly rather than left to the flex stretch of .field:
+     the MCC search sits one level down inside .mcc-wrapper, so it missed the
+     stretch and shrank to a text input's default 20-character width while its
+     suggestion list still spanned the full row. */
   .field input, .field select {
+    width: 100%;
     border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px;
     font-size: 0.88rem; font-family: inherit; background: var(--input-bg);
     color: var(--text); transition: all 0.15s ease; outline: none;
