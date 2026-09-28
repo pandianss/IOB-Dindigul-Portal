@@ -2874,7 +2874,10 @@ function updateBulkButton() {
 function vpaSiblingsOf(docId, acct) {
   const key = canonAccount(acct);
   const out = [];
-  for (const cat of ['qr', 'sb', 'lead']) {
+  // QR and soundbox only. A product lead is a sales enquiry, not a request
+  // being fulfilled against this sheet: it holds no VPA at all, and writing
+  // one into it would be inventing data rather than correcting it.
+  for (const cat of ['qr', 'sb']) {
     for (const rec of (ALL_DATA[cat] || [])) {
       if (!rec.docId || rec.docId === docId) continue;
       if (rec.QR_PDF_URL) continue;                      // has its own generated ID
