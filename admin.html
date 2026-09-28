@@ -350,6 +350,7 @@
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
   }
   .badge-type.qr { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .pair-note { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
   .badge-type.sb { background: rgba(217,70,239,0.15); color: #e879f9; }
   .badge-type.lead { background: rgba(245,158,11,0.15); color: #fbbf24; }
 
@@ -1560,7 +1561,8 @@ function renderTable() {
         _sheetName: 'Soundbox_Template',
         _name: item.ACCOUNT_NAME,
         _vpa: item.VPA,
-        _acc: '-',
+        _acc: (linkedQrOf(item, ALL_DATA.qr) || {}).ACCOUNTNO || '-',
+        _pairedQr: !!linkedQrOf(item, ALL_DATA.qr),
         _mobile: item.MOBILE_NUMBER,
         _staffName: item.STAFF_NAME || '',
         _staffRoll: item.STAFF_ROLL || '',
@@ -1628,7 +1630,12 @@ function renderTable() {
   tbody.innerHTML = items.map(item => {
     let typeBadge = '';
     if (item._type === 'QR') typeBadge = '<span class="badge-type qr">📲 QR Code</span>';
-    else if (item._type === 'Soundbox') typeBadge = '<span class="badge-type sb">🔊 Soundbox</span>';
+    else if (item._type === 'Soundbox') {
+      // Says which request this belongs to. Without it the mirror record reads
+      // as a second, unexplained row for the same merchant.
+      typeBadge = '<span class="badge-type sb">🔊 Soundbox</span>' +
+        (item._pairedQr ? '<div class="pair-note">🔗 raised with the QR request on this account</div>' : '');
+    }
     else typeBadge = '<span class="badge-type lead">💳 Product Lead</span>';
 
     const st = item.STATUS || 'Pending Review';
@@ -1666,7 +1673,9 @@ function renderTable() {
       ? `<div class="reminder-flag" title="Chased ${reminders} time${reminders === 1 ? '' : 's'}${item.LAST_REMINDER_BY ? ', last by ' + escapeHtml(item.LAST_REMINDER_BY) : ''}">⏰ ${reminders} reminder${reminders === 1 ? '' : 's'}</div>`
       : '';
 
-    const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes' ? '<div style="font-size:0.7rem;color:var(--warning);font-weight:700;margin-top:2px">🔊 Soundbox Requested</div>' : '';
+    const sbIndicator = item.SOUNDBOX_REQUIRED === 'Yes'
+      ? '<div class="pair-note" style="color:var(--warning);font-weight:700">🔊 Soundbox requested — listed separately</div>'
+      : '';
 
     // Staff details column
     let staffDisplay = '<span style="color:var(--muted);font-size:0.78rem">-</span>';
@@ -2907,6 +2916,18 @@ async function propagateVpa(docId, acct, vpa) {
     }
   }
   return changed;
+}
+
+// A soundbox raised alongside a QR is a separate request with its own
+// fulfilment — the QR is finished when the sheet is generated, the soundbox
+// when the device is installed — so the two are kept as separate records and
+// shown as separate rows. The mirror record carries no account number of its
+// own; it points back through LINKED_QR_DOC. Resolving that here lets the
+// soundbox row show the account it belongs to and say what it is paired with,
+// instead of appearing as an unexplained second row for the same merchant.
+function linkedQrOf(item, pool) {
+  if (!item || !item.LINKED_QR_DOC) return null;
+  return (pool || []).find(q => q.docId === item.LINKED_QR_DOC) || null;
 }
 
 // Mirrors a write into the in-memory table and cache so the operator sees it
