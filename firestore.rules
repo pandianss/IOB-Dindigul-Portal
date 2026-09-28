@@ -57,6 +57,9 @@ service cloud.firestore {
           // What the record held before the generated sheet overwrote it,
           // kept so a correction can be traced back rather than vanishing.
           'VPA_BEFORE_QR',
+          // The soundbox request raised alongside a QR keeps its ID in VPA,
+          // and takes the generated one from the sheet on its linked request.
+          'VPA',
           'DOWNLOAD_COUNT', 'SOUNDBOX_CREATED',
           // A branch nudging a request that has been waiting, instead of
           // submitting a duplicate.

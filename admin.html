@@ -264,6 +264,7 @@
   .bulk-table select { width: 100%; font-size: 0.75rem; padding: 4px; border-radius: 6px;
     background: var(--input-bg); color: var(--text); border: 1px solid var(--border-light); }
   .bulk-warn { font-size: 0.7rem; color: var(--warning); margin-top: 2px; font-weight: 700; }
+  .bulk-note { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
   .bulk-auto { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
   .bulk-auto a { color: var(--iob-blue-light); font-weight: 700; }
   .bulk-alt { margin-top: 4px; }
@@ -2027,6 +2028,9 @@ async function confirmCompletion() {
       renderTable();
     }
 
+    // Same rule when a sheet is attached one at a time from this dialog.
+    const vpaToShare = updatedFields.MERCHANTVPA;
+
     let queuedOffline = false;
     if (db && activeSelectedApp.docId) {
       await ensureSignedIn();   // rules reject writes from an unauthenticated caller
@@ -2049,9 +2053,17 @@ async function confirmCompletion() {
       queuedOffline = outcome === TIMEOUT;
     }
 
+    let shared = 0;
+    if (vpaToShare && activeSelectedApp.docId) {
+      shared = await propagateVpa(activeSelectedApp.docId, activeSelectedApp._acc, vpaToShare);
+    }
+
     showToast(queuedOffline
       ? "Saved on this device — it will sync when the connection returns"
-      : "✅ Status updated successfully!", queuedOffline ? "warning" : "success");
+      : shared
+        ? "✅ Status updated, and the UPI ID copied to " + shared +
+          " linked request" + (shared === 1 ? "" : "s")
+        : "✅ Status updated successfully!", queuedOffline ? "warning" : "success");
     closeModal();
   } catch(e) {
     showToast("Update notice: " + e.message, "warning");
@@ -2522,13 +2534,20 @@ function stateForRow(row) {
   return 'ready';
 }
 
-// Whether an already-attached sheet disagrees with the record it is attached
-// to. A record still holding a placeholder is not a disagreement, it is simply
-// unfilled, and 'ready'/'replace' handle that.
+// Whether an already-attached sheet disagrees with anything it should govern:
+// the record it is attached to, or a request raised alongside it. A row whose
+// own ID is already right still needs correcting when the soundbox beside it
+// is not, which is the common case — the QR was filled in from the sheet and
+// the soundbox was left on "Pending Generation".
 function vpaVerdict(row, rec) {
-  const had = String((rec && (rec.MERCHANTVPA || rec.VPA)) || '').trim();
   if (!row.vpa) return 'skipped';
-  return had.toLowerCase() === row.vpa.toLowerCase() ? 'skipped' : 'fixvpa';
+  const want = row.vpa.toLowerCase();
+  const had = String((rec && (rec.MERCHANTVPA || rec.VPA)) || '').trim();
+  if (had.toLowerCase() !== want) return 'fixvpa';
+
+  const siblingWrong = vpaSiblingsOf(row.chosen, row.acct).some(x =>
+    String(x.rec.MERCHANTVPA || x.rec.VPA || '').trim().toLowerCase() !== want);
+  return siblingWrong ? 'fixvpa' : 'skipped';
 }
 
 async function onBulkQrFiles(fileList) {
@@ -2704,9 +2723,18 @@ function renderBulkTable(rejectedCount) {
       })();
       const changing = onRecord && onRecord.toLowerCase() !== row.vpa.toLowerCase()
                        && !/^pending/i.test(onRecord);
+      const alsoN = row.chosen
+        ? vpaSiblingsOf(row.chosen, row.acct)
+            .filter(x => String(x.rec.MERCHANTVPA || x.rec.VPA || '').trim().toLowerCase()
+                         !== row.vpa.toLowerCase()).length
+        : 0;
       vpaCell = '<code>' + escapeHtml(row.vpa) + '</code>' +
         (changing
           ? '<div class="bulk-warn">replaces <code>' + escapeHtml(onRecord) + '</code></div>'
+          : '') +
+        (alsoN
+          ? '<div class="bulk-note">also sets ' + alsoN + ' linked request' +
+            (alsoN === 1 ? '' : 's') + '</div>'
           : '') +
         (row.nameMismatch
           ? '<div class="bulk-warn">⚠ PDF is for "' + escapeHtml(row.pdfName) + '"</div>'
@@ -2817,6 +2845,68 @@ function updateBulkButton() {
   if (uploads) parts.push('Upload ' + uploads + ' PDF' + (uploads === 1 ? '' : 's'));
   if (fixes) parts.push((uploads ? 'correct ' : 'Correct ') + fixes + ' UPI ID' + (fixes === 1 ? '' : 's'));
   btn.textContent = parts.join(' and ') || 'Upload';
+}
+
+// ─────────────────────────────────────────────
+// ONE UPI ID PER MERCHANT
+// A single submission can raise two requests — a QR and a soundbox — and each
+// carries its own VPA field, filled in by the branch before either ID existed.
+// The soundbox record has no account number of its own; it points back at the
+// QR request through LINKED_QR_DOC.
+//
+// Once a sheet has been generated the ID printed on it is the merchant's real
+// one, so it is written to the sibling requests too rather than leaving the
+// soundbox holding "Pending Generation" or an abbreviation someone typed.
+//
+// A sibling that has a sheet of its own is left alone: two QR requests on one
+// account each have their own generated ID, and neither should overwrite the
+// other.
+// ─────────────────────────────────────────────
+function vpaSiblingsOf(docId, acct) {
+  const key = canonAccount(acct);
+  const out = [];
+  for (const cat of ['qr', 'sb', 'lead']) {
+    for (const rec of (ALL_DATA[cat] || [])) {
+      if (!rec.docId || rec.docId === docId) continue;
+      if (rec.QR_PDF_URL) continue;                      // has its own generated ID
+      const linked = rec.LINKED_QR_DOC === docId;
+      const sameAcct = key && canonAccount(rec.ACCOUNTNO || rec.ACCOUNT_NO) === key;
+      if (linked || sameAcct) out.push({ cat, rec });
+    }
+  }
+  return out;
+}
+
+// Returns how many sibling records were rewritten. Failures are reported but
+// never fail the caller: the sheet is already attached and its own record
+// already correct, and losing that to a sibling write would be the worse
+// outcome.
+async function propagateVpa(docId, acct, vpa) {
+  if (!vpa || /^pending/i.test(vpa)) return 0;
+  let changed = 0;
+
+  for (const { rec } of vpaSiblingsOf(docId, acct)) {
+    const field = rec.MERCHANTVPA !== undefined ? 'MERCHANTVPA' : 'VPA';
+    const had = String(rec[field] || '').trim();
+    if (had.toLowerCase() === vpa.toLowerCase()) continue;
+
+    const patch = { [field]: vpa, UPDATED_DATE: new Date().toISOString() };
+    if (had) patch.VPA_BEFORE_QR = had;
+    // The soundbox status is deliberately untouched: that request is finished
+    // when the device is installed, not when the QR is generated.
+
+    applyLocally(rec.docId, patch);
+    try {
+      const write = FB.updateDoc(FB.doc(db, 'leads', rec.docId),
+        { ...patch, UPDATED_AT: FB.serverTimestamp() });
+      write.catch(err => console.warn('Deferred sibling VPA write failed:', err.message));
+      await Promise.race([write, new Promise(res => setTimeout(res, 8000))]);
+      changed++;
+    } catch (e) {
+      console.warn('Sibling VPA write failed for ' + rec.docId + ':', e.message);
+    }
+  }
+  return changed;
 }
 
 // Mirrors a write into the in-memory table and cache so the operator sees it
@@ -2953,6 +3043,12 @@ async function runBulkQrUpload() {
       // still reading "Pending" and the upload looked like it had not applied
       // the status at all.
       applyLocally(row.chosen, update);
+
+      // The generated ID is the merchant's, not this one request's: carry it
+      // to the soundbox request raised alongside it.
+      if (update.MERCHANTVPA) {
+        row.siblings = await propagateVpa(row.chosen, row.acct, update.MERCHANTVPA);
+      }
     } catch (e) {
       row.state = 'failed';
       row.result = e.code || e.message;
@@ -2989,6 +3085,9 @@ async function runBulkQrUpload() {
   if (ok) parts.push('attached ' + ok);
   if (queued) parts.push(queued + ' not confirmed — check the record and retry if needed');
   if (failed) parts.push(failed + ' failed');
+  const shared = bulkRows.reduce((n, r) => n + (r.siblings || 0), 0);
+  if (shared) parts.push('UPI ID copied to ' + shared +
+    ' linked request' + (shared === 1 ? '' : 's'));
   showToast(
     (failed || queued ? '' : '✅ ') + parts.join(', ') + (failed || queued ? '' : ' QR PDF' + (ok === 1 ? '' : 's')),
     failed ? 'warning' : (queued ? 'warning' : 'success')
