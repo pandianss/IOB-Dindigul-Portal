@@ -866,11 +866,20 @@
           <input type="checkbox" id="bulkReplaceChk" onchange="onBulkReplaceToggle(this.checked)">
           <span>Also replace sheets that are already attached</span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px">
+          <input type="checkbox" id="bulkRecheckChk" onchange="onBulkRecheckToggle(this.checked)">
+          <span>Re-check the UPI ID on requests that already have a sheet</span>
+        </label>
         <div style="margin-top:6px">
           Requests that already have a sheet are skipped, so the same folder can be
           re-run to pick up only what is missing. The UPI ID is read from each sheet
           that is written, saved to its record, and the request marked Completed; a
           sheet with no readable UPI ID is still attached but the status is left alone.
+          <br><br>
+          Re-checking opens the already-attached sheets as well to compare the UPI ID
+          each one prints against the ID on its record, and corrects the record where
+          they differ. Nothing is re-uploaded. It is off by default because reading
+          every sheet takes about a second each.
         </div>
       </div>
     </div>
@@ -2294,6 +2303,7 @@ let bulkRows = [];
 let bulkUploading = false;
 let bulkFinished = false;
 let bulkReplaceExisting = false;
+let bulkRecheckVpa = false;
 
 // Records currently on screen, keyed by document id. Rows carry only the id in
 // a data attribute; the object is fetched from here on click, so nothing
@@ -2406,10 +2416,13 @@ function openBulkQrModal() {
   bulkUploading = false;
   bulkFinished = false;
   bulkReplaceExisting = false;
+  bulkRecheckVpa = false;
   bulkRejected = 0;
   bulkFilter = '';
   const chk = document.getElementById('bulkReplaceChk');
   if (chk) chk.checked = false;
+  const rechk = document.getElementById('bulkRecheckChk');
+  if (rechk) rechk.checked = false;
   document.getElementById('bulkQrInput').value = '';
   document.getElementById('bulkSummary').hidden = true;
   document.getElementById('bulkScroll').hidden = true;
@@ -2498,8 +2511,24 @@ function stateForRow(row) {
   if (row.matches.length === 0) return 'nomatch';
   if (!row.chosen) return 'ambiguous';
   const rec = row.matches.find(m => m.docId === row.chosen);
-  if (rec && rec.QR_PDF_URL) return bulkReplaceExisting ? 'replace' : 'skipped';
+  if (rec && rec.QR_PDF_URL) {
+    if (bulkReplaceExisting) return 'replace';
+    // 'recheck' is a reading state, not a writing one: the sheet is opened so
+    // its UPI ID can be compared with the record's, and the row then settles
+    // into 'fixvpa' or back to 'skipped'.
+    if (bulkRecheckVpa) return row.vpa === undefined ? 'recheck' : vpaVerdict(row, rec);
+    return 'skipped';
+  }
   return 'ready';
+}
+
+// Whether an already-attached sheet disagrees with the record it is attached
+// to. A record still holding a placeholder is not a disagreement, it is simply
+// unfilled, and 'ready'/'replace' handle that.
+function vpaVerdict(row, rec) {
+  const had = String((rec && (rec.MERCHANTVPA || rec.VPA)) || '').trim();
+  if (!row.vpa) return 'skipped';
+  return had.toLowerCase() === row.vpa.toLowerCase() ? 'skipped' : 'fixvpa';
 }
 
 async function onBulkQrFiles(fileList) {
@@ -2534,7 +2563,7 @@ async function onBulkQrFiles(fileList) {
 // already done.
 async function parseSelectedPdfs() {
   for (const row of bulkRows) {
-    if (row.state !== 'ready' && row.state !== 'replace') continue;
+    if (!['ready', 'replace', 'recheck'].includes(row.state)) continue;
     if (row.vpa !== undefined) continue;                 // already read
     const parsed = await readQrPdf(row.file);
     row.vpa = parsed.vpa;
@@ -2544,6 +2573,7 @@ async function parseSelectedPdfs() {
     const rec = row.matches.find(m => m.docId === row.chosen);
     row.nameMismatch = !!(rec && parsed.name &&
       !namesLookAlike(parsed.name, rec.MERCHANTNAME || rec.ACCOUNT_NAME || rec.MERCHANT_NAME));
+    if (row.state === 'recheck') row.state = vpaVerdict(row, rec);
     renderBulkTable(bulkRejected);
   }
   renderBulkTable(bulkRejected);
@@ -2551,8 +2581,17 @@ async function parseSelectedPdfs() {
 
 // Toggling the option re-evaluates every row and reads any sheet that has
 // newly come into scope.
+async function onBulkRecheckToggle(checked) {
+  bulkRecheckVpa = !!checked;
+  await reEvaluateBulkRows();
+}
+
 async function onBulkReplaceToggle(checked) {
   bulkReplaceExisting = !!checked;
+  await reEvaluateBulkRows();
+}
+
+async function reEvaluateBulkRows() {
   bulkRows.forEach(row => {
     if (['uploading','done','queued','failed'].includes(row.state)) return;
     row.state = stateForRow(row);
@@ -2565,6 +2604,8 @@ function bulkStateBadge(row) {
   switch (row.state) {
     case 'ready':     return '<span class="bulk-badge ok">will attach</span>';
     case 'replace':   return '<span class="bulk-badge warn">replaces existing PDF</span>';
+    case 'recheck':   return '<span class="bulk-badge">reading to compare…</span>';
+    case 'fixvpa':    return '<span class="bulk-badge warn" title="The sheet on this record prints a different UPI ID. The record will be corrected; the sheet itself is left as it is.">UPI ID on record is wrong — will correct</span>';
     case 'skipped':   return '<span class="bulk-badge" title="This request already has a QR sheet. Tick the replace option below to overwrite it.">already has a sheet — skipped</span>';
     case 'ambiguous': return '<span class="bulk-badge warn">' + row.matches.length + ' requests share this account — pick one</span>';
     case 'nomatch':   return '<span class="bulk-badge bad">no request with this account</span>';
@@ -2654,7 +2695,19 @@ function renderBulkTable(rejectedCount) {
 
     let vpaCell;
     if (row.vpa) {
+      // Say so when the sheet disagrees with what the record holds. The sheet
+      // is taken as correct, but replacing a UPI ID silently would leave no
+      // way to notice a file matched to the wrong merchant.
+      const onRecord = row.chosen && (() => {
+        const m = row.matches.find(x => x.docId === row.chosen);
+        return String((m && (m.MERCHANTVPA || m.VPA)) || '').trim();
+      })();
+      const changing = onRecord && onRecord.toLowerCase() !== row.vpa.toLowerCase()
+                       && !/^pending/i.test(onRecord);
       vpaCell = '<code>' + escapeHtml(row.vpa) + '</code>' +
+        (changing
+          ? '<div class="bulk-warn">replaces <code>' + escapeHtml(onRecord) + '</code></div>'
+          : '') +
         (row.nameMismatch
           ? '<div class="bulk-warn">⚠ PDF is for "' + escapeHtml(row.pdfName) + '"</div>'
           : '');
@@ -2679,11 +2732,13 @@ function renderBulkTable(rejectedCount) {
       '… and ' + hiddenCount + ' more. Use the chips above to narrow the list.</td></tr>'
     : '');
 
-  const counts = { ready: 0, replace: 0, ambiguous: 0, unmatched: 0, skipped: 0,
-                   working: 0, done: 0, queued: 0, failed: 0 };
+  const counts = { ready: 0, replace: 0, recheck: 0, fixvpa: 0, ambiguous: 0,
+                   unmatched: 0, skipped: 0, working: 0, done: 0, queued: 0, failed: 0 };
   bulkRows.forEach(r => {
     if (r.state === 'ready') counts.ready++;
     else if (r.state === 'replace') counts.replace++;
+    else if (r.state === 'recheck') counts.recheck++;
+    else if (r.state === 'fixvpa') counts.fixvpa++;
     else if (r.state === 'ambiguous') counts.ambiguous++;
     else if (r.state === 'nomatch' || r.state === 'nonumber') counts.unmatched++;
     else if (r.state === 'skipped') counts.skipped++;
@@ -2704,6 +2759,8 @@ function renderBulkTable(rejectedCount) {
   const chips = [
     chip('ready',     'ok',   counts.ready,     'ready'),
     chip('replace',   'warn', counts.replace,   'will replace an existing PDF'),
+    chip('recheck',   '',     counts.recheck,   'being re-read'),
+    chip('fixvpa',    'warn', counts.fixvpa,    'wrong UPI ID on the record'),
     chip('ambiguous', 'warn', counts.ambiguous, 'need a choice'),
     chip('skipped',   '',     counts.skipped,   'already done'),
     chip('unmatched', 'bad',  counts.unmatched, 'unmatched'),
@@ -2750,10 +2807,16 @@ function updateBulkButton() {
   // renderBulkTable runs on every progress tick, so leave the button alone once
   // an upload is under way or it overwrites the "Uploading 2 of 5" label.
   if (bulkUploading) return;
-  const n = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace')).length;
+  const picked = bulkRows.filter(r => r.chosen);
+  const uploads = picked.filter(r => r.state === 'ready' || r.state === 'replace').length;
+  const fixes = picked.filter(r => r.state === 'fixvpa').length;
   const btn = document.getElementById('btnBulkUpload');
-  btn.disabled = n === 0;
-  btn.textContent = n ? 'Upload ' + n + ' PDF' + (n === 1 ? '' : 's') : 'Upload';
+  btn.disabled = uploads + fixes === 0;
+
+  const parts = [];
+  if (uploads) parts.push('Upload ' + uploads + ' PDF' + (uploads === 1 ? '' : 's'));
+  if (fixes) parts.push((uploads ? 'correct ' : 'Correct ') + fixes + ' UPI ID' + (fixes === 1 ? '' : 's'));
+  btn.textContent = parts.join(' and ') || 'Upload';
 }
 
 // Mirrors a write into the in-memory table and cache so the operator sees it
@@ -2780,7 +2843,8 @@ async function runBulkQrUpload() {
   // clicking it did nothing at all.
   if (bulkFinished) { closeBulkQrModal(); return; }
 
-  const queue = bulkRows.filter(r => r.chosen && (r.state === 'ready' || r.state === 'replace'));
+  const queue = bulkRows.filter(r => r.chosen &&
+    ['ready', 'replace', 'fixvpa'].includes(r.state));
   if (!queue.length) return;
 
   const btn = document.getElementById('btnBulkUpload');
@@ -2800,16 +2864,20 @@ async function runBulkQrUpload() {
 
   for (let i = 0; i < queue.length; i++) {
     const row = queue[i];
+    // A correction only rewrites the record; the sheet it disagreed with is
+    // already in place and is not touched.
+    const correctOnly = row.state === 'fixvpa';
     row.state = 'uploading';
     renderBulkTable(bulkRejected);
-    btn.textContent = 'Uploading ' + (i + 1) + ' of ' + queue.length + '…';
+    btn.textContent = (correctOnly ? 'Correcting ' : 'Uploading ') +
+      (i + 1) + ' of ' + queue.length + '…';
 
     try {
       const ref = FB.storageRef(fbStorage, qrPdfPath(row.chosen));
 
       // Resumable, so the row can report real progress. A plain upload gives no
       // feedback at all, which makes a slow connection look like a hang.
-      await new Promise((resolve, reject) => {
+      if (!correctOnly) await new Promise((resolve, reject) => {
         const task = FB.uploadBytesResumable(ref, row.file, { contentType: 'application/pdf' });
         const stall = setTimeout(() => {
           task.cancel();
@@ -2829,21 +2897,36 @@ async function runBulkQrUpload() {
       });
 
       const update = {
-        QR_PDF_URL: await FB.getDownloadURL(ref),
-        PDF_NAME: row.file.name,
         UPDATED_DATE: new Date().toISOString(),
         UPDATED_AT: FB.serverTimestamp()
       };
+      if (!correctOnly) {
+        update.QR_PDF_URL = await FB.getDownloadURL(ref);
+        update.PDF_NAME = row.file.name;
+      }
 
       // The sheet carries the generated UPI ID, so the record can be filled in
       // and closed off without anyone retyping it. A request is only completed
       // when a VPA is actually known: a QR with no ID is not onboarded.
+      //
+      // The sheet wins outright. This used to write the UPI ID only when the
+      // record had none, on the reasoning that an existing value should not be
+      // clobbered — but the existing value is whatever the branch typed when
+      // they raised the request, which is a guess made before the ID existed:
+      // an abbreviation, a trade name, or the merchant's mobile number. On a
+      // request that also asked for a soundbox it is the soundbox VPA, a
+      // different account entirely. The ID printed on the QR is the only one a
+      // customer can actually pay, so it is the one the record must carry.
+      // What was replaced is kept alongside it rather than discarded.
       const rec = row.matches.find(m => m.docId === row.chosen);
-      const vpa = row.vpa || (rec && (rec.MERCHANTVPA || rec.VPA)) || '';
-      const isPlaceholder = /^pending/i.test(String(rec && rec.MERCHANTVPA || ''));
+      const had = String((rec && (rec.MERCHANTVPA || rec.VPA)) || '').trim();
+      const vpa = row.vpa || had;
 
-      if (row.vpa && (isPlaceholder || !rec.MERCHANTVPA)) {
+      if (row.vpa) {
         update.MERCHANTVPA = row.vpa;
+        if (had && had.toLowerCase() !== row.vpa.toLowerCase()) {
+          update.VPA_BEFORE_QR = had;
+        }
       }
       if (vpa && !/^pending/i.test(vpa)) {
         update.STATUS = 'Completed';

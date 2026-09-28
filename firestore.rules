@@ -54,6 +54,9 @@ service cloud.firestore {
         .hasOnly([
           'STATUS', 'VENDOR_REMARKS', 'MERCHANTVPA', 'QR_PDF_URL', 'PDF_NAME',
           'COMPLETED_DATE', 'UPDATED_DATE', 'UPDATED_AT',
+          // What the record held before the generated sheet overwrote it,
+          // kept so a correction can be traced back rather than vanishing.
+          'VPA_BEFORE_QR',
           'DOWNLOAD_COUNT', 'SOUNDBOX_CREATED',
           // A branch nudging a request that has been waiting, instead of
           // submitting a duplicate.
